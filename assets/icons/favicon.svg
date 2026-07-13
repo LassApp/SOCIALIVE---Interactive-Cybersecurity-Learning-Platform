@@ -1,0 +1,22 @@
+<!--
+  favicon.svg
+  -----------------------------------------------------------------------
+  Colore hardcoded (#3951E0, primitivo primary-600) invece di un token
+  --sl-color-*: eccezione legittima alla regola "nessun colore fuori dai
+  token", perché questo file è richiesto dal browser autonomamente,
+  fuori dalla cascata CSS della pagina — non ha accesso alle custom
+  property. Se in futuro il brand color cambierà, va aggiornato anche
+  qui (unico altro punto oltre a css/tokens/colors.css).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#3951e0" />
+  <text
+    x="32"
+    y="45"
+    font-family="-apple-system, Segoe UI, Roboto, Arial, sans-serif"
+    font-size="34"
+    font-weight="700"
+    fill="#ffffff"
+    text-anchor="middle"
+  >S</text>
+</svg>
