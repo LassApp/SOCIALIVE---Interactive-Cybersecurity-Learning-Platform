@@ -1,0 +1,57 @@
+/**
+ * avatar.css
+ * -----------------------------------------------------------------------
+ * Dimensioni fisse in px (32/40/56): sono una decisione di sizing del
+ * componente, non uno spazio tra elementi, quindi non forzata sui token
+ * --sl-space-* (che restano comunque multipli di 4, coerenti con la
+ * grid). Il colore di fallback riusa --sl-color-primary-600, già
+ * verificato 6.13:1 con testo inverso in entrambi i temi: nessun nuovo
+ * rischio di contrasto introdotto.
+ */
+
+.sl-avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: var(--sl-radius-full);
+  background-color: var(--sl-color-bg-elevated);
+}
+
+.sl-avatar--sm {
+  width: 32px;
+  height: 32px;
+}
+.sl-avatar--md {
+  width: 40px;
+  height: 40px;
+}
+.sl-avatar--lg {
+  width: 56px;
+  height: 56px;
+}
+
+.sl-avatar__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sl-avatar__fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background-color: var(--sl-color-primary-600);
+  color: var(--sl-color-text-inverse);
+  font-weight: var(--sl-font-weight-semibold);
+  font-size: var(--sl-font-size-xs);
+  line-height: 1;
+}
+
+.sl-avatar--lg .sl-avatar__fallback {
+  font-size: var(--sl-font-size-sm);
+}

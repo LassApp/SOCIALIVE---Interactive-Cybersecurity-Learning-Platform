@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SocialAlive — Style Guide (verifica interna)</title>
+
+  <!--
+    Script anti-FOUC: sincrono, non-module, eseguito nel <head> PRIMA
+    che i CSS vengano applicati. Legge la preferenza salvata (o quella
+    di sistema) e imposta data-theme sull'<html>, cosi' il tema corretto
+    e' già attivo al primo paint (nessun lampeggio).
+
+    La chiave 'sl-theme' e' duplicata rispetto a THEME_STORAGE_KEY in
+    js/services/themeService.js per necessità tecnica: questo script
+    deve restare sincrono e senza import di moduli. Se in futuro la
+    chiave cambia, va aggiornata in ENTRAMBI i punti (commento presente
+    anche nel file services/themeService.js).
+  -->
+  <script>
+    (function () {
+      var STORAGE_KEY = "sl-theme";
+      try {
+        var stored = window.localStorage.getItem(STORAGE_KEY);
+        var theme =
+          stored === "light" || stored === "dark"
+            ? stored
+            : window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        document.documentElement.setAttribute("data-theme", theme);
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
+
+  <link rel="stylesheet" href="css/base/reset.css" />
+  <link rel="stylesheet" href="css/tokens/colors.css" />
+  <link rel="stylesheet" href="css/tokens/spacing.css" />
+  <link rel="stylesheet" href="css/tokens/typography.css" />
+  <link rel="stylesheet" href="css/tokens/radius.css" />
+  <link rel="stylesheet" href="css/tokens/shadows.css" />
+  <link rel="stylesheet" href="css/tokens/motion.css" />
+  <link rel="stylesheet" href="css/themes/theme-light.css" />
+  <link rel="stylesheet" href="css/themes/theme-dark.css" />
+  <link rel="stylesheet" href="css/base/global.css" />
+  <link rel="stylesheet" href="css/components/button.css" />
+  <link rel="stylesheet" href="css/components/avatar.css" />
+  <link rel="stylesheet" href="css/components/badge.css" />
+  <link rel="stylesheet" href="css/components/card.css" />
+
+  <!--
+    Stili SOTTO qui usano il prefisso "sg-" (Style Guide), non "sl-":
+    questa pagina non e' un componente del Design System, e' uno
+    strumento di QA interno. Il prefisso diverso evita che un futuro
+    sviluppatore la confonda con un componente reale da riusare.
+  -->
+  <style>
+    .sg-page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: var(--sl-space-8) var(--sl-space-4) var(--sl-space-12);
+    }
+    .sg-banner {
+      background-color: var(--sl-color-warning-bg-subtle);
+      color: var(--sl-color-warning-text);
+      border-radius: var(--sl-radius-md);
+      padding: var(--sl-space-3) var(--sl-space-4);
+      margin-bottom: var(--sl-space-8);
+      font-size: var(--sl-font-size-sm);
+    }
+    .sg-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sl-space-4);
+      margin-bottom: var(--sl-space-10);
+    }
+    .sg-toolbar h1 {
+      font-size: var(--sl-font-size-2xl);
+      font-weight: var(--sl-font-weight-bold);
+    }
+    .sg-toggle {
+      font-size: var(--sl-font-size-sm);
+      font-weight: var(--sl-font-weight-semibold);
+      padding: var(--sl-space-2) var(--sl-space-4);
+      border-radius: var(--sl-radius-full);
+      background-color: var(--sl-color-primary-600);
+      color: var(--sl-color-text-inverse);
+      transition: background-color var(--sl-duration-fast) var(--sl-ease-standard);
+    }
+    .sg-toggle:hover {
+      background-color: var(--sl-color-primary-500);
+    }
+    section {
+      margin-bottom: var(--sl-space-12);
+    }
+    section > h2 {
+      font-size: var(--sl-font-size-xl);
+      font-weight: var(--sl-font-weight-bold);
+      border-bottom: 1px solid var(--sl-color-border-subtle);
+      padding-bottom: var(--sl-space-3);
+      margin-bottom: var(--sl-space-5);
+    }
+    section > h3 {
+      font-size: var(--sl-font-size-sm);
+      font-weight: var(--sl-font-weight-semibold);
+      color: var(--sl-color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: var(--sl-space-3);
+    }
+    .sg-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: var(--sl-space-4);
+      margin-bottom: var(--sl-space-6);
+    }
+    .sg-swatch {
+      height: 88px;
+      border-radius: var(--sl-radius-md);
+      display: flex;
+      align-items: flex-end;
+      padding: var(--sl-space-2);
+      font-size: var(--sl-font-size-xs);
+      font-weight: var(--sl-font-weight-medium);
+      border: 1px solid var(--sl-color-border-subtle);
+    }
+    .sg-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sl-space-2);
+      padding: var(--sl-space-1) var(--sl-space-3);
+      border-radius: var(--sl-radius-full);
+      font-size: var(--sl-font-size-sm);
+      font-weight: var(--sl-font-weight-medium);
+    }
+    .sg-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sl-space-4);
+      align-items: center;
+      margin-bottom: var(--sl-space-4);
+    }
+    .sg-type-sample {
+      display: flex;
+      align-items: baseline;
+      gap: var(--sl-space-4);
+      padding: var(--sl-space-2) 0;
+      border-bottom: 1px solid var(--sl-color-border-subtle);
+    }
+    .sg-type-sample small {
+      color: var(--sl-color-text-secondary);
+      font-size: var(--sl-font-size-xs);
+      min-width: 132px;
+    }
+    .sg-space-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--sl-space-3);
+      margin-bottom: var(--sl-space-2);
+    }
+    .sg-space-bar__fill {
+      background-color: var(--sl-color-primary-500);
+      height: 16px;
+      border-radius: var(--sl-radius-sm);
+    }
+    .sg-space-bar small {
+      color: var(--sl-color-text-secondary);
+      font-size: var(--sl-font-size-xs);
+      width: 90px;
+    }
+    .sg-shadow-box {
+      width: 140px;
+      height: 90px;
+      background-color: var(--sl-color-bg-surface);
+      border-radius: var(--sl-radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--sl-font-size-xs);
+      color: var(--sl-color-text-secondary);
+    }
+    .sg-radius-box {
+      width: 90px;
+      height: 90px;
+      background-color: var(--sl-color-primary-600);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--sl-color-text-inverse);
+      font-size: var(--sl-font-size-xs);
+    }
+    .sg-motion-box {
+      width: 64px;
+      height: 64px;
+      border-radius: var(--sl-radius-md);
+      background-color: var(--sl-color-primary-600);
+      transition: transform var(--sl-duration-base) var(--sl-ease-standard);
+    }
+    .sg-motion-box:hover,
+    .sg-motion-box:focus-visible {
+      transform: translateX(48px);
+    }
+    .sg-row--stretch {
+      align-items: stretch;
+    }
+    .sg-demo-card {
+      width: 220px;
+    }
+    .sg-demo-card-title {
+      font-weight: var(--sl-font-weight-semibold);
+      margin-bottom: var(--sl-space-1);
+    }
+    .sg-demo-card-body {
+      color: var(--sl-color-text-secondary);
+      font-size: var(--sl-font-size-sm);
+    }
+  </style>
+</head>
+<body>
+  <main class="sg-page">
+    <p class="sg-banner" role="note">
+      Questa pagina non fa parte dell'applicazione SocialAlive/SOCIALIVE: è uno
+      strumento di verifica interno, usato per validare a occhio i design token
+      (contrasto, temi, motion) prima di costruire i componenti reali della Fase 2.
+      Il bottone qui sotto chiama <code>themeService</code> direttamente e non è
+      il futuro componente <code>ThemeSwitch</code>.
+    </p>
+
+    <div class="sg-toolbar">
+      <h1>SocialAlive — Design Tokens</h1>
+      <button class="sg-toggle" id="theme-toggle" type="button" aria-pressed="false">
+        Cambia tema
+      </button>
+    </div>
+
+    <section aria-labelledby="colori-heading">
+      <h2 id="colori-heading">Colori</h2>
+
+      <h3>Sfondi</h3>
+      <div class="sg-grid">
+        <div class="sg-swatch" style="background-color: var(--sl-color-bg-canvas);">bg-canvas</div>
+        <div class="sg-swatch" style="background-color: var(--sl-color-bg-surface);">bg-surface</div>
+        <div class="sg-swatch" style="background-color: var(--sl-color-bg-elevated);">bg-elevated</div>
+      </div>
+
+      <h3>Testo (su bg-surface)</h3>
+      <div class="sg-row">
+        <span style="color: var(--sl-color-text-primary); font-size: var(--sl-font-size-md);">Testo primario — Aa</span>
+        <span style="color: var(--sl-color-text-secondary); font-size: var(--sl-font-size-md);">Testo secondario — Aa</span>
+        <span class="sg-badge" style="background-color: var(--sl-color-primary-600); color: var(--sl-color-text-inverse);">Testo inverso — Aa</span>
+      </div>
+
+      <h3>Bordi</h3>
+      <div class="sg-row">
+        <div style="width:120px;height:48px;border-radius:var(--sl-radius-md);border:2px solid var(--sl-color-border-subtle);"></div>
+        <div style="width:120px;height:48px;border-radius:var(--sl-radius-md);border:2px solid var(--sl-color-border-strong);"></div>
+      </div>
+
+      <h3>Brand</h3>
+      <div class="sg-grid">
+        <div class="sg-swatch" style="background-color: var(--sl-color-primary-500); color: var(--sl-color-text-inverse); align-items:center; justify-content:center;">primary-500</div>
+        <div class="sg-swatch" style="background-color: var(--sl-color-primary-600); color: var(--sl-color-text-inverse); align-items:center; justify-content:center;">primary-600</div>
+      </div>
+
+      <h3>Stati (variante soft: bg-subtle + text)</h3>
+      <div class="sg-row">
+        <span class="sg-badge" style="background-color: var(--sl-color-success-bg-subtle); color: var(--sl-color-success-text);">Successo</span>
+        <span class="sg-badge" style="background-color: var(--sl-color-warning-bg-subtle); color: var(--sl-color-warning-text);">Avviso</span>
+        <span class="sg-badge" style="background-color: var(--sl-color-error-bg-subtle); color: var(--sl-color-error-text);">Errore</span>
+        <span class="sg-badge" style="background-color: var(--sl-color-info-bg-subtle); color: var(--sl-color-info-text);">Informazione</span>
+      </div>
+    </section>
+
+    <section aria-labelledby="tipografia-heading">
+      <h2 id="tipografia-heading">Tipografia</h2>
+      <div class="sg-type-sample"><small>font-size-3xl / bold</small><span style="font-size:var(--sl-font-size-3xl);font-weight:var(--sl-font-weight-bold);">SocialAlive</span></div>
+      <div class="sg-type-sample"><small>font-size-2xl / bold</small><span style="font-size:var(--sl-font-size-2xl);font-weight:var(--sl-font-weight-bold);">SocialAlive</span></div>
+      <div class="sg-type-sample"><small>font-size-xl / semibold</small><span style="font-size:var(--sl-font-size-xl);font-weight:var(--sl-font-weight-semibold);">SocialAlive</span></div>
+      <div class="sg-type-sample"><small>font-size-lg / medium</small><span style="font-size:var(--sl-font-size-lg);font-weight:var(--sl-font-weight-medium);">SocialAlive</span></div>
+      <div class="sg-type-sample"><small>font-size-md / regular</small><span style="font-size:var(--sl-font-size-md);">SocialAlive</span></div>
+      <div class="sg-type-sample"><small>font-size-base / regular</small><span style="font-size:var(--sl-font-size-base);">SocialAlive</span></div>
+      <div class="sg-type-sample"><small>font-size-sm / regular</small><span style="font-size:var(--sl-font-size-sm);">SocialAlive</span></div>
+      <div class="sg-type-sample"><small>font-size-xs / regular</small><span style="font-size:var(--sl-font-size-xs);">SocialAlive</span></div>
+    </section>
+
+    <section aria-labelledby="spaziatura-heading">
+      <h2 id="spaziatura-heading">Spaziatura (grid 4px)</h2>
+      <div class="sg-space-bar"><small>space-1 (4px)</small><div class="sg-space-bar__fill" style="width:var(--sl-space-1);"></div></div>
+      <div class="sg-space-bar"><small>space-2 (8px)</small><div class="sg-space-bar__fill" style="width:var(--sl-space-2);"></div></div>
+      <div class="sg-space-bar"><small>space-4 (16px)</small><div class="sg-space-bar__fill" style="width:var(--sl-space-4);"></div></div>
+      <div class="sg-space-bar"><small>space-6 (24px)</small><div class="sg-space-bar__fill" style="width:var(--sl-space-6);"></div></div>
+      <div class="sg-space-bar"><small>space-8 (32px)</small><div class="sg-space-bar__fill" style="width:var(--sl-space-8);"></div></div>
+      <div class="sg-space-bar"><small>space-12 (48px)</small><div class="sg-space-bar__fill" style="width:var(--sl-space-12);"></div></div>
+    </section>
+
+    <section aria-labelledby="radius-heading">
+      <h2 id="radius-heading">Radius e ombre</h2>
+      <div class="sg-row">
+        <div class="sg-radius-box" style="border-radius:var(--sl-radius-sm);">sm</div>
+        <div class="sg-radius-box" style="border-radius:var(--sl-radius-md);">md</div>
+        <div class="sg-radius-box" style="border-radius:var(--sl-radius-lg);">lg</div>
+        <div class="sg-radius-box" style="border-radius:var(--sl-radius-full);">full</div>
+      </div>
+      <div class="sg-row">
+        <div class="sg-shadow-box" style="box-shadow:var(--sl-shadow-1);">shadow-1</div>
+        <div class="sg-shadow-box" style="box-shadow:var(--sl-shadow-2);">shadow-2</div>
+        <div class="sg-shadow-box" style="box-shadow:var(--sl-shadow-3);">shadow-3</div>
+      </div>
+    </section>
+
+    <section aria-labelledby="motion-heading">
+      <h2 id="motion-heading">Motion</h2>
+      <p style="color:var(--sl-color-text-secondary); font-size:var(--sl-font-size-sm); margin-bottom:var(--sl-space-4);">
+        Passa il mouse sul quadrato (o raggiungilo con Tab). Se nel sistema è attiva
+        l'opzione "riduci movimento", il quadrato si sposterà istantaneamente, senza transizione.
+      </p>
+      <div class="sg-motion-box" tabindex="0"></div>
+    </section>
+
+    <section aria-labelledby="componenti-heading">
+      <h2 id="componenti-heading">Componenti (Fase 2 — Step 2)</h2>
+
+      <h3>Button — primary / secondary / ghost, stato disabled, variante icon</h3>
+      <div class="sg-row" id="demo-buttons"></div>
+
+      <h3>Avatar — dimensioni sm/md/lg, fallback su errore e senza src</h3>
+      <div class="sg-row" id="demo-avatars"></div>
+
+      <h3>Badge — tono neutral / success / warning / error / info</h3>
+      <div class="sg-row" id="demo-badges"></div>
+
+      <h3>Card — variante statica e interattiva (raggiungibile con Tab)</h3>
+      <div class="sg-row sg-row--stretch" id="demo-cards"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initTheme, toggleTheme, getCurrentTheme, THEME_NAMES } from "./js/services/themeService.js";
+    import { create as createButton } from "./js/components/Button.js";
+    import { create as createAvatar } from "./js/components/Avatar.js";
+    import { create as createBadge } from "./js/components/Badge.js";
+    import { create as createCard } from "./js/components/Card.js";
+
+    initTheme();
+
+    const toggleButton = document.getElementById("theme-toggle");
+
+    function syncButtonState() {
+      const isDark = getCurrentTheme() === THEME_NAMES.DARK;
+      toggleButton.setAttribute("aria-pressed", String(isDark));
+      toggleButton.textContent = isDark ? "Passa a tema chiaro" : "Passa a tema scuro";
+    }
+
+    toggleButton.addEventListener("click", () => {
+      toggleTheme();
+      syncButtonState();
+    });
+
+    syncButtonState();
+
+    // --- Demo Button ---------------------------------------------------
+    // Icona segnaposto (cerchio): lo sprite reale (assets/icons/icons.svg)
+    // non esiste ancora, non è nello scope di questo step.
+    function placeholderIcon() {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 24 24");
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", "12");
+      circle.setAttribute("cy", "12");
+      circle.setAttribute("r", "8");
+      circle.setAttribute("fill", "currentColor");
+      svg.appendChild(circle);
+      return svg;
+    }
+
+    const buttonsRow = document.getElementById("demo-buttons");
+    const buttonFeedback = document.createElement("p");
+    buttonFeedback.style.width = "100%";
+    buttonFeedback.style.color = "var(--sl-color-text-secondary)";
+    buttonFeedback.style.fontSize = "var(--sl-font-size-sm)";
+    buttonFeedback.textContent = "Clicca un bottone per verificare l'evento sl:click…";
+    buttonsRow.after(buttonFeedback);
+
+    function onButtonClick(event) {
+      buttonFeedback.textContent = `Evento sl:click ricevuto — variante: "${event.detail.variant}"`;
+    }
+
+    [
+      { label: "Pubblica", variant: "primary" },
+      { label: "Annulla", variant: "secondary" },
+      { label: "Salta", variant: "ghost" },
+      { label: "Non disponibile", variant: "primary", disabled: true },
+    ].forEach((props) => {
+      const { element } = createButton(props);
+      element.addEventListener("sl:click", onButtonClick);
+      buttonsRow.appendChild(element);
+    });
+
+    const iconButton = createButton({
+      variant: "icon",
+      ariaLabel: "Notifiche (icona segnaposto)",
+      icon: placeholderIcon(),
+    });
+    iconButton.element.addEventListener("sl:click", onButtonClick);
+    buttonsRow.appendChild(iconButton.element);
+
+    // --- Demo Avatar -----------------------------------------------------
+    // Immagine generata via data URI: nessuna dipendenza da rete esterna,
+    // la pagina di QA deve funzionare anche offline.
+    const placeholderPhoto =
+      "data:image/svg+xml;utf8," +
+      encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
+          '<rect width="100" height="100" fill="#8fa3ff"/>' +
+          '<circle cx="50" cy="38" r="18" fill="#eef1ff"/>' +
+          '<rect x="20" y="62" width="60" height="34" rx="30" fill="#eef1ff"/>' +
+          "</svg>"
+      );
+
+    const avatarsRow = document.getElementById("demo-avatars");
+    [
+      { src: placeholderPhoto, name: "Marco Rossi", size: "sm" },
+      { src: placeholderPhoto, name: "Marco Rossi", size: "md" },
+      { src: placeholderPhoto, name: "Marco Rossi", size: "lg" },
+      { src: "assets/immagine-inesistente.jpg", name: "Giulia Bianchi", size: "md" }, // testa il fallback
+      { name: "Cybersecurity", size: "md" }, // nessuna src: iniziali da subito
+    ].forEach((props) => {
+      const { element } = createAvatar(props);
+      avatarsRow.appendChild(element);
+    });
+
+    // --- Demo Badge -------------------------------------------------------
+    const badgesRow = document.getElementById("demo-badges");
+    [
+      { label: "Bozza", tone: "neutral" },
+      { label: "Completato", tone: "success" },
+      { label: "In revisione", tone: "warning" },
+      { label: "Errore", tone: "error" },
+      { label: "Nuovo", tone: "info" },
+    ].forEach((props) => {
+      const { element } = createBadge(props);
+      badgesRow.appendChild(element);
+    });
+
+    // --- Demo Card ---------------------------------------------------------
+    const cardsRow = document.getElementById("demo-cards");
+
+    function buildCardContent(title, body) {
+      const titleEl = document.createElement("p");
+      titleEl.className = "sg-demo-card-title";
+      titleEl.textContent = title;
+      const bodyEl = document.createElement("p");
+      bodyEl.className = "sg-demo-card-body";
+      bodyEl.textContent = body;
+      return [titleEl, bodyEl];
+    }
+
+    const staticCard = createCard({
+      content: buildCardContent(
+        "Card semplice",
+        "Contenitore generico: PostCard, nella Fase 6, lo comporrà senza duplicarlo."
+      ),
+    });
+    staticCard.element.classList.add("sg-demo-card");
+
+    const interactiveCard = createCard({
+      content: buildCardContent("Card interattiva", "Passa il mouse o raggiungila con Tab."),
+      interactive: true,
+    });
+    interactiveCard.element.classList.add("sg-demo-card");
+    interactiveCard.element.tabIndex = 0;
+
+    cardsRow.append(staticCard.element, interactiveCard.element);
+  </script>
+</body>
+</html>

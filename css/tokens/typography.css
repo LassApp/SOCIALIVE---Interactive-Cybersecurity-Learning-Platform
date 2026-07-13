@@ -1,0 +1,31 @@
+/**
+ * typography.css
+ * -----------------------------------------------------------------------
+ * Font di sistema (zero download, massimo realismo e performance).
+ * Dimensioni in rem: rispettano le preferenze di zoom/font-size del
+ * browser dell'utente (requisito di accessibilità, WCAG 1.4.4 / 1.4.10).
+ */
+
+:root {
+  --sl-font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  /* Scala modulare, rapporto ~1.2, arrotondata a valori puliti */
+  --sl-font-size-xs: 0.75rem; /* 12px */
+  --sl-font-size-sm: 0.875rem; /* 14px */
+  --sl-font-size-base: 1rem; /* 16px */
+  --sl-font-size-md: 1.125rem; /* 18px */
+  --sl-font-size-lg: 1.25rem; /* 20px */
+  --sl-font-size-xl: 1.5rem; /* 24px */
+  --sl-font-size-2xl: 1.75rem; /* 28px */
+  --sl-font-size-3xl: 2rem; /* 32px */
+
+  --sl-font-weight-regular: 400;
+  --sl-font-weight-medium: 500;
+  --sl-font-weight-semibold: 600;
+  --sl-font-weight-bold: 700;
+
+  --sl-line-height-tight: 1.2;
+  --sl-line-height-base: 1.5;
+  --sl-line-height-relaxed: 1.65;
+}

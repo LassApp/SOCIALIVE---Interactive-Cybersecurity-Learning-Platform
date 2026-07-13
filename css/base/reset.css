@@ -1,0 +1,75 @@
+/**
+ * reset.css
+ * -----------------------------------------------------------------------
+ * Reset moderno e minimale. Deliberatamente agnostico rispetto al design
+ * system: nessuna custom property --sl-* qui dentro. Le scelte
+ * specifiche di SOCIALIVE (colori, focus ring, utility) vivono in
+ * global.css, un livello sopra.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img,
+picture,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+  text-align: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Rimosso lo stile lista di default: i componenti che presentano
+   contenuto realmente enumerativo (fuori dal design system, es. testo
+   generato dallo scenario) devono reintrodurre list-style esplicitamente. */
+ul,
+ol {
+  list-style: none;
+  padding: 0;
+}
+
+table {
+  border-collapse: collapse;
+}

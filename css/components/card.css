@@ -1,0 +1,28 @@
+/**
+ * card.css
+ * -----------------------------------------------------------------------
+ * border-subtle qui è puramente decorativo (non l'unico segnale di
+ * confine: la card ha già sfondo e ombra propri), quindi non è soggetto
+ * alla soglia 3:1 di WCAG 1.4.11 — a differenza di border-strong, usato
+ * altrove per confini funzionali come l'outline di un input.
+ */
+
+.sl-card {
+  background-color: var(--sl-color-bg-surface);
+  border: 1px solid var(--sl-color-border-subtle);
+  border-radius: var(--sl-radius-lg);
+  box-shadow: var(--sl-shadow-1);
+  padding: var(--sl-space-5);
+}
+
+.sl-card--interactive {
+  cursor: pointer;
+  transition: box-shadow var(--sl-duration-base) var(--sl-ease-standard),
+    transform var(--sl-duration-base) var(--sl-ease-standard);
+}
+
+.sl-card--interactive:hover,
+.sl-card--interactive:focus-visible {
+  box-shadow: var(--sl-shadow-2);
+  transform: translateY(-1px);
+}

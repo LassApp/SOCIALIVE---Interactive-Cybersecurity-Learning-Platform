@@ -1,0 +1,67 @@
+/**
+ * theme-dark.css
+ * -----------------------------------------------------------------------
+ * Token SEMANTICI del tema scuro. Stessi nomi di theme-light.css: nessun
+ * componente deve mai sapere quale tema è attivo, cambia solo il valore
+ * risolto dalla custom property.
+ *
+ * Scelte diverse dal Light, motivate:
+ *   - bg-elevated più chiaro di bg-surface (invece che uguale + ombra
+ *     come in Light): su sfondo scuro l'ombra nera è poco percepibile,
+ *     quindi l'elevazione è comunicata soprattutto con la luminosità
+ *     della superficie (pattern standard nei sistemi dark, es. Material).
+ *   - primary-500 punta al primitivo -400 (più chiaro) invece di -500:
+ *     usato come colore decorativo/icona su sfondo scuro, -400 resta
+ *     ben leggibile (5.21:1) mentre -500 sarebbe più spento.
+ *   - primary-600 resta IDENTICO al Light (stesso primitivo -600): è il
+ *     colore di riempimento dei bottoni solidi, un blocco autosufficiente
+ *     il cui contrasto con il testo bianco (6.13:1) non dipende dal tema
+ *     della pagina; tenerlo fisso garantisce inoltre continuità di brand.
+ */
+
+[data-theme="dark"] {
+  /* Sfondi */
+  --sl-color-bg-canvas: var(--sl-palette-gray-950);
+  --sl-color-bg-surface: var(--sl-palette-gray-900);
+  --sl-color-bg-elevated: var(--sl-palette-gray-800);
+  --sl-color-bg-hover: rgba(247, 248, 250, 0.06);
+  --sl-color-bg-active: rgba(247, 248, 250, 0.1);
+
+  /* Testo — text-primary/-surface: 16.04:1, text-secondary: 7.48:1 */
+  --sl-color-text-primary: var(--sl-palette-gray-50);
+  --sl-color-text-secondary: var(--sl-palette-gray-400);
+  --sl-color-text-inverse: var(--sl-palette-gray-900);
+
+  /* Bordi — strong verificato 4.36:1 su bg-surface */
+  --sl-color-border-subtle: var(--sl-palette-gray-800);
+  --sl-color-border-strong: var(--sl-palette-gray-500);
+
+  /* Brand */
+  --sl-color-primary-500: var(--sl-palette-primary-400);
+  --sl-color-primary-600: var(--sl-palette-primary-600);
+
+  /* Stati semantici */
+  --sl-color-success-500: var(--sl-palette-success-500);
+  --sl-color-success-bg-subtle: var(--sl-palette-success-900);
+  --sl-color-success-text: var(--sl-palette-success-300);
+
+  --sl-color-warning-500: var(--sl-palette-warning-500);
+  --sl-color-warning-bg-subtle: var(--sl-palette-warning-900);
+  --sl-color-warning-text: var(--sl-palette-warning-300);
+
+  --sl-color-error-500: var(--sl-palette-error-500);
+  --sl-color-error-bg-subtle: var(--sl-palette-error-900);
+  --sl-color-error-text: var(--sl-palette-error-300);
+
+  --sl-color-info-500: var(--sl-palette-info-500);
+  --sl-color-info-bg-subtle: var(--sl-palette-info-900);
+  --sl-color-info-text: var(--sl-palette-info-300);
+
+  /* Overlay — leggermente più opaco: lo sfondo è già scuro, serve più
+     scurimento per distinguere il layer della modale */
+  --sl-color-overlay: rgba(0, 0, 0, 0.7);
+
+  /* Focus ring — primitivo dedicato (-300), non alias di primary-500/600:
+     serve il massimo contrasto possibile su sfondo scuro (7.18–7.90:1) */
+  --sl-color-focus-ring: var(--sl-palette-primary-300);
+}

@@ -1,0 +1,80 @@
+/**
+ * colors.css
+ * -----------------------------------------------------------------------
+ * PALETTE PRIMITIVA (theme-agnostic).
+ *
+ * Nota architetturale: il documento di Fase 1 elenca "colors.css" tra i
+ * token "comuni ai due temi", ma i colori semantici (bg, text, border...)
+ * per definizione CAMBIANO tra Light e Dark. Per risolvere la tensione
+ * senza duplicare valori, questo file contiene SOLO i colori primitivi
+ * (la tinta grezza, es. "che blu è il blu di brand"), mentre
+ * css/themes/theme-light.css e theme-dark.css mappano questi primitivi
+ * sui token *semantici* (--sl-color-bg-surface, --sl-color-text-primary...)
+ * usati realmente dai componenti.
+ *
+ * Nessun componente deve MAI referenziare direttamente un --sl-palette-*.
+ * I componenti usano esclusivamente i token semantici definiti nei theme.
+ *
+ * Ogni combinazione qui sotto è stata verificata per contrasto WCAG AA
+ * (vedi commenti nei file theme-light.css / theme-dark.css per i risultati).
+ */
+
+:root {
+  /* Grigi neutri — sfondi, testo, bordi */
+  --sl-palette-gray-0: #ffffff;
+  --sl-palette-gray-50: #f7f8fa;
+  --sl-palette-gray-100: #eef0f3;
+  --sl-palette-gray-200: #e2e5ea;
+  --sl-palette-gray-300: #cbd0d8;
+  --sl-palette-gray-400: #a6acb8;
+  --sl-palette-gray-500: #7a8190;
+  --sl-palette-gray-600: #5b6272;
+  --sl-palette-gray-700: #434957;
+  --sl-palette-gray-800: #2c3038;
+  --sl-palette-gray-900: #1a1c21;
+  --sl-palette-gray-950: #101216;
+
+  /* Brand primario */
+  --sl-palette-primary-50: #eef1ff;
+  --sl-palette-primary-100: #dce3ff;
+  --sl-palette-primary-200: #b9c7ff;
+  --sl-palette-primary-300: #8fa3ff;
+  --sl-palette-primary-400: #6b85ff;
+  --sl-palette-primary-500: #4f6bff;
+  --sl-palette-primary-600: #3951e0;
+  --sl-palette-primary-700: #2c3eb8;
+  --sl-palette-primary-800: #232f8c;
+  --sl-palette-primary-900: #1c2569;
+
+  /* Stati semantici: successo, avviso, errore, informazione.
+     Scala a 5 passi (50/300/500/700/900) per coprire sia l'uso
+     "soft" (tinta chiara + testo scuro) sia l'uso su sfondo scuro
+     (tinta scura + testo chiaro), entrambi verificati AA. */
+  --sl-palette-success-50: #eafbf0;
+  --sl-palette-success-300: #7fe3b4;
+  --sl-palette-success-500: #1fa971;
+  --sl-palette-success-700: #0f6b44;
+  --sl-palette-success-900: #123024;
+
+  /* Nota: il valore -500 originario (#e3a008) non raggiungeva il rapporto
+     3:1 nemmeno per uso decorativo/icona (2.26:1, verificato con script di
+     controllo contrasto). Sostituito con una tonalità più scura a parità
+     di intento cromatico (ambra). */
+  --sl-palette-warning-50: #fff7e6;
+  --sl-palette-warning-300: #f5cb6b;
+  --sl-palette-warning-500: #b8760a;
+  --sl-palette-warning-700: #7a5206;
+  --sl-palette-warning-900: #332404;
+
+  --sl-palette-error-50: #fdeeee;
+  --sl-palette-error-300: #f3a39c;
+  --sl-palette-error-500: #e1483d;
+  --sl-palette-error-700: #8e2e27;
+  --sl-palette-error-900: #341613;
+
+  --sl-palette-info-50: #eaf6ff;
+  --sl-palette-info-300: #8ad1f5;
+  --sl-palette-info-500: #1e9de3;
+  --sl-palette-info-700: #12628f;
+  --sl-palette-info-900: #0f2c3d;
+}

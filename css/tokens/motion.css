@@ -1,0 +1,27 @@
+/**
+ * motion.css
+ * -----------------------------------------------------------------------
+ * Durate ed easing condivisi. La riduzione per chi richiede
+ * prefers-reduced-motion è centralizzata QUI (unica fonte di verità:
+ * chi consuma --sl-duration-* ottiene automaticamente animazioni
+ * quasi istantanee, senza dover gestire la media query altrove).
+ *
+ * Un secondo livello di sicurezza, più aggressivo, è comunque presente
+ * in css/base/global.css per i pochi casi che non passano da questi
+ * token (difesa in profondità, non duplicazione: vedi commento lì).
+ */
+
+:root {
+  --sl-duration-fast: 120ms;
+  --sl-duration-base: 200ms;
+  --sl-duration-slow: 320ms;
+  --sl-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --sl-duration-fast: 0ms;
+    --sl-duration-base: 0ms;
+    --sl-duration-slow: 0ms;
+  }
+}

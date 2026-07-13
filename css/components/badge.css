@@ -1,0 +1,46 @@
+/**
+ * badge.css
+ * -----------------------------------------------------------------------
+ * Variante "soft" (tinta chiara + testo scuro/saturo) per tutti i toni,
+ * mai riempimento saturo + testo bianco: quest'ultimo, verificato con lo
+ * script di controllo contrasto, scende sotto 4.5:1 su tre toni su
+ * quattro (success/info a 3.0x, warning addirittura sotto 3:1).
+ */
+
+.sl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sl-space-1);
+  padding: var(--sl-space-1) var(--sl-space-3);
+  border-radius: var(--sl-radius-full);
+  font-size: var(--sl-font-size-xs);
+  font-weight: var(--sl-font-weight-semibold);
+  line-height: var(--sl-line-height-tight);
+  white-space: nowrap;
+}
+
+.sl-badge--neutral {
+  background-color: var(--sl-color-bg-elevated);
+  color: var(--sl-color-text-secondary);
+  border: 1px solid var(--sl-color-border-subtle);
+}
+
+.sl-badge--success {
+  background-color: var(--sl-color-success-bg-subtle);
+  color: var(--sl-color-success-text);
+}
+
+.sl-badge--warning {
+  background-color: var(--sl-color-warning-bg-subtle);
+  color: var(--sl-color-warning-text);
+}
+
+.sl-badge--error {
+  background-color: var(--sl-color-error-bg-subtle);
+  color: var(--sl-color-error-text);
+}
+
+.sl-badge--info {
+  background-color: var(--sl-color-info-bg-subtle);
+  color: var(--sl-color-info-text);
+}

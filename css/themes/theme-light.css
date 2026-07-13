@@ -1,0 +1,67 @@
+/**
+ * theme-light.css
+ * -----------------------------------------------------------------------
+ * Token SEMANTICI del tema chiaro. Ogni componente usa esclusivamente
+ * questi nomi (mai i --sl-palette-* direttamente).
+ *
+ * Convenzione per il brand (--sl-color-primary-500 / -600), fissata dopo
+ * verifica di contrasto reale (vedi script di controllo eseguito in fase
+ * di progettazione):
+ *   - primary-500 → uso decorativo/icone/controlli UI (soglia 3:1, es.
+ *     icona attiva, spunta di una checkbox, anello di focus adiacente).
+ *     Testo piccolo su questo colore NON garantisce 4.5:1: da evitare.
+ *   - primary-600 → testo/link su sfondo pagina E riempimenti solidi
+ *     (bottoni primari) con testo bianco/inverso: garantisce 6.1:1,
+ *     valido in entrambi i contesti.
+ *
+ * Stessa logica per i colori di stato: la variante "-500" resta per
+ * icone/accenti (verificata ≥3:1 su bg-surface), mentre per badge/toast
+ * con testo si usa la coppia bg-subtle + text (verificata ≥6:1).
+ */
+
+[data-theme="light"] {
+  /* Sfondi */
+  --sl-color-bg-canvas: var(--sl-palette-gray-50);
+  --sl-color-bg-surface: var(--sl-palette-gray-0);
+  --sl-color-bg-elevated: var(--sl-palette-gray-0);
+  --sl-color-bg-hover: rgba(26, 28, 33, 0.04);
+  --sl-color-bg-active: rgba(26, 28, 33, 0.08);
+
+  /* Testo — text-primary/-surface: 17.05:1, text-secondary: 6.11:1 */
+  --sl-color-text-primary: var(--sl-palette-gray-900);
+  --sl-color-text-secondary: var(--sl-palette-gray-600);
+  --sl-color-text-inverse: var(--sl-palette-gray-50);
+
+  /* Bordi — subtle è puramente decorativo (non l'unico segnale di
+     confine, es. una card ha anche sfondo/ombra propri); strong è
+     usato per confini funzionali (input, ecc.) ed è verificato 3.91:1 */
+  --sl-color-border-subtle: var(--sl-palette-gray-200);
+  --sl-color-border-strong: var(--sl-palette-gray-500);
+
+  /* Brand */
+  --sl-color-primary-500: var(--sl-palette-primary-500);
+  --sl-color-primary-600: var(--sl-palette-primary-600);
+
+  /* Stati semantici */
+  --sl-color-success-500: var(--sl-palette-success-500);
+  --sl-color-success-bg-subtle: var(--sl-palette-success-50);
+  --sl-color-success-text: var(--sl-palette-success-700);
+
+  --sl-color-warning-500: var(--sl-palette-warning-500);
+  --sl-color-warning-bg-subtle: var(--sl-palette-warning-50);
+  --sl-color-warning-text: var(--sl-palette-warning-700);
+
+  --sl-color-error-500: var(--sl-palette-error-500);
+  --sl-color-error-bg-subtle: var(--sl-palette-error-50);
+  --sl-color-error-text: var(--sl-palette-error-700);
+
+  --sl-color-info-500: var(--sl-palette-info-500);
+  --sl-color-info-bg-subtle: var(--sl-palette-info-50);
+  --sl-color-info-text: var(--sl-palette-info-700);
+
+  /* Overlay dietro le modali */
+  --sl-color-overlay: rgba(16, 18, 20, 0.5);
+
+  /* Focus ring — 6.13:1 su surface, 5.77:1 su canvas */
+  --sl-color-focus-ring: var(--sl-palette-primary-600);
+}

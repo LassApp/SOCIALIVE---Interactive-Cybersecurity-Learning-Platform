@@ -1,0 +1,78 @@
+/**
+ * global.css
+ * -----------------------------------------------------------------------
+ * Baseline visiva di SOCIALIVE applicata sopra il reset. Usa solo token
+ * (--sl-*), mai valori hardcoded: qualunque cambiamento del design
+ * system si propaga automaticamente da qui.
+ */
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--sl-font-family-base);
+  font-size: var(--sl-font-size-base);
+  line-height: var(--sl-line-height-base);
+  color: var(--sl-color-text-primary);
+  background-color: var(--sl-color-bg-canvas);
+  /* Transizione leggera solo su questa proprietà, per un cambio tema
+     percepito come morbido invece che a scatto. Non generalizzato con
+     un "transition: all" per non introdurre costi di repaint su
+     proprietà che non cambiano mai con il tema. */
+  transition: background-color var(--sl-duration-base) var(--sl-ease-standard),
+    color var(--sl-duration-base) var(--sl-ease-standard);
+}
+
+/* Focus visibile solo da tastiera (:focus-visible), non al click da
+   mouse — requisito esplicito WCAG 2.4.7 del piano di Fase 1. */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--sl-color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--sl-radius-sm);
+}
+
+::selection {
+  background-color: var(--sl-color-primary-500);
+  color: var(--sl-color-text-inverse);
+}
+
+/* Utility per contenuti destinati solo agli screen reader
+   (es. label di icon-button, skip-link). Va nel livello globale perché
+   è trasversale a moltissimi componenti futuri, non specifica di uno. */
+.sl-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/*
+ * Rete di sicurezza per prefers-reduced-motion.
+ * I token --sl-duration-* in motion.css sono già azzerati per chi lo
+ * richiede: questa regola è un secondo livello di difesa per eventuali
+ * animazioni che in futuro venissero scritte senza passare dai token
+ * (es. un @keyframes con durata hardcoded). Non è duplicazione della
+ * logica: è protezione contro il caso in cui la disciplina di progetto
+ * (§ regole) venga violata da un componente scritto in una fase futura.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,12 @@
+/**
+ * radius.css
+ * -----------------------------------------------------------------------
+ * Raggi di bordo condivisi. --sl-radius-full è pensato per avatar/pill.
+ */
+
+:root {
+  --sl-radius-sm: 6px;
+  --sl-radius-md: 10px;
+  --sl-radius-lg: 16px;
+  --sl-radius-full: 9999px;
+}

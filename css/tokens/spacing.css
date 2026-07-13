@@ -1,0 +1,24 @@
+/**
+ * spacing.css
+ * -----------------------------------------------------------------------
+ * Grid di spaziatura a 4px. Valori in px (non rem) perché qui l'obiettivo
+ * è l'allineamento pixel-perfect alla grid, non la scalabilità col
+ * font-size dell'utente (quella è demandata a typography.css, dove i
+ * valori sono in rem per rispetto dell'accessibilità / zoom testo).
+ */
+
+:root {
+  --sl-space-0: 0px;
+  --sl-space-1: 4px;
+  --sl-space-2: 8px;
+  --sl-space-3: 12px;
+  --sl-space-4: 16px;
+  --sl-space-5: 20px;
+  --sl-space-6: 24px;
+  --sl-space-7: 28px;
+  --sl-space-8: 32px;
+  --sl-space-9: 36px;
+  --sl-space-10: 40px;
+  --sl-space-11: 44px;
+  --sl-space-12: 48px;
+}

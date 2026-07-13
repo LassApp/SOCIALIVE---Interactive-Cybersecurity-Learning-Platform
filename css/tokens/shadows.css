@@ -1,0 +1,18 @@
+/**
+ * shadows.css
+ * -----------------------------------------------------------------------
+ * Tre livelli di elevazione. Volutamente sobri (nessun glow, nessun
+ * effetto "futuristico"): l'obiettivo è credibilità da prodotto reale.
+ *
+ * Nota per il tema Dark: un'ombra nera è poco percepibile su sfondo
+ * scuro. Per questo, nel tema Dark l'elevazione è comunicata
+ * PRINCIPALMENTE tramite superfici via via più chiare
+ * (--sl-color-bg-surface → --sl-color-bg-elevated, vedi theme-dark.css)
+ * e queste ombre restano un rinforzo secondario, non l'unico segnale.
+ */
+
+:root {
+  --sl-shadow-1: 0 1px 2px rgba(16, 18, 20, 0.06), 0 1px 3px rgba(16, 18, 20, 0.08);
+  --sl-shadow-2: 0 2px 4px rgba(16, 18, 20, 0.06), 0 4px 10px rgba(16, 18, 20, 0.1);
+  --sl-shadow-3: 0 4px 10px rgba(16, 18, 20, 0.08), 0 12px 32px rgba(16, 18, 20, 0.16);
+}
