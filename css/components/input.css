@@ -1,0 +1,83 @@
+/**
+ * input.css
+ * -----------------------------------------------------------------------
+ * Bordo di default: --sl-color-border-strong (confine funzionale, non
+ * decorativo — cfr. il commento in card.css che aveva già anticipato
+ * questo uso). Verificato ≥3:1 su bg-surface in entrambi i temi (3.91:1
+ * Light, 4.36:1 Dark — numeri già presenti nei commenti di
+ * theme-light.css/theme-dark.css).
+ *
+ * Focus: solo cambio di border-color a --sl-color-primary-600, come
+ * ulteriore segnale di stato "campo attivo". L'anello di focus
+ * (:focus-visible + --sl-color-focus-ring) resta quello globale
+ * definito in css/base/global.css: non viene ridefinito qui (stesso
+ * principio già seguito da button.css).
+ *
+ * Errore: border-color --sl-color-error-500 (verificato 4.04:1 Light /
+ * 4.22:1 Dark su bg-surface — ben oltre la soglia 3:1 richiesta per un
+ * confine non testuale, WCAG 1.4.11) + messaggio in --sl-color-error-text
+ * (verificato 8.17:1 Light / 8.55:1 Dark direttamente su bg-surface:
+ * nessun problema a usarlo qui, non solo nella variante "soft" bg-subtle
+ * già usata da Badge/Toast). Il colore non è l'unico segnale: il
+ * messaggio stesso è testo (§5.7 architettura Fase 1).
+ *
+ * Stato disabled: stessa ricetta già usata da Button (opacity + cursor
+ * + aria-disabled), per coerenza visiva nel Design System.
+ */
+
+.sl-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-1);
+}
+
+.sl-input__label {
+  font-size: var(--sl-font-size-sm);
+  font-weight: var(--sl-font-weight-medium);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-input__field {
+  padding: var(--sl-space-2) var(--sl-space-3);
+  border-radius: var(--sl-radius-md);
+  border: 1px solid var(--sl-color-border-strong);
+  background-color: var(--sl-color-bg-surface);
+  color: var(--sl-color-text-primary);
+  font-family: inherit;
+  font-size: var(--sl-font-size-md);
+  transition: border-color var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-input__field::placeholder {
+  color: var(--sl-color-text-secondary);
+}
+
+.sl-input__field:focus-visible {
+  border-color: var(--sl-color-primary-600);
+}
+
+.sl-input__field[aria-invalid="true"] {
+  border-color: var(--sl-color-error-500);
+}
+
+/* Ricolora solo l'outline (non l'intera dichiarazione, che resta
+   quella globale di :focus-visible): un campo in errore che riceve
+   focus mantiene un segnale coerente col proprio stato. */
+.sl-input__field[aria-invalid="true"]:focus-visible {
+  outline-color: var(--sl-color-error-500);
+}
+
+.sl-input__field:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sl-input__helper {
+  font-size: var(--sl-font-size-xs);
+  color: var(--sl-color-text-secondary);
+}
+
+.sl-input__helper--error {
+  color: var(--sl-color-error-text);
+  font-weight: var(--sl-font-weight-medium);
+}

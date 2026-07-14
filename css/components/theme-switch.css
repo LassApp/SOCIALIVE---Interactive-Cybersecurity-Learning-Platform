@@ -1,0 +1,78 @@
+/**
+ * theme-switch.css
+ * -----------------------------------------------------------------------
+ * Track: off = --sl-color-border-strong (già verificato ≥3:1 su
+ * bg-canvas/bg-surface in entrambi i temi, cfr. commenti in
+ * theme-light.css/theme-dark.css); on = --sl-color-primary-600 (fisso
+ * in entrambi i temi).
+ *
+ * Thumb: usa --sl-color-text-inverse, che con la correzione applicata
+ * in questo stesso step è un valore chiaro FISSO in entrambi i temi —
+ * necessario perché il thumb deve restare leggibile sia sopra il track
+ * "off" (border-strong: 3.68:1) sia sopra il track "on" (primary-600,
+ * fisso: 5.77:1). Un valore che si inverte con il tema (come
+ * bg-elevated, chiaro in Light/scuro in Dark) fallirebbe contro
+ * primary-600 in Dark: verificato 2.16:1, sotto soglia.
+ *
+ * Dimensioni fisse in px (44×24 track, 18×18 thumb): decisione di
+ * sizing del componente, non spaziatura tra elementi — stesso criterio
+ * già usato in avatar.css.
+ *
+ * Il focus visibile NON è ridefinito qui: :focus-visible è già gestito
+ * globalmente in css/base/global.css per qualunque elemento (stesso
+ * principio già seguito da button.css). Nessun override locale per
+ * prefers-reduced-motion: --sl-duration-base è già azzerato da
+ * motion.css e global.css applica comunque una rete di sicurezza
+ * generale — ridefinirlo qui sarebbe una duplicazione non necessaria.
+ */
+
+.sl-theme-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sl-space-2);
+  background: none;
+  padding: 0;
+}
+
+.sl-theme-switch__track {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  border-radius: var(--sl-radius-full);
+  background-color: var(--sl-color-border-strong);
+  transition: background-color var(--sl-duration-base) var(--sl-ease-standard);
+  flex-shrink: 0;
+}
+
+.sl-theme-switch[aria-checked="true"] .sl-theme-switch__track {
+  background-color: var(--sl-color-primary-600);
+}
+
+.sl-theme-switch__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--sl-radius-full);
+  background-color: var(--sl-color-text-inverse);
+  box-shadow: var(--sl-shadow-1);
+  transition: transform var(--sl-duration-base) var(--sl-ease-standard);
+}
+
+.sl-theme-switch[aria-checked="true"] .sl-theme-switch__thumb {
+  transform: translateX(20px);
+}
+
+.sl-theme-switch__label {
+  font-size: var(--sl-font-size-sm);
+  font-weight: var(--sl-font-weight-medium);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-theme-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
