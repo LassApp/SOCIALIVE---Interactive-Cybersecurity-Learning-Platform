@@ -27,10 +27,19 @@
   --sl-color-bg-hover: rgba(247, 248, 250, 0.06);
   --sl-color-bg-active: rgba(247, 248, 250, 0.1);
 
-  /* Testo — text-primary/-surface: 16.04:1, text-secondary: 7.48:1 */
+  /* Testo — text-primary/-surface: 16.04:1, text-secondary: 7.48:1.
+     text-inverse è FISSO su gray-50 in entrambi i temi (non un flip
+     "opposto al tema" come gli altri token di questo blocco): è usato
+     esclusivamente per testo sopra riempimenti a colore fisso
+     (primary-600 nel Button primario, nel fallback di Avatar), che non
+     cambiano con il tema. Il valore precedente (gray-900) dava 2.78:1
+     su primary-600 in Dark — sotto la soglia AA 4.5:1 per testo normale.
+     Bug trovato e corretto in Fase 2 Step 3 durante la verifica dei
+     nuovi accostamenti per ThemeSwitch/Input. Ora: 5.77:1 in entrambi
+     i temi (invariato in Light, corretto in Dark). */
   --sl-color-text-primary: var(--sl-palette-gray-50);
   --sl-color-text-secondary: var(--sl-palette-gray-400);
-  --sl-color-text-inverse: var(--sl-palette-gray-900);
+  --sl-color-text-inverse: var(--sl-palette-gray-50);
 
   /* Bordi — strong verificato 4.36:1 su bg-surface */
   --sl-color-border-subtle: var(--sl-palette-gray-800);
