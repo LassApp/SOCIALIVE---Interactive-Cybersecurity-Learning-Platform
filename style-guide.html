@@ -50,6 +50,8 @@
   <link rel="stylesheet" href="css/components/avatar.css" />
   <link rel="stylesheet" href="css/components/badge.css" />
   <link rel="stylesheet" href="css/components/card.css" />
+  <link rel="stylesheet" href="css/components/theme-switch.css" />
+  <link rel="stylesheet" href="css/components/input.css" />
 
   <!--
     Stili SOTTO qui usano il prefisso "sg-" (Style Guide), non "sl-":
@@ -81,18 +83,6 @@
     .sg-toolbar h1 {
       font-size: var(--sl-font-size-2xl);
       font-weight: var(--sl-font-weight-bold);
-    }
-    .sg-toggle {
-      font-size: var(--sl-font-size-sm);
-      font-weight: var(--sl-font-weight-semibold);
-      padding: var(--sl-space-2) var(--sl-space-4);
-      border-radius: var(--sl-radius-full);
-      background-color: var(--sl-color-primary-600);
-      color: var(--sl-color-text-inverse);
-      transition: background-color var(--sl-duration-fast) var(--sl-ease-standard);
-    }
-    .sg-toggle:hover {
-      background-color: var(--sl-color-primary-500);
     }
     section {
       margin-bottom: var(--sl-space-12);
@@ -218,6 +208,12 @@
       color: var(--sl-color-text-secondary);
       font-size: var(--sl-font-size-sm);
     }
+    .sg-demo-inputs {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: var(--sl-space-5);
+      margin-bottom: var(--sl-space-4);
+    }
   </style>
 </head>
 <body>
@@ -225,16 +221,15 @@
     <p class="sg-banner" role="note">
       Questa pagina non fa parte dell'applicazione SocialAlive/SOCIALIVE: è uno
       strumento di verifica interno, usato per validare a occhio i design token
-      (contrasto, temi, motion) prima di costruire i componenti reali della Fase 2.
-      Il bottone qui sotto chiama <code>themeService</code> direttamente e non è
-      il futuro componente <code>ThemeSwitch</code>.
+      e i componenti (contrasto, temi, motion, comportamento) prima di costruirli
+      dentro l'applicazione reale. Il toggle qui sotto è ora il componente
+      <code>ThemeSwitch</code> reale (Fase 2 — Step 3), non più un bottone
+      segnaposto.
     </p>
 
     <div class="sg-toolbar">
       <h1>SocialAlive — Design Tokens</h1>
-      <button class="sg-toggle" id="theme-toggle" type="button" aria-pressed="false">
-        Cambia tema
-      </button>
+      <div id="theme-switch-mount"></div>
     </div>
 
     <section aria-labelledby="colori-heading">
@@ -336,31 +331,38 @@
       <h3>Card — variante statica e interattiva (raggiungibile con Tab)</h3>
       <div class="sg-row sg-row--stretch" id="demo-cards"></div>
     </section>
+
+    <section aria-labelledby="componenti-step3-heading">
+      <h2 id="componenti-step3-heading">Componenti (Fase 2 — Step 3)</h2>
+
+      <h3>ThemeSwitch — quello nella toolbar in alto è questo stesso componente; qui: con/senza label, stato disabled</h3>
+      <div class="sg-row" id="demo-theme-switches"></div>
+
+      <h3>Input — text/email/password, con valore, helper text, errore, stato disabled</h3>
+      <div class="sg-demo-inputs" id="demo-inputs"></div>
+      <p id="input-feedback" style="width:100%; color: var(--sl-color-text-secondary); font-size: var(--sl-font-size-sm);">
+        Scrivi in un campo per verificare gli eventi sl:input / sl:blur…
+      </p>
+    </section>
   </main>
 
   <script type="module">
-    import { initTheme, toggleTheme, getCurrentTheme, THEME_NAMES } from "./js/services/themeService.js";
+    import { initTheme } from "./js/services/themeService.js";
     import { create as createButton } from "./js/components/Button.js";
     import { create as createAvatar } from "./js/components/Avatar.js";
     import { create as createBadge } from "./js/components/Badge.js";
     import { create as createCard } from "./js/components/Card.js";
+    import { create as createThemeSwitch } from "./js/components/ThemeSwitch.js";
+    import { create as createInput } from "./js/components/Input.js";
 
     initTheme();
 
-    const toggleButton = document.getElementById("theme-toggle");
-
-    function syncButtonState() {
-      const isDark = getCurrentTheme() === THEME_NAMES.DARK;
-      toggleButton.setAttribute("aria-pressed", String(isDark));
-      toggleButton.textContent = isDark ? "Passa a tema chiaro" : "Passa a tema scuro";
-    }
-
-    toggleButton.addEventListener("click", () => {
-      toggleTheme();
-      syncButtonState();
-    });
-
-    syncButtonState();
+    // --- ThemeSwitch nella toolbar --------------------------------------
+    // Non c'è più bisogno di orchestrare manualmente toggleTheme() /
+    // getCurrentTheme() qui: il componente si occupa da solo di leggere,
+    // applicare e riflettere lo stato del tema (vedi ThemeSwitch.js).
+    const themeSwitchMount = document.getElementById("theme-switch-mount");
+    themeSwitchMount.appendChild(createThemeSwitch({}).element);
 
     // --- Demo Button ---------------------------------------------------
     // Icona segnaposto (cerchio): lo sprite reale (assets/icons/icons.svg)
@@ -475,6 +477,36 @@
     interactiveCard.element.tabIndex = 0;
 
     cardsRow.append(staticCard.element, interactiveCard.element);
+
+    // --- Demo ThemeSwitch ---------------------------------------------
+    // Istanze aggiuntive solo per verifica visiva: sincronizzano tutte
+    // insieme perché ThemeSwitch ascolta sl:theme-change su document,
+    // non serve altro codice qui per tenerle allineate.
+    const themeSwitchesRow = document.getElementById("demo-theme-switches");
+    themeSwitchesRow.appendChild(createThemeSwitch({}).element);
+    themeSwitchesRow.appendChild(createThemeSwitch({ showLabel: false, ariaLabel: "Cambia tema (senza label visibile)" }).element);
+    themeSwitchesRow.appendChild(createThemeSwitch({ disabled: true, ariaLabel: "Cambia tema (disabilitato, solo per QA visiva)" }).element);
+
+    // --- Demo Input -----------------------------------------------------
+    const inputsGrid = document.getElementById("demo-inputs");
+    const inputFeedback = document.getElementById("input-feedback");
+
+    function onInputEvent(event) {
+      inputFeedback.textContent = `Evento ${event.type} ricevuto — valore: "${event.detail.value}"`;
+    }
+
+    [
+      { label: "Nome utente", placeholder: "es. mario.rossi", required: true },
+      { label: "Email", type: "email", value: "docente@scuola.it", helperText: "Usata solo per il recupero password (Fase 3)." },
+      { label: "Password", type: "password", placeholder: "••••••••", required: true },
+      { label: "Codice invito", value: "ABC123", error: "Il codice inserito non è valido." },
+      { label: "Campo non disponibile", value: "Valore precompilato", disabled: true },
+    ].forEach((props) => {
+      const { element } = createInput(props);
+      element.addEventListener("sl:input", onInputEvent);
+      element.addEventListener("sl:blur", onInputEvent);
+      inputsGrid.appendChild(element);
+    });
   </script>
 </body>
 </html>
