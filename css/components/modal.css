@@ -1,0 +1,105 @@
+/**
+ * modal.css
+ * -----------------------------------------------------------------------
+ * Overlay: --sl-color-overlay (già definito per entrambi i temi in
+ * theme-light.css/theme-dark.css). Pannello: --sl-color-bg-elevated —
+ * il token pensato esplicitamente per "sfondo modali/dropdown" (§5.1
+ * architettura Fase 1) — + --sl-shadow-3, il livello di elevazione più
+ * alto, riservato proprio alle modali (§5.4).
+ *
+ * .sl-modal__close riceve margin-left:auto invece di affidarsi a
+ * justify-content sull'header: così il bottone di chiusura resta
+ * sempre allineato a destra anche quando il titolo è assente
+ * (titleEl.hidden — un h2 vuoto e visibile a "space-between" con un
+ * solo altro figlio si sposterebbe a sinistra, comportamento sbagliato).
+ *
+ * Animazione d'ingresso: solo su apertura (nessuna transizione di
+ * chiusura, dato che il pannello viene rimosso dal DOM da destroy());
+ * nessun override locale di prefers-reduced-motion — --sl-duration-*
+ * è già azzerato da motion.css e global.css applica comunque una rete
+ * di sicurezza generale (stesso principio già seguito da tutti gli
+ * altri componenti).
+ *
+ * Focus visibile NON ridefinito: :focus-visible resta quello globale.
+ */
+
+.sl-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sl-space-4);
+  background-color: var(--sl-color-overlay);
+  animation: sl-modal-overlay-in var(--sl-duration-base) var(--sl-ease-standard);
+}
+
+.sl-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100vh - var(--sl-space-8));
+  background-color: var(--sl-color-bg-elevated);
+  border-radius: var(--sl-radius-lg);
+  box-shadow: var(--sl-shadow-3);
+  animation: sl-modal-panel-in var(--sl-duration-base) var(--sl-ease-standard);
+}
+
+.sl-modal__header {
+  display: flex;
+  align-items: center;
+  gap: var(--sl-space-4);
+  padding: var(--sl-space-5) var(--sl-space-5) 0;
+}
+
+.sl-modal__title {
+  font-size: var(--sl-font-size-lg);
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-modal__close {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.sl-modal__body {
+  padding: var(--sl-space-5);
+  overflow-y: auto;
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-md);
+  line-height: var(--sl-line-height-relaxed);
+}
+
+.sl-modal__body p + p {
+  margin-top: var(--sl-space-3);
+}
+
+.sl-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sl-space-3);
+  padding: 0 var(--sl-space-5) var(--sl-space-5);
+}
+
+@keyframes sl-modal-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sl-modal-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
