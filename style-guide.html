@@ -52,6 +52,7 @@
   <link rel="stylesheet" href="css/components/card.css" />
   <link rel="stylesheet" href="css/components/theme-switch.css" />
   <link rel="stylesheet" href="css/components/input.css" />
+  <link rel="stylesheet" href="css/components/modal.css" />
 
   <!--
     Stili SOTTO qui usano il prefisso "sg-" (Style Guide), non "sl-":
@@ -344,6 +345,16 @@
         Scrivi in un campo per verificare gli eventi sl:input / sl:blur…
       </p>
     </section>
+
+    <section aria-labelledby="componenti-step4-heading">
+      <h2 id="componenti-step4-heading">Componenti (Fase 2 — Step 4)</h2>
+
+      <h3>Modal — variante default (contenuto libero) e dialog (conferma/annulla)</h3>
+      <div class="sg-row" id="demo-modal-triggers"></div>
+      <p id="modal-feedback" style="width:100%; color: var(--sl-color-text-secondary); font-size: var(--sl-font-size-sm);">
+        Apri un modale per verificare focus trap, chiusura ESC/overlay e gli eventi sl:modal-close / sl:modal-confirm…
+      </p>
+    </section>
   </main>
 
   <script type="module">
@@ -354,6 +365,7 @@
     import { create as createCard } from "./js/components/Card.js";
     import { create as createThemeSwitch } from "./js/components/ThemeSwitch.js";
     import { create as createInput } from "./js/components/Input.js";
+    import { create as createModal } from "./js/components/Modal.js";
 
     initTheme();
 
@@ -507,6 +519,51 @@
       element.addEventListener("sl:blur", onInputEvent);
       inputsGrid.appendChild(element);
     });
+
+    // --- Demo Modal -------------------------------------------------------
+    const modalTriggersRow = document.getElementById("demo-modal-triggers");
+    const modalFeedback = document.getElementById("modal-feedback");
+
+    function buildParagraph(text) {
+      const p = document.createElement("p");
+      p.textContent = text;
+      return p;
+    }
+
+    const openDefaultModalBtn = createButton({ label: "Apri modale generico", variant: "secondary" });
+    openDefaultModalBtn.element.addEventListener("sl:click", () => {
+      const modal = createModal({
+        title: "Modale generico",
+        content: [
+          buildParagraph("Contenuto libero: qui può andare qualunque nodo (testo, form, immagini)."),
+          buildParagraph("Chiudi con il bottone ×, con ESC o cliccando fuori dal pannello."),
+        ],
+      });
+      modal.element.addEventListener("sl:modal-close", (event) => {
+        modalFeedback.textContent = `Evento sl:modal-close ricevuto — motivo: "${event.detail.reason}"`;
+      });
+    });
+
+    const openDialogBtn = createButton({ label: "Apri dialog di conferma", variant: "primary" });
+    openDialogBtn.element.addEventListener("sl:click", () => {
+      const dialog = createModal({
+        variant: "dialog",
+        title: "Eliminare l'elemento?",
+        content: [buildParagraph("L'operazione non è reversibile. Confermi di voler procedere?")],
+        confirmLabel: "Sì, elimina",
+        cancelLabel: "Annulla",
+      });
+      dialog.element.addEventListener("sl:modal-confirm", () => {
+        modalFeedback.textContent = "Evento sl:modal-confirm ricevuto";
+      });
+      dialog.element.addEventListener("sl:modal-close", (event) => {
+        if (event.detail.reason !== "confirm") {
+          modalFeedback.textContent = `Evento sl:modal-close ricevuto — motivo: "${event.detail.reason}"`;
+        }
+      });
+    });
+
+    modalTriggersRow.append(openDefaultModalBtn.element, openDialogBtn.element);
   </script>
 </body>
 </html>
