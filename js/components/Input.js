@@ -26,12 +26,31 @@
  * — stesso limite già annotato per l'icona segnaposto di Button in
  * style-guide.html. Rimandato a quando lo sprite esisterà (YAGNI).
  *
+ * Aggiunte in Fase 2 / Step 5 (per il campo di ricerca di AppHeader):
+ *   - tipo "search": stesso input testuale, ma semantica nativa corretta
+ *     (alcuni browser aggiungono una "x" di svuotamento gratuita) —
+ *     nessun costo aggiuntivo, stesso identico rendering/gestione degli
+ *     altri tipi.
+ *   - prop "hideLabel": la label resta nel DOM (nome accessibile reale,
+ *     letto dagli screen reader) ma viene nascosta SOLO visivamente con
+ *     la classe ".sl-visually-hidden" (già definita in css/base/global.css
+ *     proprio per questo caso d'uso — "label di icon-button"). Prima di
+ *     questa aggiunta, un Input senza prop "label" nascondeva la label
+ *     con l'attributo "hidden" (rimosso anche dall'albero di
+ *     accessibilità) senza alcun fallback aria-label sul campo: un
+ *     'buco' di accessibilità mai emerso finora perché ogni Input
+ *     costruito finché label sempre passata visibile. hideLabel risolve
+ *     il caso corretto (serve un nome accessibile ma non uno spazio
+ *     visivo) senza introdurre un secondo canale (aria-label diretto sul
+ *     campo) da tenere sincronizzato con "label": si continua a passare
+ *     SEMPRE "label", e si decide solo se mostrarla.
+ *
  * Interfaccia: create(props) → { element, update(props), destroy() }
  */
 
 import { createElement } from "../utils/dom.js";
 
-const TYPES = ["text", "email", "password"];
+const TYPES = ["text", "email", "password", "search"];
 
 let idCounter = 0;
 function generateId() {
@@ -44,10 +63,15 @@ function resolveType(type) {
 }
 
 function render(refs, props) {
-  const { label, type, placeholder, error, helperText, disabled, required, name } = props;
+  const { label, type, placeholder, error, helperText, disabled, required, name, hideLabel } = props;
 
   refs.labelEl.textContent = label ? `${label}${required ? " *" : ""}` : "";
+  // "hidden" solo se manca del tutto il testo (nessun nome accessibile
+  // possibile). Se il testo c'è ma hideLabel è true, la label resta nel
+  // DOM/accessibility tree e viene nascosta solo visivamente (vedi
+  // commento in testa al file).
   refs.labelEl.hidden = !label;
+  refs.labelEl.classList.toggle("sl-visually-hidden", Boolean(label) && Boolean(hideLabel));
 
   refs.field.type = resolveType(type);
   refs.field.placeholder = placeholder || "";
