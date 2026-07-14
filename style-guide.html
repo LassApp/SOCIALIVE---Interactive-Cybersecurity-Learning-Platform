@@ -53,6 +53,7 @@
   <link rel="stylesheet" href="css/components/theme-switch.css" />
   <link rel="stylesheet" href="css/components/input.css" />
   <link rel="stylesheet" href="css/components/modal.css" />
+  <link rel="stylesheet" href="css/components/app-header.css" />
 
   <!--
     Stili SOTTO qui usano il prefisso "sg-" (Style Guide), non "sl-":
@@ -215,6 +216,25 @@
       gap: var(--sl-space-5);
       margin-bottom: var(--sl-space-4);
     }
+    /* Riquadro con scroll proprio: contiene lo "sticky" di AppHeader
+       dentro un'area limitata, cosi' il test dello scroll non fa
+       scomparire la toolbar della pagina di QA sotto l'header reale. */
+    .sg-header-demo-frame {
+      height: 220px;
+      overflow-y: auto;
+      border: 1px solid var(--sl-color-border-subtle);
+      border-radius: var(--sl-radius-md);
+      margin-bottom: var(--sl-space-4);
+    }
+    .sg-header-demo-filler {
+      padding: var(--sl-space-5);
+      color: var(--sl-color-text-secondary);
+      font-size: var(--sl-font-size-sm);
+      line-height: var(--sl-line-height-relaxed);
+    }
+    .sg-header-demo-filler p + p {
+      margin-top: var(--sl-space-3);
+    }
   </style>
 </head>
 <body>
@@ -355,6 +375,24 @@
         Apri un modale per verificare focus trap, chiusura ESC/overlay e gli eventi sl:modal-close / sl:modal-confirm…
       </p>
     </section>
+
+    <section aria-labelledby="componenti-step5-heading">
+      <h2 id="componenti-step5-heading">Componenti (Fase 2 — Step 5)</h2>
+
+      <h3>AppHeader — branding, ricerca (Input riusato), trigger menu profilo. Riquadro con scroll interno: verifica che l'header resti "sticky" in cima durante lo scorrimento (ProfileMenu e Sidebar arriveranno nei prossimi step)</h3>
+      <div class="sg-header-demo-frame" id="app-header-frame">
+        <div id="app-header-mount"></div>
+        <div class="sg-header-demo-filler">
+          <p>Scorri qui dentro per verificare che AppHeader resti visibile in cima al riquadro (position: sticky), senza sovrapporsi alla toolbar della pagina di QA qui sopra.</p>
+          <p>Il trigger a destra (avatar) apre/chiude tramite l'evento sl:profile-menu-toggle: qui sotto trovi solo la conferma testuale dell'evento, il pannello ProfileMenu vero e proprio arriva nel prossimo step.</p>
+          <p>Il campo di ricerca al centro è il componente Input reale (type="search", label nascosta solo visivamente): scrivici per verificare l'evento sl:search.</p>
+          <p>Su schermi stretti (sotto 768px) la ricerca si nasconde: prova a restringere la finestra del browser.</p>
+        </div>
+      </div>
+      <p id="app-header-feedback" style="width:100%; color: var(--sl-color-text-secondary); font-size: var(--sl-font-size-sm);">
+        Scrivi nella ricerca o apri il trigger del profilo per verificare gli eventi sl:search / sl:profile-menu-toggle…
+      </p>
+    </section>
   </main>
 
   <script type="module">
@@ -366,6 +404,7 @@
     import { create as createThemeSwitch } from "./js/components/ThemeSwitch.js";
     import { create as createInput } from "./js/components/Input.js";
     import { create as createModal } from "./js/components/Modal.js";
+    import { create as createAppHeader } from "./js/components/AppHeader.js";
 
     initTheme();
 
@@ -564,6 +603,26 @@
     });
 
     modalTriggersRow.append(openDefaultModalBtn.element, openDialogBtn.element);
+
+    // --- Demo AppHeader ----------------------------------------------
+    // Utente demo con avatar reale (stessa data URI già usata per Avatar
+    // qui sopra) per verificare il trigger del menu profilo con un'immagine
+    // vera, non solo col fallback a iniziali.
+    const appHeaderMount = document.getElementById("app-header-mount");
+    const appHeaderFeedback = document.getElementById("app-header-feedback");
+
+    const appHeader = createAppHeader({
+      user: { name: "Prof. Anna Ferrari", avatarSrc: placeholderPhoto },
+    });
+
+    appHeader.element.addEventListener("sl:search", (event) => {
+      appHeaderFeedback.textContent = `Evento sl:search ricevuto — valore: "${event.detail.value}"`;
+    });
+    appHeader.element.addEventListener("sl:profile-menu-toggle", (event) => {
+      appHeaderFeedback.textContent = `Evento sl:profile-menu-toggle ricevuto — open: ${event.detail.open}`;
+    });
+
+    appHeaderMount.appendChild(appHeader.element);
   </script>
 </body>
 </html>
