@@ -1,0 +1,104 @@
+/**
+ * app-header.css
+ * -----------------------------------------------------------------------
+ * Layout a tre zone (brand / ricerca / azioni) via flexbox. Nessuna
+ * altezza fissa in px: l'altezza è determinata dal padding + dal
+ * contenuto (avatar 32px, campo di Input), così l'header resta leggibile
+ * anche con zoom testo del browser fino al 200% (WCAG 1.4.4) — stesso
+ * principio già seguito da typography.css, che usa rem invece di px
+ * proprio per questo.
+ *
+ * position: sticky (non fixed): l'header resta visibile durante lo
+ * scroll del feed senza dover riservare manualmente uno spazio vuoto in
+ * cima al contenuto sottostante (necessario invece con fixed).
+ *
+ * z-index: 10, ben sotto il layer delle modali (1000, cfr. modal.css):
+ * l'header non deve mai comparire sopra un modale aperto.
+ *
+ * Colori: NESSUN nuovo accostamento — solo token già verificati in altri
+ * contesti sullo stesso sfondo (bg-surface): border-subtle (separazione
+ * dal contenuto, stesso uso di Card), border-strong (bordo del campo di
+ * ricerca, ereditato invariato da input.css — non sovrascritto qui),
+ * text-secondary (placeholder, già verificato), primary-600 per il brand
+ * (già verificato 6.1:1 su bg-surface in theme-light.css/theme-dark.css
+ * per testo/link), bg-hover/bg-active per lo stato del trigger profilo
+ * (stesso uso già fatto da Button ghost/icon). Nessuno script di verifica
+ * contrasto necessario in questo step.
+ *
+ * Campo di ricerca: solo border-radius arrotondato a "pill", sfondo
+ * lasciato invariato (bg-surface, come l'header) — una variante con
+ * sfondo leggermente diverso (bg-canvas) è un possibile affinamento
+ * visivo futuro, rimandato perché introdurrebbe un nuovo accostamento di
+ * contrasto da verificare (border-strong/text-secondary su un nuovo
+ * sfondo) senza reale necessità funzionale in questo step.
+ *
+ * Ricerca nascosta sotto il breakpoint "md" (768px, cfr. architettura
+ * Fase 1 §5.6) per dare priorità a branding e trigger profilo sugli
+ * schermi stretti: una ricerca mobile dedicata (icona che apre una vista
+ * a schermo intero) è rimandata alla Fase 4 (Home), quando esisterà un
+ * vero page controller per orchestrarla.
+ */
+
+.sl-app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--sl-space-4);
+  padding: var(--sl-space-3) var(--sl-space-5);
+  background-color: var(--sl-color-bg-surface);
+  border-bottom: 1px solid var(--sl-color-border-subtle);
+}
+
+.sl-app-header__brand {
+  flex-shrink: 0;
+  font-size: var(--sl-font-size-lg);
+  font-weight: var(--sl-font-weight-bold);
+  color: var(--sl-color-primary-600);
+  white-space: nowrap;
+}
+
+.sl-app-header__search {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 480px;
+  margin-inline: auto;
+}
+
+.sl-app-header__search-field .sl-input__field {
+  border-radius: var(--sl-radius-full);
+}
+
+.sl-app-header__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--sl-space-2);
+}
+
+/* Bottone reset (eredita già cursor/background da reset.css): solo
+   dimensione e stato aggiunti qui. Padding space-2 (8px) attorno
+   all'avatar sm (32px) porta la superficie cliccabile a 48px — sopra la
+   soglia dei 44px raccomandata per i target di tocco (WCAG 2.5.5). */
+.sl-app-header__profile-trigger {
+  display: inline-flex;
+  padding: var(--sl-space-2);
+  border-radius: var(--sl-radius-full);
+  transition: background-color var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-app-header__profile-trigger:hover {
+  background-color: var(--sl-color-bg-hover);
+}
+
+.sl-app-header__profile-trigger:active,
+.sl-app-header__profile-trigger[aria-expanded="true"] {
+  background-color: var(--sl-color-bg-active);
+}
+
+@media (max-width: 767px) {
+  .sl-app-header__search {
+    display: none;
+  }
+}
