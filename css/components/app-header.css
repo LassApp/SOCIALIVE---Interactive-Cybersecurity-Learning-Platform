@@ -28,15 +28,19 @@
  * mai rilevato: il trigger restava comunque "visible", solo fuori
  * posizione).
  *
- * Colori: NESSUN nuovo accostamento — solo token già verificati in altri
- * contesti sullo stesso sfondo (bg-surface): border-subtle (separazione
- * dal contenuto, stesso uso di Card), border-strong (bordo del campo di
- * ricerca, ereditato invariato da input.css — non sovrascritto qui),
- * text-secondary (placeholder, già verificato), primary-600 per il brand
- * (già verificato 6.1:1 su bg-surface in theme-light.css/theme-dark.css
- * per testo/link), bg-hover/bg-active per lo stato del trigger profilo
- * (stesso uso già fatto da Button ghost/icon). Nessuno script di verifica
- * contrasto necessario in questo step.
+ * Colori: NESSUN nuovo accostamento non verificato — border-subtle
+ * (separazione dal contenuto, stesso uso di Card), border-strong (bordo
+ * del campo di ricerca, ereditato invariato da input.css), text-secondary
+ * (placeholder, già verificato), bg-hover/bg-active per lo stato del
+ * trigger profilo (stesso uso già fatto da Button ghost/icon). Il brand
+ * usa --sl-color-primary-text (NON --sl-color-primary-600): un bug è
+ * stato trovato in questo stesso step durante la verifica per Sidebar —
+ * primary-600 come colore di TESTO su sfondo scuro rende 2.78:1, ben
+ * sotto la soglia AA (il numero 6.13:1 documentato in theme-dark.css
+ * riguarda solo l'uso come riempimento di bottoni con testo bianco
+ * sopra, un pairing diverso). primary-text è il nuovo token dedicato al
+ * testo di brand, verificato 6.13:1 Light / 5.21:1 Dark — vedi commento
+ * in theme-dark.css per il dettaglio del bug e della correzione.
  *
  * Campo di ricerca: solo border-radius arrotondato a "pill", sfondo
  * lasciato invariato (bg-surface, come l'header) — una variante con
@@ -69,7 +73,7 @@
   flex-shrink: 0;
   font-size: var(--sl-font-size-lg);
   font-weight: var(--sl-font-weight-bold);
-  color: var(--sl-color-primary-600);
+  color: var(--sl-color-primary-text);
   white-space: nowrap;
 }
 
