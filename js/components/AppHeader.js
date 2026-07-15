@@ -65,7 +65,12 @@
  *
  * Eventi emessi (su element, bubbling):
  *   - sl:search               detail: { value }
- *   - sl:profile-menu-toggle  detail: { open }
+ *   - sl:profile-menu-toggle  detail: { open, anchorElement }
+ *     (anchorElement = il nodo <button> del trigger, incluso per
+ *     permettere a ProfileMenu — Fase 2/Step 5, prossima consegna — di
+ *     posizionarsi vicino al trigger senza dover conoscere le classi CSS
+ *     interne di AppHeader; AppHeader resta comunque ignaro dell'esistenza
+ *     di ProfileMenu)
  */
 
 import { createElement } from "../utils/dom.js";
@@ -132,7 +137,7 @@ export function create(props = {}) {
     element.dispatchEvent(
       new CustomEvent("sl:profile-menu-toggle", {
         bubbles: true,
-        detail: { open: state.profileMenuOpen },
+        detail: { open: state.profileMenuOpen, anchorElement: trigger },
       })
     );
   }
