@@ -42,6 +42,14 @@
   --sl-color-primary-500: var(--sl-palette-primary-500);
   --sl-color-primary-600: var(--sl-palette-primary-600);
 
+  /* Colore di brand per TESTO (wordmark, link): distinto da primary-600.
+     In Light coincidono (6.13:1, vedi sopra), ma NON vanno confusi come
+     interscambiabili — in Dark theme-dark.css li separa (bug trovato e
+     corretto in Fase 2 / Step 5, vedi commento lì). Introdotto qui per
+     coerenza di significato tra i due file tema, anche se in Light il
+     valore è lo stesso di primary-600. */
+  --sl-color-primary-text: var(--sl-color-primary-600);
+
   /* Stati semantici */
   --sl-color-success-500: var(--sl-palette-success-500);
   --sl-color-success-bg-subtle: var(--sl-palette-success-50);
