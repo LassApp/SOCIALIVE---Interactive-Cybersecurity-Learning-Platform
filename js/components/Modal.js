@@ -56,9 +56,7 @@
 
 import { createElement } from "../utils/dom.js";
 import { create as createButton } from "./Button.js";
-
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+import { getFocusableElements, trapTabKey } from "../utils/focusTrap.js";
 
 let idCounter = 0;
 function generateId(prefix) {
@@ -87,10 +85,6 @@ function normalizeContent(content) {
   if (content instanceof Node) return [content];
   if (Array.isArray(content)) return content.filter((node) => node instanceof Node);
   return [];
-}
-
-function getFocusable(container) {
-  return Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR));
 }
 
 export function create(props = {}) {
@@ -169,7 +163,7 @@ export function create(props = {}) {
   const initialFocusTarget =
     variant === "dialog"
       ? cancelButton.element
-      : getFocusable(body)[0] || getFocusable(panel)[0] || panel;
+      : getFocusableElements(body)[0] || getFocusableElements(panel)[0] || panel;
   initialFocusTarget.focus();
 
   function handleOverlayClick(event) {
@@ -196,20 +190,7 @@ export function create(props = {}) {
       return;
     }
     if (event.key === "Tab") {
-      const focusable = getFocusable(panel);
-      if (focusable.length === 0) {
-        event.preventDefault();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
+      trapTabKey(event, panel);
     }
   }
 
