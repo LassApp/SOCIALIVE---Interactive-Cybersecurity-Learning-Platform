@@ -1,0 +1,85 @@
+/**
+ * profile-menu.css
+ * -----------------------------------------------------------------------
+ * position: fixed statico qui; le coordinate top/right sono calcolate
+ * dinamicamente in JS (ProfileMenu.js) in base alla posizione del trigger
+ * — separazione di responsabilità: il CSS possiede la strategia di
+ * posizionamento, il JS possiede solo i numeri che cambiano ad ogni
+ * apertura.
+ *
+ * Sfondo bg-elevated + shadow-2: bg-elevated è il token riservato a
+ * "sfondo modali/dropdown" (§5.1 architettura Fase 1), shadow-2 è
+ * l'elevazione già documentata in shadows.css per "dropdown/menu" — non
+ * scelte nuove, sono esattamente i token già pianificati per questo caso
+ * d'uso. Contrasto testo su bg-elevated verificato numericamente in
+ * questo step (bg-elevated differisce da bg-surface in Dark): vedi
+ * commento in testa a ProfileMenu.js per i valori.
+ *
+ * z-index: 900 — sopra l'header (10) ma sotto le modali (1000, cfr.
+ * modal.css): se in futuro un Modal venisse aperto con il ProfileMenu
+ * ancora montato (flusso non previsto oggi), il Modal deve comunque
+ * vincere.
+ *
+ * Larghezza fissa in px (260px): decisione di sizing del componente, non
+ * spaziatura tra elementi — stesso criterio già usato in avatar.css /
+ * theme-switch.css.
+ */
+
+.sl-profile-menu {
+  position: fixed;
+  z-index: 900;
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  padding: var(--sl-space-2) 0;
+  background-color: var(--sl-color-bg-elevated);
+  border-radius: var(--sl-radius-lg);
+  box-shadow: var(--sl-shadow-2);
+}
+
+.sl-profile-menu__header {
+  display: flex;
+  align-items: center;
+  gap: var(--sl-space-3);
+  padding: var(--sl-space-2) var(--sl-space-4) var(--sl-space-3);
+}
+
+.sl-profile-menu__user-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-profile-menu__section {
+  padding: var(--sl-space-2) var(--sl-space-4);
+}
+
+.sl-profile-menu__divider {
+  height: 1px;
+  margin: var(--sl-space-2) 0;
+  background-color: var(--sl-color-border-subtle);
+}
+
+.sl-profile-menu__item {
+  width: 100%;
+  padding: var(--sl-space-3) var(--sl-space-4);
+  text-align: left;
+  font-size: var(--sl-font-size-sm);
+  color: var(--sl-color-text-primary);
+  transition: background-color var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-profile-menu__item:hover {
+  background-color: var(--sl-color-bg-hover);
+}
+
+.sl-profile-menu__item:active {
+  background-color: var(--sl-color-bg-active);
+}
+
+.sl-profile-menu__item--danger {
+  color: var(--sl-color-error-text);
+}
