@@ -12,7 +12,7 @@ Piattaforma didattica per la formazione in Cybersecurity Awareness, ad uso esclu
   - Step 4 — componente `Modal` (incl. variante `dialog` per conferma/annulla).
   - Step 5 — navigazione e profilo (in corso):
     - ✅ `AppHeader` (branding, ricerca, trigger menu profilo)
-    - ⏳ `ProfileMenu` (dropdown con `ThemeSwitch` incluso)
+    - ✅ `ProfileMenu` (dropdown con `ThemeSwitch`, Impostazioni, Esci)
     - ⏳ `Sidebar`
 - ⏳ Fase 3 — Autenticazione · Fase 4 — Home · Fase 5 — Sistema Scenari · Fase 6 — Scenario Oversharing · Fase 7 — Post e Media Viewer · Fase 8 — Dati (JSON) · Fase 9 — Rifinitura UX · Fase 10 — Audit finale.
 
