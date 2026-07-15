@@ -1,0 +1,103 @@
+/**
+ * sidebar.css
+ * -----------------------------------------------------------------------
+ * Larghezza fissa in px (240px): decisione di sizing del componente, non
+ * spaziatura tra elementi — stesso criterio già usato in avatar.css /
+ * theme-switch.css / profile-menu.css.
+ *
+ * NESSUNA posizione di pagina qui (niente sticky/fixed/grid-column): è
+ * una decisione di layout di pagina, non del componente — vedi
+ * rationale in testa a Sidebar.js. Questo file definisce solo l'aspetto
+ * intrinseco (colonna verticale, padding, stato dei link).
+ *
+ * Sfondo bg-surface + border-right border-subtle: stesso trattamento già
+ * usato da AppHeader per separarsi dal contenuto (bg-surface/
+ * border-subtle già verificati altrove sullo stesso sfondo, nessun nuovo
+ * accostamento).
+ *
+ * Stato attivo — SOLO token già verificati, NESSUN nuovo colore di testo:
+ *   - testo: --sl-color-text-primary (mai un colore di brand come testo
+ *     pieno — vedi il bug trovato in questo step su AppHeader/brand,
+ *     corretto con --sl-color-primary-text; qui lo si evita del tutto
+ *     scegliendo semplicemente di non colorare il testo della voce
+ *     attiva, solo di appesantirlo con font-weight)
+ *   - sfondo: --sl-color-bg-active, PERSISTENTE (non solo su :hover) per
+ *     segnalare "sei qui" — overlay già verificato/usato altrove (Button,
+ *     trigger di AppHeader), qui applicato in modo permanente invece che
+ *     solo sull'interazione
+ *   - barra decorativa sinistra: --sl-color-primary-500, soglia 3:1 (non
+ *     4.5:1, essendo un elemento grafico non testuale — WCAG 1.4.11), già
+ *     documentato come "uso decorativo/icone/controlli UI" nei file tema.
+ *     Verificato numericamente anche nel caso combinato con lo sfondo
+ *     bg-active: 3.68:1 Light / 3.92:1 Dark — oltre la soglia 3:1 in
+ *     entrambi i casi (Fase 2 / Step 5).
+ *
+ * Voci disabilitate: solo opacità ridotta, stessa ricetta già usata da
+ * Button/Input per lo stato disabled (coerenza visiva nel Design System).
+ * Non serve verificare un nuovo contrasto: l'opacità riduce la leggibilità
+ * intenzionalmente (comunica "non disponibile"), non deve superare AA.
+ */
+
+.sl-sidebar {
+  width: 240px;
+  padding: var(--sl-space-3);
+  background-color: var(--sl-color-bg-surface);
+  border-right: 1px solid var(--sl-color-border-subtle);
+}
+
+.sl-sidebar__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-1);
+}
+
+.sl-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: var(--sl-space-3);
+  padding: var(--sl-space-3) var(--sl-space-4);
+  border-radius: var(--sl-radius-full);
+  border-left: 3px solid transparent;
+  font-size: var(--sl-font-size-sm);
+  font-weight: var(--sl-font-weight-medium);
+  color: var(--sl-color-text-primary);
+  transition: background-color var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-sidebar__icon {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.sl-sidebar__icon svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.sl-sidebar__link:hover {
+  background-color: var(--sl-color-bg-hover);
+}
+
+.sl-sidebar__link:active {
+  background-color: var(--sl-color-bg-active);
+}
+
+.sl-sidebar__link--active {
+  background-color: var(--sl-color-bg-active);
+  border-left-color: var(--sl-color-primary-500);
+  font-weight: var(--sl-font-weight-semibold);
+}
+
+.sl-sidebar__link--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 767px) {
+  .sl-sidebar {
+    display: none;
+  }
+}
