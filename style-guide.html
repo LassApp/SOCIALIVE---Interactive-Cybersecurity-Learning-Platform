@@ -54,6 +54,7 @@
   <link rel="stylesheet" href="css/components/input.css" />
   <link rel="stylesheet" href="css/components/modal.css" />
   <link rel="stylesheet" href="css/components/app-header.css" />
+  <link rel="stylesheet" href="css/components/profile-menu.css" />
 
   <!--
     Stili SOTTO qui usano il prefisso "sg-" (Style Guide), non "sl-":
@@ -379,12 +380,12 @@
     <section aria-labelledby="componenti-step5-heading">
       <h2 id="componenti-step5-heading">Componenti (Fase 2 — Step 5)</h2>
 
-      <h3>AppHeader — branding, ricerca (Input riusato), trigger menu profilo. Riquadro con scroll interno: verifica che l'header resti "sticky" in cima durante lo scorrimento (ProfileMenu e Sidebar arriveranno nei prossimi step)</h3>
+      <h3>AppHeader — branding, ricerca (Input riusato), trigger menu profilo. Riquadro con scroll interno: verifica che l'header resti "sticky" in cima durante lo scorrimento (Sidebar arriverà nel prossimo step)</h3>
       <div class="sg-header-demo-frame" id="app-header-frame">
         <div id="app-header-mount"></div>
         <div class="sg-header-demo-filler">
           <p>Scorri qui dentro per verificare che AppHeader resti visibile in cima al riquadro (position: sticky), senza sovrapporsi alla toolbar della pagina di QA qui sopra.</p>
-          <p>Il trigger a destra (avatar) apre/chiude tramite l'evento sl:profile-menu-toggle: qui sotto trovi solo la conferma testuale dell'evento, il pannello ProfileMenu vero e proprio arriva nel prossimo step.</p>
+          <p>Il trigger a destra (avatar) apre/chiude il pannello <code>ProfileMenu</code> reale: riepilogo utente, toggle tema, "Impostazioni" ed "Esci". Chiudilo con ESC, cliccando fuori, o scegliendo un'azione.</p>
           <p>Il campo di ricerca al centro è il componente Input reale (type="search", label nascosta solo visivamente): scrivici per verificare l'evento sl:search.</p>
           <p>Su schermi stretti (sotto 768px) la ricerca si nasconde: prova a restringere la finestra del browser.</p>
         </div>
@@ -405,6 +406,7 @@
     import { create as createInput } from "./js/components/Input.js";
     import { create as createModal } from "./js/components/Modal.js";
     import { create as createAppHeader } from "./js/components/AppHeader.js";
+    import { create as createProfileMenu } from "./js/components/ProfileMenu.js";
 
     initTheme();
 
@@ -618,8 +620,47 @@
     appHeader.element.addEventListener("sl:search", (event) => {
       appHeaderFeedback.textContent = `Evento sl:search ricevuto — valore: "${event.detail.value}"`;
     });
+
+    // Orchestrazione AppHeader <-> ProfileMenu: non esiste ancora un page
+    // controller (Fase 4), quindi questa logica di "chi apre/chiude cosa"
+    // vive temporaneamente qui, esattamente come già i trigger di Modal
+    // qui sopra. Quando esisterà un vero page controller, questo blocco
+    // si sposterà lì senza toccare AppHeader.js/ProfileMenu.js (nessuno
+    // dei due componenti conosce l'altro).
+    let profileMenu = null;
+
+    function closeProfileMenu() {
+      if (!profileMenu) return;
+      profileMenu.destroy();
+      profileMenu = null;
+    }
+
     appHeader.element.addEventListener("sl:profile-menu-toggle", (event) => {
       appHeaderFeedback.textContent = `Evento sl:profile-menu-toggle ricevuto — open: ${event.detail.open}`;
+
+      if (!event.detail.open) {
+        closeProfileMenu();
+        return;
+      }
+
+      profileMenu = createProfileMenu({
+        user: { name: "Prof. Anna Ferrari", avatarSrc: placeholderPhoto },
+        anchorElement: event.detail.anchorElement,
+      });
+
+      // ProfileMenu può chiudersi da sé (ESC, click fuori, azione scelta):
+      // in quel caso risincronizza aria-expanded su AppHeader senza
+      // simulare un secondo click sul trigger.
+      profileMenu.element.addEventListener("sl:profile-menu-close", () => {
+        appHeader.update({ profileMenuOpen: false });
+        profileMenu = null;
+      });
+      profileMenu.element.addEventListener("sl:settings-click", () => {
+        appHeaderFeedback.textContent = "Evento sl:settings-click ricevuto (nessuna pagina impostazioni ancora — Fase 4)";
+      });
+      profileMenu.element.addEventListener("sl:logout", () => {
+        appHeaderFeedback.textContent = "Evento sl:logout ricevuto (nessun authService ancora — Fase 3)";
+      });
     });
 
     appHeaderMount.appendChild(appHeader.element);
