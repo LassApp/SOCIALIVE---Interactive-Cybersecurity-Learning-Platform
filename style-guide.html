@@ -55,6 +55,7 @@
   <link rel="stylesheet" href="css/components/modal.css" />
   <link rel="stylesheet" href="css/components/app-header.css" />
   <link rel="stylesheet" href="css/components/profile-menu.css" />
+  <link rel="stylesheet" href="css/components/sidebar.css" />
 
   <!--
     Stili SOTTO qui usano il prefisso "sg-" (Style Guide), non "sl-":
@@ -380,7 +381,7 @@
     <section aria-labelledby="componenti-step5-heading">
       <h2 id="componenti-step5-heading">Componenti (Fase 2 — Step 5)</h2>
 
-      <h3>AppHeader — branding, ricerca (Input riusato), trigger menu profilo. Riquadro con scroll interno: verifica che l'header resti "sticky" in cima durante lo scorrimento (Sidebar arriverà nel prossimo step)</h3>
+      <h3>AppHeader — branding, ricerca (Input riusato), trigger menu profilo. Riquadro con scroll interno: verifica che l'header resti "sticky" in cima durante lo scorrimento</h3>
       <div class="sg-header-demo-frame" id="app-header-frame">
         <div id="app-header-mount"></div>
         <div class="sg-header-demo-filler">
@@ -392,6 +393,12 @@
       </div>
       <p id="app-header-feedback" style="width:100%; color: var(--sl-color-text-secondary); font-size: var(--sl-font-size-sm);">
         Scrivi nella ricerca o apri il trigger del profilo per verificare gli eventi sl:search / sl:profile-menu-toggle…
+      </p>
+
+      <h3>Sidebar — navigazione principale, voce attiva, voce disabilitata (modulo non ancora implementato)</h3>
+      <div class="sg-row sg-row--stretch" id="sidebar-mount"></div>
+      <p id="sidebar-feedback" style="width:100%; color: var(--sl-color-text-secondary); font-size: var(--sl-font-size-sm);">
+        Clicca una voce per verificare l'evento sl:navigate (la voce "in arrivo" è disabilitata: nessun evento, non raggiungibile con Tab)…
       </p>
     </section>
   </main>
@@ -407,6 +414,7 @@
     import { create as createModal } from "./js/components/Modal.js";
     import { create as createAppHeader } from "./js/components/AppHeader.js";
     import { create as createProfileMenu } from "./js/components/ProfileMenu.js";
+    import { create as createSidebar } from "./js/components/Sidebar.js";
 
     initTheme();
 
@@ -664,6 +672,29 @@
     });
 
     appHeaderMount.appendChild(appHeader.element);
+
+    // --- Demo Sidebar ---------------------------------------------------
+    const sidebarMount = document.getElementById("sidebar-mount");
+    const sidebarFeedback = document.getElementById("sidebar-feedback");
+
+    const sidebar = createSidebar({
+      items: [
+        { id: "home", label: "Home", route: "#/home" },
+        { id: "modules", label: "Moduli", route: "#/modules" },
+        { id: "settings", label: "Impostazioni", route: "#/settings" },
+        { id: "coming-soon", label: "Nuovo scenario (in arrivo)", disabled: true },
+      ],
+      activeId: "home",
+    });
+
+    sidebar.element.addEventListener("sl:navigate", (event) => {
+      sidebarFeedback.textContent = `Evento sl:navigate ricevuto — id: "${event.detail.id}", route: "${event.detail.route}"`;
+      // Un vero page controller aggiornerebbe activeId dopo la navigazione
+      // effettiva (Fase 4); qui, per QA, lo si simula subito.
+      sidebar.update({ activeId: event.detail.id });
+    });
+
+    sidebarMount.appendChild(sidebar.element);
   </script>
 </body>
 </html>
