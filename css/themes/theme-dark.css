@@ -49,6 +49,27 @@
   --sl-color-primary-500: var(--sl-palette-primary-400);
   --sl-color-primary-600: var(--sl-palette-primary-600);
 
+  /* BUG TROVATO E CORRETTO in Fase 2 / Step 5, durante la verifica
+     numerica per lo stato "attivo" di Sidebar: il commento originario di
+     questo file diceva che primary-600 "resta identico al Light" ed è
+     sicuro per bottoni pieni con testo bianco (6.13:1) — VERO, ma questo
+     NON implica che primary-600 sia leggibile come TESTO PIENO su sfondo
+     scuro (un uso diverso: colore-di-sfondo-con-testo-bianco-sopra contro
+     colore-di-testo-su-sfondo-scuro sono due pairing distinti anche
+     quando il valore esadecimale è identico). Verificato numericamente:
+     primary-600 come testo su bg-surface Dark è 2.78:1 — ben sotto la
+     soglia AA 4.5:1, e sotto perfino la soglia 3:1 per elementi non
+     testuali. L'errore si era già insinuato nel brand mark di AppHeader
+     (app-header.css), corretto in questo stesso step.
+     Fix: nuovo token --sl-color-primary-text, distinto da primary-600,
+     che punta a primary-500 in Dark (qui = primitivo -400, già
+     verificato 5.21:1 per uso "decorativo/icona" — il margine è in
+     realtà ampio abbastanza da coprire anche il testo pieno, soglia
+     4.5:1). primary-600 resta riservato SOLO ai riempimenti solidi con
+     testo bianco sopra (Button, Avatar fallback, thumb ThemeSwitch):
+     mai più usato come colore di testo diretto su sfondo. */
+  --sl-color-primary-text: var(--sl-color-primary-500);
+
   /* Stati semantici */
   --sl-color-success-500: var(--sl-palette-success-500);
   --sl-color-success-bg-subtle: var(--sl-palette-success-900);
