@@ -1,0 +1,43 @@
+/**
+ * feed.css
+ * -----------------------------------------------------------------------
+ * .sl-feed__list è una <ul>: list-style e padding sono già azzerati
+ * globalmente da reset.css per ogni ul/ol del progetto, nessuna
+ * ridichiarazione necessaria qui.
+ *
+ * .sl-feed__sentinel: 1px di altezza, invisibile ma presente nel layout
+ * (display:none non andrebbe bene: un elemento non renderizzato non può
+ * mai intersecare il viewport, l'IntersectionObserver non lo vedrebbe
+ * mai). aria-hidden già impostato in Feed.js.
+ *
+ * Header del post "scheletro": stesso gap/allineamento già usato per
+ * l'header reale di PostCard (post-card.css, .sl-post-card__header) —
+ * nessun nuovo valore inventato, il placeholder deve occupare lo stesso
+ * spazio del contenuto reale che sostituisce temporaneamente, altrimenti
+ * il passaggio "skeleton → post vero" produrrebbe un salto di layout
+ * percepibile (cumulative layout shift).
+ */
+
+.sl-feed__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-5);
+}
+
+.sl-feed__sentinel {
+  height: 1px;
+}
+
+.sl-feed__skeleton-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sl-space-3);
+  margin-bottom: var(--sl-space-3);
+}
+
+.sl-feed__skeleton-header-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--sl-space-2);
+}
