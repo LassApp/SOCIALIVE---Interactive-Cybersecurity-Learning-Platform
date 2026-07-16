@@ -1,0 +1,128 @@
+/**
+ * post-card.css
+ * -----------------------------------------------------------------------
+ * Sovrascrive/estende .sl-card (già stilata in card.css: sfondo, bordo,
+ * radius, ombra, padding) SOLO con ciò che serve a un post: layout
+ * verticale a tre blocchi (header/corpo/azioni) e le regole specifiche
+ * di PostCard. Nessuna proprietà di card.css viene duplicata qui.
+ *
+ * Selettori a doppia classe (es. ".sl-button.sl-post-card__action")
+ * usati deliberatamente per battere in specificità le regole di
+ * button.css senza dipendere dall'ordine di caricamento dei file nel
+ * <head> — stesso principio di "non affidarsi alla cascata" già
+ * applicato altrove nel progetto per gli override mirati.
+ */
+
+.sl-post-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-3);
+}
+
+/* --- Header: avatar + nome/orario ------------------------------------ */
+
+.sl-post-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--sl-space-3);
+}
+
+.sl-post-card__header-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sl-post-card__author {
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sl-post-card__timestamp {
+  font-size: var(--sl-font-size-xs);
+  color: var(--sl-color-text-secondary);
+}
+
+/* --- Corpo: testo + immagine ------------------------------------------ */
+
+.sl-post-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-3);
+}
+
+.sl-post-card__content {
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-md);
+  line-height: var(--sl-line-height-relaxed);
+  /* Testo selezionabile normalmente: NON è il trigger di sl:post-open
+     (vedi rationale in PostCard.js) — nessuna regola cursor/interattiva
+     qui, di proposito. */
+  white-space: pre-line;
+}
+
+/* Immagine "full-bleed": margine orizzontale negativo pari al padding
+   di .sl-card (--sl-space-5, cfr. card.css) per raggiungere i due bordi
+   della card. MAI a contatto con gli angoli arrotondati (header/azioni
+   la separano sempre in verticale), quindi nessun overflow:hidden
+   necessario per correggere i corner radius — vedi rationale completo
+   in PostCard.js. Accoppiamento noto con --sl-space-5: se il padding di
+   Card cambiasse, aggiornare anche qui (stesso valore, non un alias
+   dedicato, per non introdurre un token a uso singolo). */
+.sl-post-card__media {
+  display: block;
+  width: calc(100% + var(--sl-space-5) * 2);
+  margin-inline: calc(var(--sl-space-5) * -1);
+  transition: filter var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+/* Bug reale trovato in Playwright (Fase 2 / Step 6): l'attributo nativo
+   [hidden] da solo non basta più una volta che una regola d'autore
+   imposta "display" sulla stessa classe — una dichiarazione d'autore
+   vince SEMPRE sullo stile UA di default, a prescindere dalla
+   specificità. Va ridichiarato esplicitamente qui, con selettore più
+   specifico (classe + attributo) di quello sopra. */
+.sl-post-card__media[hidden] {
+  display: none;
+}
+
+.sl-post-card__media:hover,
+.sl-post-card__media:focus-visible {
+  filter: brightness(0.94);
+}
+
+.sl-post-card__media-image {
+  width: 100%;
+  max-height: 520px;
+  object-fit: cover;
+}
+
+/* --- Azioni: like / commenta / condividi ------------------------------ */
+
+.sl-post-card__actions {
+  display: flex;
+  gap: var(--sl-space-2);
+  padding-top: var(--sl-space-3);
+  border-top: 1px solid var(--sl-color-border-subtle);
+}
+
+/* Ghost di Button di default usa --sl-color-text-primary (adatto a un
+   bottone "importante"); qui le azioni sono un rinforzo secondario del
+   post, non l'elemento primario di attenzione — text-secondary, già
+   verificato ovunque su bg-surface, nessuna nuova coppia introdotta. */
+.sl-button.sl-post-card__action {
+  flex: 1;
+  color: var(--sl-color-text-secondary);
+}
+
+/* Stato "mi piace" attivo: error-text, già verificato DIRETTAMENTE su
+   bg-surface (8.17:1 Light / 8.55:1 Dark — input.css), qui riusato
+   invariato. Tinge sia l'icona (currentColor) sia il contatore (eredita
+   color): entrambi restano sopra la soglia testo 4.5:1, non solo 3:1 —
+   vedi rationale in PostCard.js sul perché NON si usa error-500. */
+.sl-button.sl-post-card__action--liked {
+  color: var(--sl-color-error-text);
+}
