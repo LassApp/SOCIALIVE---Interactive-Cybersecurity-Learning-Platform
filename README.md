@@ -14,6 +14,9 @@ Piattaforma didattica per la formazione in Cybersecurity Awareness, ad uso esclu
     - ✅ `AppHeader` (branding, ricerca, trigger menu profilo)
     - ✅ `ProfileMenu` (dropdown con `ThemeSwitch`, Impostazioni, Esci)
     - ✅ `Sidebar` (navigazione principale, voce attiva, voce disabilitata)
+  - Step 6 — `PostCard`:
+    - ✅ `PostCard` (compone `Card`/`Avatar`/`Button`; header, testo, immagine full-bleed opzionale, azioni Mi piace/Commenta/Condividi con icone inline)
+    - ⏳ `Feed` (orchestrazione di più `PostCard`, lazy-load) — prossimo step
 - ⏳ Fase 3 — Autenticazione · Fase 4 — Home · Fase 5 — Sistema Scenari · Fase 6 — Scenario Oversharing · Fase 7 — Post e Media Viewer · Fase 8 — Dati (JSON) · Fase 9 — Rifinitura UX · Fase 10 — Audit finale.
 
 ## Stack tecnologico
