@@ -56,6 +56,7 @@
   <link rel="stylesheet" href="css/components/app-header.css" />
   <link rel="stylesheet" href="css/components/profile-menu.css" />
   <link rel="stylesheet" href="css/components/sidebar.css" />
+  <link rel="stylesheet" href="css/components/post-card.css" />
 
   <!--
     Stili SOTTO qui usano il prefisso "sg-" (Style Guide), non "sl-":
@@ -237,6 +238,16 @@
     .sg-header-demo-filler p + p {
       margin-top: var(--sl-space-3);
     }
+    /* Larghezza realistica di una colonna feed (non l'intera pagina di
+       QA, larga 960px): un post reale non occupa mai l'intero schermo
+       desktop. */
+    .sg-feed-demo {
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: var(--sl-space-5);
+      margin-bottom: var(--sl-space-4);
+    }
   </style>
 </head>
 <body>
@@ -401,6 +412,16 @@
         Clicca una voce per verificare l'evento sl:navigate (la voce "in arrivo" è disabilitata: nessun evento, non raggiungibile con Tab)…
       </p>
     </section>
+
+    <section aria-labelledby="componenti-step6-heading">
+      <h2 id="componenti-step6-heading">Componenti (Fase 2 — Step 6)</h2>
+
+      <h3>PostCard — post con immagine, post solo testo, "mi piace" già attivo, autore senza avatar (fallback iniziali)</h3>
+      <div class="sg-feed-demo" id="post-card-mount"></div>
+      <p id="post-card-feedback" style="width:100%; color: var(--sl-color-text-secondary); font-size: var(--sl-font-size-sm);">
+        Clicca "Mi piace" (si aggiorna otticamente, il componente resta comunque controllato dall'esterno), l'immagine (evento sl:post-open), commenta o condividi per verificare gli eventi…
+      </p>
+    </section>
   </main>
 
   <script type="module">
@@ -415,6 +436,7 @@
     import { create as createAppHeader } from "./js/components/AppHeader.js";
     import { create as createProfileMenu } from "./js/components/ProfileMenu.js";
     import { create as createSidebar } from "./js/components/Sidebar.js";
+    import { create as createPostCard } from "./js/components/PostCard.js";
 
     initTheme();
 
@@ -695,6 +717,91 @@
     });
 
     sidebarMount.appendChild(sidebar.element);
+
+    // --- Demo PostCard --------------------------------------------------
+    // Immagine di post generata via data URI (stesso motivo già seguito
+    // per placeholderPhoto: nessuna dipendenza di rete, la pagina di QA
+    // deve funzionare anche offline).
+    const placeholderPostImage =
+      "data:image/svg+xml;utf8," +
+      encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320">' +
+          '<rect width="480" height="320" fill="#dce3ff"/>' +
+          '<circle cx="380" cy="70" r="36" fill="#f5cb6b"/>' +
+          '<polygon points="0,320 140,160 220,240 300,120 480,320" fill="#8fa3ff"/>' +
+          "</svg>"
+      );
+
+    // Dati statici solo per QA: in Fase 8 arriveranno da data/scenarios/
+    // .../posts.json tramite repository/adapter, non cambia nulla qui.
+    const demoPosts = [
+      {
+        id: "post-1",
+        author: { name: "Prof. Anna Ferrari", avatarSrc: placeholderPhoto },
+        timestamp: "2 h fa",
+        content:
+          "Oggi in laboratorio abbiamo parlato di quanto sia facile ricostruire le abitudini di una persona partendo solo dai post pubblici. Uno spunto interessante per la lezione di domani.",
+        image: {
+          src: placeholderPostImage,
+          alt: "Paesaggio stilizzato con montagne e sole, immagine segnaposto",
+        },
+        stats: { likes: 128, comments: 24, shares: 6 },
+        liked: false,
+      },
+      {
+        id: "post-2",
+        author: { name: "Prof. Anna Ferrari", avatarSrc: placeholderPhoto },
+        timestamp: "5 h fa",
+        content: "Promemoria per i colleghi: la prossima riunione dipartimentale è stata spostata a giovedì alle 15:00.",
+        stats: { likes: 342, comments: 12, shares: 3 },
+        liked: true, // verifica stato iniziale "già piaciuto"
+      },
+      {
+        id: "post-3",
+        author: { name: "Cybersecurity Awareness Team — Istituto Comprensivo" }, // niente avatarSrc: verifica fallback iniziali + troncamento nome lungo
+        timestamp: "1 giorno fa",
+        content:
+          "Un contenuto un po' più lungo per verificare che il testo vada a capo correttamente e che il nome autore, se troppo lungo, venga troncato con ellissi invece di rompere il layout dell'header.",
+        stats: { likes: 1560, comments: 0, shares: 0 }, // verifica formattazione migliaia (toLocaleString)
+        liked: false,
+      },
+    ];
+
+    const postCardMount = document.getElementById("post-card-mount");
+    const postCardFeedback = document.getElementById("post-card-feedback");
+
+    demoPosts.forEach((postData) => {
+      const postCard = createPostCard({ post: postData });
+
+      postCard.element.addEventListener("sl:post-open", (event) => {
+        postCardFeedback.textContent = `Evento sl:post-open ricevuto — postId: "${event.detail.postId}"`;
+      });
+
+      // Il componente è pienamente controllato (vedi PostCard.js): qui,
+      // nel "finto page controller" della style guide, si applica subito
+      // l'aggiornamento ottimistico via update() — esattamente il ruolo
+      // che spetterà al vero page controller in Fase 4.
+      postCard.element.addEventListener("sl:post-like", (event) => {
+        const { postId, liked } = event.detail;
+        const target = demoPosts.find((p) => p.id === postId);
+        if (target) {
+          target.liked = liked;
+          target.stats.likes += liked ? 1 : -1;
+          postCard.update({ post: target });
+        }
+        postCardFeedback.textContent = `Evento sl:post-like ricevuto — postId: "${postId}", liked: ${liked}`;
+      });
+
+      postCard.element.addEventListener("sl:post-comment", (event) => {
+        postCardFeedback.textContent = `Evento sl:post-comment ricevuto — postId: "${event.detail.postId}" (nessuna UI commenti ancora — Fase 7)`;
+      });
+
+      postCard.element.addEventListener("sl:post-share", (event) => {
+        postCardFeedback.textContent = `Evento sl:post-share ricevuto — postId: "${event.detail.postId}"`;
+      });
+
+      postCardMount.appendChild(postCard.element);
+    });
   </script>
 </body>
 </html>
