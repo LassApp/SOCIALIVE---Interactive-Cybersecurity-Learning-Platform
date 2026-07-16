@@ -57,6 +57,8 @@
   <link rel="stylesheet" href="css/components/profile-menu.css" />
   <link rel="stylesheet" href="css/components/sidebar.css" />
   <link rel="stylesheet" href="css/components/post-card.css" />
+  <link rel="stylesheet" href="css/components/skeleton.css" />
+  <link rel="stylesheet" href="css/components/feed.css" />
 
   <!--
     Stili SOTTO qui usano il prefisso "sg-" (Style Guide), non "sl-":
@@ -248,6 +250,18 @@
       gap: var(--sl-space-5);
       margin-bottom: var(--sl-space-4);
     }
+    /* Riquadro con scroll proprio per la demo di Feed: l'IntersectionObserver
+       ha bisogno di un root reale che possa effettivamente scorrere in
+       uno spazio contenuto — la pagina di QA intera (migliaia di px) non
+       si presterebbe a una demo pratica dell'infinite scroll. */
+    .sg-feed-scroll-frame {
+      max-width: 480px;
+      height: 520px;
+      overflow-y: auto;
+      border: 1px solid var(--sl-color-border-subtle);
+      border-radius: var(--sl-radius-md);
+      padding: var(--sl-space-4);
+    }
   </style>
 </head>
 <body>
@@ -422,6 +436,18 @@
         Clicca "Mi piace" (si aggiorna otticamente, il componente resta comunque controllato dall'esterno), l'immagine (evento sl:post-open), commenta o condividi per verificare gli eventi…
       </p>
     </section>
+
+    <section aria-labelledby="componenti-step7-heading">
+      <h2 id="componenti-step7-heading">Componenti (Fase 2 — Step 7)</h2>
+
+      <h3>Feed — orchestrazione di PostCard con lazy-load. Scorri fino in fondo al riquadro: dopo ~900ms (rete simulata) compaiono 2 nuovi post; dopo 3 caricamenti il feed segnala "fine contenuti" e l'osservatore smette di emettere eventi</h3>
+      <div class="sg-feed-scroll-frame" id="feed-scroll-frame">
+        <div id="feed-mount"></div>
+      </div>
+      <p id="feed-feedback" style="width:100%; color: var(--sl-color-text-secondary); font-size: var(--sl-font-size-sm);">
+        Scorri il riquadro qui sopra per verificare l'evento sl:feed-load-more e i placeholder Skeleton durante il caricamento…
+      </p>
+    </section>
   </main>
 
   <script type="module">
@@ -437,6 +463,7 @@
     import { create as createProfileMenu } from "./js/components/ProfileMenu.js";
     import { create as createSidebar } from "./js/components/Sidebar.js";
     import { create as createPostCard } from "./js/components/PostCard.js";
+    import { create as createFeed } from "./js/components/Feed.js";
 
     initTheme();
 
@@ -801,6 +828,72 @@
       });
 
       postCardMount.appendChild(postCard.element);
+    });
+
+    // --- Demo Feed --------------------------------------------------------
+    // Simula un backend con latenza reale (setTimeout ~900ms) che restituisce
+    // pagine di 2 post ciascuna, fino a un massimo di 3 pagine — dopo la
+    // terza, hasMore diventa false e l'observer smette di emettere eventi
+    // (comportamento verificabile scorrendo oltre la fine del feed).
+    const feedMount = document.getElementById("feed-mount");
+    const feedScrollFrame = document.getElementById("feed-scroll-frame");
+    const feedFeedback = document.getElementById("feed-feedback");
+
+    let feedPage = 0;
+    const MAX_FEED_PAGES = 3;
+
+    function buildFeedPost(index) {
+      return {
+        id: `feed-post-${index}`,
+        author: { name: "Prof. Anna Ferrari", avatarSrc: placeholderPhoto },
+        timestamp: `${index} giorni fa`,
+        content: `Post generato per la demo di Feed — numero ${index}. Utile per verificare scroll, riordino e caricamento incrementale.`,
+        stats: { likes: index * 12, comments: index, shares: 0 },
+        liked: false,
+      };
+    }
+
+    let feedPosts = [buildFeedPost(1), buildFeedPost(2), buildFeedPost(3)];
+
+    const feed = createFeed({
+      posts: feedPosts,
+      isLoading: false,
+      hasMore: true,
+      scrollContainer: feedScrollFrame,
+    });
+
+    feedMount.appendChild(feed.element);
+
+    feed.element.addEventListener("sl:feed-load-more", () => {
+      feedPage += 1;
+      feedFeedback.textContent = `Evento sl:feed-load-more ricevuto — caricamento pagina ${feedPage}…`;
+      feed.update({ isLoading: true });
+
+      setTimeout(() => {
+        const start = feedPosts.length + 1;
+        const newPosts = [buildFeedPost(start), buildFeedPost(start + 1)];
+        feedPosts = [...feedPosts, ...newPosts];
+        const hasMore = feedPage < MAX_FEED_PAGES;
+        feed.update({ posts: feedPosts, isLoading: false, hasMore });
+        feedFeedback.textContent = hasMore
+          ? `Pagina ${feedPage} caricata (${feedPosts.length} post totali) — scorri ancora per caricarne altri…`
+          : `Pagina ${feedPage} caricata (${feedPosts.length} post totali) — fine dei contenuti, nessun ulteriore sl:feed-load-more verrà emesso.`;
+      }, 900);
+    });
+
+    // Gli eventi di ciascun PostCard (sl:post-like, sl:post-open, ecc.)
+    // bollono naturalmente fino a Feed: un solo listener qui basta per
+    // TUTTI i post, presenti e futuri, senza doverlo riattaccare ad ogni
+    // nuovo post caricato (esattamente il vantaggio del bubbling già
+    // documentato in Feed.js).
+    feed.element.addEventListener("sl:post-like", (event) => {
+      const { postId, liked } = event.detail;
+      const target = feedPosts.find((p) => p.id === postId);
+      if (target) {
+        target.liked = liked;
+        target.stats.likes += liked ? 1 : -1;
+        feed.update({ posts: feedPosts });
+      }
     });
   </script>
 </body>
