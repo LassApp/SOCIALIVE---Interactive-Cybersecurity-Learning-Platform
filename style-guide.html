@@ -59,6 +59,8 @@
   <link rel="stylesheet" href="css/components/post-card.css" />
   <link rel="stylesheet" href="css/components/skeleton.css" />
   <link rel="stylesheet" href="css/components/feed.css" />
+  <link rel="stylesheet" href="css/components/loader.css" />
+  <link rel="stylesheet" href="css/components/login-form.css" />
 
   <!--
     Stili SOTTO qui usano il prefisso "sg-" (Style Guide), non "sl-":
@@ -262,6 +264,20 @@
       border-radius: var(--sl-radius-md);
       padding: var(--sl-space-4);
     }
+    /* Sfondo bg-canvas (non bg-surface, uguale alla card): la card deve
+       distinguersi visivamente dalla pagina sottostante, come in un vero
+       schermo di login — altrimenti nella style guide (che usa bg-canvas
+       come sfondo di pagina) la card sparirebbe nel contesto circostante
+       già identico. */
+    .sg-login-demo-frame {
+      display: flex;
+      justify-content: center;
+      padding: var(--sl-space-10) var(--sl-space-4);
+      background-color: var(--sl-color-bg-canvas);
+      border: 1px solid var(--sl-color-border-subtle);
+      border-radius: var(--sl-radius-md);
+      margin-bottom: var(--sl-space-4);
+    }
   </style>
 </head>
 <body>
@@ -448,6 +464,18 @@
         Scorri il riquadro qui sopra per verificare l'evento sl:feed-load-more e i placeholder Skeleton durante il caricamento…
       </p>
     </section>
+
+    <section aria-labelledby="componenti-step8-heading">
+      <h2 id="componenti-step8-heading">Componenti (Fase 2 — Step 8)</h2>
+
+      <h3>LoginForm — solo UI, nessuna autenticazione reale (Fase 3). Prova a inviare vuoto, con un'email non valida, poi con "docente@scuola.it" / "password123" (unica combinazione accettata da questa demo)</h3>
+      <div class="sg-login-demo-frame">
+        <div id="login-form-mount"></div>
+      </div>
+      <p id="login-form-feedback" style="width:100%; color: var(--sl-color-text-secondary); font-size: var(--sl-font-size-sm);">
+        Invia il form per verificare la validazione di formato e l'evento sl:login-submit…
+      </p>
+    </section>
   </main>
 
   <script type="module">
@@ -464,6 +492,7 @@
     import { create as createSidebar } from "./js/components/Sidebar.js";
     import { create as createPostCard } from "./js/components/PostCard.js";
     import { create as createFeed } from "./js/components/Feed.js";
+    import { create as createLoginForm } from "./js/components/LoginForm.js";
 
     initTheme();
 
@@ -895,6 +924,44 @@
         feed.update({ posts: feedPosts });
       }
     });
+
+    // --- Demo LoginForm -----------------------------------------------
+    // Backend simulato con latenza (~800ms): un'unica combinazione demo
+    // è accettata, per mostrare sia il percorso di successo sia quello di
+    // errore generale (props "error") senza un vero authService (Fase 3).
+    const loginFormMount = document.getElementById("login-form-mount");
+    const loginFormFeedback = document.getElementById("login-form-feedback");
+
+    const DEMO_EMAIL = "docente@scuola.it";
+    const DEMO_PASSWORD = "password123";
+
+    const loginForm = createLoginForm({
+      initialEmail: "",
+    });
+
+    loginForm.element.addEventListener("sl:login-submit", (event) => {
+      const { email, password } = event.detail;
+      loginFormFeedback.textContent = `Evento sl:login-submit ricevuto — email: "${email}". Verifica in corso…`;
+      loginForm.update({ isSubmitting: true, error: undefined });
+
+      setTimeout(() => {
+        const ok = email === DEMO_EMAIL && password === DEMO_PASSWORD;
+        loginForm.update({
+          isSubmitting: false,
+          error: ok ? undefined : "Credenziali non valide.",
+        });
+        loginFormFeedback.textContent = ok
+          ? `Accesso simulato riuscito per "${email}" (nessun redirect: routing/autenticazione reale sono Fase 3/4).`
+          : `Accesso simulato fallito per "${email}" — prova con "${DEMO_EMAIL}" / "${DEMO_PASSWORD}".`;
+      }, 800);
+    });
+
+    loginForm.element.addEventListener("sl:login-forgot-password", () => {
+      loginFormFeedback.textContent =
+        "Evento sl:login-forgot-password ricevuto (nessun flusso di recupero implementato — fuori scope di questo step).";
+    });
+
+    loginFormMount.appendChild(loginForm.element);
   </script>
 </body>
 </html>
