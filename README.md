@@ -5,7 +5,7 @@ Piattaforma didattica per la formazione in Cybersecurity Awareness, ad uso esclu
 ## Stato del progetto
 
 - ✅ **Fase 1 — Fondamenta**: architettura, convenzioni, piano dei componenti (solo documentazione).
-- 🔄 **Fase 2 — Design System e UI Core** (in corso):
+- ✅ **Fase 2 — Design System e UI Core** (completa):
   - Step 1 — token, temi Light/Dark, reset/global, `themeService`.
   - Step 2 — componenti `Button`, `Avatar`, `Badge`, `Card`.
   - Step 3 — componenti `ThemeSwitch`, `Input`.
@@ -19,8 +19,10 @@ Piattaforma didattica per la formazione in Cybersecurity Awareness, ad uso esclu
   - Step 7 — `Feed`:
     - ✅ `Skeleton` (placeholder generico: forme text/circle/block, componente pianificato in Fase 1 ora costruito perché realmente necessario a Feed)
     - ✅ `Feed` (orchestrazione di `PostCard` con riconciliazione per id, lazy-load via `IntersectionObserver`, placeholder Skeleton durante il caricamento, regione `aria-live` per l'annuncio a screen reader)
-- ⏳ Prossimo step di Fase 2: form di login (solo UI, senza authService) — poi Fase 2 completa e handover a 10 sezioni.
-- ⏳ Fase 3 — Autenticazione · Fase 4 — Home · Fase 5 — Sistema Scenari · Fase 6 — Scenario Oversharing · Fase 7 — Post e Media Viewer · Fase 8 — Dati (JSON) · Fase 9 — Rifinitura UX · Fase 10 — Audit finale.
+  - Step 8 — `LoginForm`:
+    - ✅ `Loader` (indicatore di attesa indeterminato, anello SVG rotante — componente pianificato in Fase 1 ora costruito perché realmente necessario al bottone di submit)
+    - ✅ `LoginForm` (solo UI: validazione di formato client-side, focus automatico sul primo campo non valido, stato di invio con `Loader`, nessuna autenticazione reale — quella è Fase 3)
+- ⏳ Fase 3 — Autenticazione (autenticazione reale, routing verso `#/login`/`#/home`) · Fase 4 — Home · Fase 5 — Sistema Scenari · Fase 6 — Scenario Oversharing · Fase 7 — Post e Media Viewer · Fase 8 — Dati (JSON) · Fase 9 — Rifinitura UX · Fase 10 — Audit finale.
 
 ## Stack tecnologico
 
@@ -48,9 +50,11 @@ socialive/
 │   ├── base/             # reset e baseline globale
 │   └── components/       # un file per componente
 └── js/
-    ├── utils/            # storage.js, dom.js
+    ├── utils/            # storage.js, dom.js, focusTrap.js
     ├── services/         # themeService.js
-    └── components/       # Button.js, Avatar.js, Badge.js, Card.js, PostCard.js, Feed.js, Skeleton.js, ...
+    └── components/       # Button.js, Avatar.js, Badge.js, Card.js, ThemeSwitch.js,
+                           # Input.js, Modal.js, AppHeader.js, ProfileMenu.js, Sidebar.js,
+                           # PostCard.js, Skeleton.js, Feed.js, Loader.js, LoginForm.js
 ```
 
 La struttura completa pianificata (comprese le cartelle non ancora popolate: `assets/`, `data/`, `js/core`, `js/pages`, ecc.) è descritta nel documento di architettura di Fase 1.
