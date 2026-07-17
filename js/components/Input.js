@@ -45,7 +45,22 @@
  *     campo) da tenere sincronizzato con "label": si continua a passare
  *     SEMPRE "label", e si decide solo se mostrarla.
  *
- * Interfaccia: create(props) → { element, update(props), destroy() }
+ * Aggiunte in Fase 2 / Step 8 (per LoginForm):
+ *   - prop "autocomplete": imposta l'attributo nativo omonimo (es.
+ *     "username", "current-password") — essenziale per una reale
+ *     integrazione con i password manager del browser, requisito di
+ *     realismo esplicito del progetto. Non elencata nel piano minimo
+ *     ma additiva: nessun consumer esistente la passava, quindi nessun
+ *     cambio di comportamento per Input già in uso altrove.
+ *   - metodo "focus()" nell'interfaccia restituita: delega al campo
+ *     nativo interno. Serve a LoginForm per spostare il focus sul primo
+ *     campo non valido dopo un tentativo di invio fallito (WCAG 3.3.1 —
+ *     l'errore deve essere raggiungibile, non solo visibile) — senza
+ *     che il consumer debba conoscere la struttura DOM interna di Input
+ *     (che resta incapsulata, coerente con l'incapsulamento "a
+ *     convenzione" già adottato in tutto il Design System).
+ *
+ * Interfaccia: create(props) → { element, update(props), destroy(), focus() }
  */
 
 import { createElement } from "../utils/dom.js";
@@ -63,7 +78,7 @@ function resolveType(type) {
 }
 
 function render(refs, props) {
-  const { label, type, placeholder, error, helperText, disabled, required, name, hideLabel } = props;
+  const { label, type, placeholder, error, helperText, disabled, required, name, hideLabel, autocomplete } = props;
 
   refs.labelEl.textContent = label ? `${label}${required ? " *" : ""}` : "";
   // "hidden" solo se manca del tutto il testo (nessun nome accessibile
@@ -79,6 +94,7 @@ function render(refs, props) {
   refs.field.required = Boolean(required);
   refs.field.setAttribute("aria-disabled", String(Boolean(disabled)));
   if (name) refs.field.name = name;
+  if (autocomplete) refs.field.autocomplete = autocomplete;
 
   const message = error || helperText;
   refs.helper.textContent = message || "";
@@ -147,5 +163,9 @@ export function create(props = {}) {
     element.remove();
   }
 
-  return { element, update, destroy };
+  function focus() {
+    field.focus();
+  }
+
+  return { element, update, destroy, focus };
 }
