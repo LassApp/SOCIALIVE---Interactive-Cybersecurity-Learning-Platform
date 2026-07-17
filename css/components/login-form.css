@@ -1,0 +1,78 @@
+/**
+ * login-form.css
+ * -----------------------------------------------------------------------
+ * NESSUN nuovo accostamento colore in questo file: error-bg-subtle +
+ * error-text è la stessa coppia "soft" già verificata e usata da Badge/
+ * ProfileMenu; primary-text è il token di brand già verificato (Fase 2/
+ * Step 5, app-header.css); text-secondary è già verificato ovunque su
+ * bg-surface. Riuso diretto, zero verifiche numeriche necessarie.
+ *
+ * Il componente non impone il centraggio a piena pagina (min-height:100vh
+ * ecc.): quella è una decisione di LAYOUT DI PAGINA, di competenza di un
+ * futuro page controller (Fase 3/4) — stesso principio già seguito da
+ * Sidebar per la propria posizione nella pagina. Qui si definisce solo
+ * l'aspetto intrinseco del blocco (brand + card + form).
+ */
+
+.sl-login-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 400px;
+}
+
+.sl-login-form__brand {
+  font-size: var(--sl-font-size-3xl);
+  font-weight: var(--sl-font-weight-bold);
+  color: var(--sl-color-primary-text);
+}
+
+.sl-login-form__tagline {
+  margin-top: var(--sl-space-1);
+  margin-bottom: var(--sl-space-6);
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-sm);
+}
+
+.sl-login-form__card {
+  width: 100%;
+}
+
+.sl-login-form__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-4);
+}
+
+.sl-login-form__error-banner {
+  padding: var(--sl-space-3);
+  border-radius: var(--sl-radius-md);
+  background-color: var(--sl-color-error-bg-subtle);
+  color: var(--sl-color-error-text);
+  font-size: var(--sl-font-size-sm);
+  font-weight: var(--sl-font-weight-medium);
+}
+
+/* Selettore a doppia classe per battere in specificità button.css senza
+   dipendere dall'ordine di caricamento — stesso principio già applicato
+   in post-card.css. */
+.sl-button.sl-login-form__submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: var(--sl-space-2);
+}
+
+.sl-login-form__forgot {
+  margin-top: var(--sl-space-1);
+  align-self: center;
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-sm);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-login-form__forgot:hover {
+  color: var(--sl-color-text-primary);
+}

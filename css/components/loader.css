@@ -1,0 +1,58 @@
+/**
+ * loader.css
+ * -----------------------------------------------------------------------
+ * currentColor ovunque: nessun colore proprio, eredita sempre dal
+ * contesto in cui è inserito (dentro un Button primary: text-inverse,
+ * già verificato 6.13:1; in un contesto testo normale: text-primary/
+ * text-secondary, già verificati) — nessun nuovo accostamento colore.
+ *
+ * Due cerchi sovrapposti: "track" (l'anello completo, opacità ridotta,
+ * il "binario" statico) + "indicator" (un arco di ~90°, stroke-dasharray
+ * "14 42" su una circonferenza di raggio 9 ≈ 56.5 — un quarto pieno,
+ * tre quarti vuoto) che ruota di continuo. Pattern standard di
+ * spinner a due livelli, più leggibile di un singolo anello che ruota
+ * per intero (che darebbe l'impressione di un anello fermo).
+ */
+
+.sl-loader {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.sl-loader--sm {
+  width: 16px;
+  height: 16px;
+}
+
+.sl-loader--md {
+  width: 20px;
+  height: 20px;
+}
+
+.sl-loader--lg {
+  width: 32px;
+  height: 32px;
+}
+
+.sl-loader__track {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  opacity: 0.25;
+}
+
+.sl-loader__indicator {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 14 42;
+  transform-origin: 12px 12px;
+  animation: sl-loader-spin 0.8s linear infinite;
+}
+
+@keyframes sl-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
