@@ -1,0 +1,14 @@
+{
+  "roles": [
+    {
+      "id": "docente",
+      "label": "Docente",
+      "permissions": ["access:app"]
+    },
+    {
+      "id": "admin",
+      "label": "Amministratore",
+      "permissions": ["access:app", "manage:users"]
+    }
+  ]
+}
