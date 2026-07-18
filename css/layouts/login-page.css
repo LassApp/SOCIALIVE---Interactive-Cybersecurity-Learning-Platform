@@ -1,0 +1,20 @@
+/**
+ * login-page.css
+ * -----------------------------------------------------------------------
+ * Layout della rotta #/login: centra LoginForm nella viewport. Il
+ * componente stesso (login-form.css) definisce solo il proprio aspetto
+ * intrinseco, non la propria posizione nella pagina — come già
+ * documentato lì ("è una decisione di LAYOUT DI PAGINA, di competenza
+ * di un futuro page controller"). Questa è la prima implementazione
+ * reale di quella decisione, nel primo vero page controller del
+ * progetto.
+ */
+
+.sl-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sl-space-4);
+  background-color: var(--sl-color-bg-canvas);
+}
