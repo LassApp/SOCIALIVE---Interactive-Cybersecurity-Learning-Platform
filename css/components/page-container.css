@@ -1,0 +1,49 @@
+/**
+ * page-container.css
+ * -----------------------------------------------------------------------
+ * Scheletro di pagina: AppHeader (già sticky, invariato) sopra; sotto,
+ * una riga a due colonne (Sidebar a larghezza fissa + area principale
+ * che occupa lo spazio restante). Nessuna proprietà di sidebar.css/
+ * app-header.css viene duplicata qui: questo file possiede SOLO la
+ * disposizione reciproca dei tre blocchi, non il loro aspetto
+ * intrinseco — stesso principio già seguito da post-card.css verso
+ * card.css (estendere, non duplicare).
+ *
+ * min-height:100vh sul container esterno (non su .__body): garantisce
+ * che un contenuto principale breve non lasci lo sfondo della Sidebar
+ * più corto della viewport (bug visivo comune in questo tipo di
+ * layout a due colonne) senza forzare un'altezza fissa sull'header,
+ * che resta libero di restare "sticky" al proprio contesto di scroll
+ * naturale (la pagina, non un contenitore innaturale).
+ *
+ * .sl-page-container__main: possiede padding e flex:1 (spazio
+ * disponibile), NON una larghezza massima del contenuto — la sezione
+ * "Moduli" (piena larghezza della colonna) e il Feed (colonna centrata,
+ * max-width definito nel proprio markup di pagina) convivono nello
+ * stesso spazio senza che PageContainer debba conoscere i dettagli
+ * visivi di nessuno dei due (stesso principio "dumb" del componente
+ * JS, applicato anche qui).
+ *
+ * Sotto 768px: Sidebar è già "display:none" (sidebar.css) — la riga
+ * flex collassa naturalmente a una sola colonna, nessuna regola
+ * aggiuntiva necessaria qui (il componente conosce se stesso, il
+ * layout si limita a disporlo — principio già seguito ovunque nel
+ * Design System).
+ */
+
+.sl-page-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.sl-page-container__body {
+  display: flex;
+  flex: 1;
+}
+
+.sl-page-container__main {
+  flex: 1;
+  min-width: 0;
+  padding: var(--sl-space-6) var(--sl-space-5);
+}

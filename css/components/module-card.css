@@ -1,0 +1,37 @@
+/**
+ * module-card.css
+ * -----------------------------------------------------------------------
+ * Estende .sl-card (già stilata in card.css: sfondo, bordo, radius,
+ * ombra, padding; .sl-card--interactive già gestisce hover/focus per il
+ * futuro stato "disponibile") SOLO con il layout interno specifico di un
+ * modulo — titolo + badge di stato, impilati verticalmente. Nessuna
+ * proprietà di card.css viene duplicata qui, stesso principio già
+ * seguito da post-card.css verso card.css.
+ *
+ * Nessun nuovo colore introdotto: --sl-color-text-primary per il titolo
+ * (già verificato ovunque su bg-surface); il Badge interno usa i propri
+ * token, già verificati in badge.css — nessuna nuova combinazione da
+ * controllare, nessuna verifica WCAG aggiuntiva necessaria in questo
+ * step.
+ *
+ * min-height: solo per uniformità visiva quando più ModuleCard sono
+ * affiancate in una griglia (la disposizione a griglia stessa è
+ * responsabilità del layout di pagina — home-page.css, non di questo
+ * file, stesso principio "componente vs posizione nella pagina" già
+ * seguito da Sidebar/PostCard) — evita che titoli di lunghezza diversa
+ * producano card di altezza percepibilmente diversa nella stessa riga.
+ */
+
+.sl-module-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--sl-space-3);
+  min-height: 96px;
+}
+
+.sl-module-card__title {
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-md);
+}
