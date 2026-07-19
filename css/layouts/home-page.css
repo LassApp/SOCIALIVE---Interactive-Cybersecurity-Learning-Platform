@@ -1,0 +1,50 @@
+/**
+ * home-page.css
+ * -----------------------------------------------------------------------
+ * Layout interno della rotta #/home reale. PageContainer (Fase 4)
+ * possiede già lo scheletro esterno (header/sidebar/main): questo file
+ * possiede SOLO l'organizzazione del contenuto di #/home dentro l'area
+ * .sl-page-container__main — stesso principio "componente vs layout di
+ * pagina" già seguito ovunque nel progetto (Sidebar, PostCard, ecc.).
+ *
+ * Sostituisce concettualmente home-page-placeholder.css (Fase 3): quel
+ * file va rimosso dal progetto quando questo verrà integrato, non
+ * lasciato accanto (nessun consumer lo importerebbe più).
+ *
+ * Colonna unica centrata (max-width 640px) per Moduli + Feed: un feed
+ * reale e una griglia di moduli a larghezze diverse fianco a fianco
+ * avrebbero un allineamento visivamente incoerente — un solo contenitore
+ * risolve il problema senza che nessuno dei due componenti debba
+ * conoscere l'altro (stesso principio "dumb" applicato anche al layout).
+ *
+ * Nessun nuovo colore introdotto: --sl-color-text-primary per il titolo
+ * di sezione, già verificato ovunque su bg-surface — nessuna verifica
+ * WCAG aggiuntiva necessaria in questo step.
+ *
+ * Griglia Moduli: 6 card, colonne auto-fill da 140px minimo — a 640px di
+ * contenitore ne stanno comodamente 4 per riga (140×4 + gap×3 ≈ 608px),
+ * a schermi più stretti si adatta automaticamente senza query dedicate
+ * (stesso approccio già usato per .sg-grid nello stile QA, qui applicato
+ * per la prima volta nell'app reale).
+ */
+
+.sl-home-page__content {
+  max-width: 640px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-8);
+}
+
+.sl-home-page__section-title {
+  font-size: var(--sl-font-size-lg);
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+  margin-bottom: var(--sl-space-4);
+}
+
+.sl-home-page__modules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--sl-space-4);
+}
