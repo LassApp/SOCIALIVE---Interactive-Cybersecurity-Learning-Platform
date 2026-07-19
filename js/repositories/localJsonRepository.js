@@ -4,29 +4,71 @@
  * Interfaccia stabile di accesso ai dati (Repository Pattern, architettura
  * Fase 1 §11: "interfaccia comune... implementata oggi da un
  * localJsonRepository... in futuro da un supabaseRepository — i services
- * consumano sempre la stessa interfaccia"). Una SOLA fabbrica generica,
- * parametrizzata per URL/collezione, invece di un file per entità (utenti,
- * ruoli, e in futuro scenari/post): evita di duplicare la stessa logica
- * di fetch+parsing ad ogni nuova collezione JSON — stesso principio DRY
- * già seguito da dom.js/storage.js/focusTrap.js in Fase 2.
+ * consumano sempre la stessa interfaccia").
  *
- * SOLO list()/get() sono implementati. create()/update()/remove() NON
- * esistono ancora: un file JSON statico servito via fetch() su GitHub
- * Pages non può essere scritto dal client — implementarli ora
- * produrrebbe metodi che non potrebbero mai funzionare davvero (nessuna
- * persistenza reale, solo una mutazione della cache in memoria persa al
- * refresh): un'interfaccia bugiarda, peggiore di ometterla. Verranno
- * aggiunti quando esisteranno insieme un vero backend scrivibile
- * (Supabase) e un vero consumer (es. una futura gestione utenti).
+ * DUE fabbriche, non una sola, a partire da Fase 5:
+ *   - createLocalJsonRepository({ url, collectionKey, idField })
+ *     per COLLEZIONI (un array di elementi con id) — users.json,
+ *     roles.json, in futuro modules.json/notifications.json. Espone
+ *     list()/get(id). INVARIATA nel comportamento rispetto a Fase 3.
+ *   - createLocalJsonResource({ url})
+ *     per RISORSE SINGOLE (un oggetto, non un array) — introdotta ora
+ *     perché data/scenarios/<id>/scenario.json è esattamente questo caso:
+ *     un solo oggetto con metadati, non una lista con id da cercare.
+ *     Espone solo get() (l'intero payload).
  *
- * Cache in memoria per URL: ogni collezione viene richiesta una sola
- * volta per sessione di pagina — sufficiente per dati che oggi non
- * cambiano mai a runtime (utenti, ruoli). list() restituisce sempre una
- * COPIA dell'array: un consumer non deve poter corrompere la cache
- * interna mutando l'array che gli viene restituito.
+ * Le due fabbriche condividono la stessa cache/fetch (fetchJson, sotto):
+ * stesso principio DRY già seguito da dom.js/storage.js/focusTrap.js in
+ * Fase 2 — evitare di duplicare la stessa logica di fetch+parsing+cache
+ * +gestione errori in due posti che fanno concettualmente la stessa cosa
+ * (recuperare un JSON da un URL, una sola volta per sessione di pagina).
+ *
+ * SOLO letture (list/get). create()/update()/remove() NON esistono: un
+ * file JSON statico servito via fetch() su GitHub Pages non può essere
+ * scritto dal client — implementarli produrrebbe metodi che non
+ * potrebbero mai funzionare davvero (nessuna persistenza reale). Verranno
+ * aggiunti quando esisterà un vero backend scrivibile (Supabase).
+ *
+ * Cache in memoria per URL: ogni risorsa/collezione viene richiesta una
+ * sola volta per sessione di pagina — sufficiente per dati che oggi non
+ * cambiano mai a runtime. list() restituisce sempre una COPIA
+ * dell'array: un consumer non deve poter corrompere la cache interna
+ * mutando l'array che gli viene restituito. get() di una risorsa singola
+ * restituisce il payload così com'è: non è una collezione mutabile per
+ * costruzione dei consumer attuali (scenario.json viene solo letto, mai
+ * iterato/filtrato) — se un futuro consumer lo mutasse in modo
+ * problematico, valutare una copia anche qui allora (YAGNI: nessun
+ * bisogno reale oggi).
  */
 
-const cache = new Map(); // url -> Promise<Array>
+const cache = new Map(); // url -> Promise<any> (payload JSON grezzo, non ancora estratto/validato)
+
+/**
+ * Fetch con cache condivisa da entrambe le fabbriche. Un fallimento
+ * (rete o HTTP non-2xx) rimuove la entry dalla cache, così una chiamata
+ * successiva può ritentare invece di restare bloccata su un errore
+ * permanente — stesso comportamento già presente in Fase 3, qui isolato
+ * per essere riusato da createLocalJsonResource senza duplicarlo.
+ * @param {string} url
+ * @returns {Promise<any>}
+ */
+function fetchJson(url) {
+  if (!cache.has(url)) {
+    const request = fetch(url)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`localJsonRepository: HTTP ${response.status} su ${url}`);
+        }
+        return response.json();
+      })
+      .catch((error) => {
+        cache.delete(url);
+        throw error;
+      });
+    cache.set(url, request);
+  }
+  return cache.get(url);
+}
 
 function extractCollection(payload, collectionKey) {
   const collection = collectionKey ? payload?.[collectionKey] : payload;
@@ -49,34 +91,33 @@ function extractCollection(payload, collectionKey) {
  *   - idField: campo usato come identificatore da get() (default: "id").
  */
 export function createLocalJsonRepository({ url, collectionKey, idField = "id" }) {
-  function fetchCollection() {
-    if (!cache.has(url)) {
-      const request = fetch(url)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`localJsonRepository: HTTP ${response.status} su ${url}`);
-          }
-          return response.json();
-        })
-        .then((payload) => extractCollection(payload, collectionKey))
-        .catch((error) => {
-          cache.delete(url); // consente un nuovo tentativo alla chiamata successiva
-          throw error;
-        });
-      cache.set(url, request);
-    }
-    return cache.get(url);
-  }
-
   async function list() {
-    const collection = await fetchCollection();
+    const payload = await fetchJson(url);
+    const collection = extractCollection(payload, collectionKey);
     return [...collection];
   }
 
   async function get(id) {
-    const collection = await fetchCollection();
+    const payload = await fetchJson(url);
+    const collection = extractCollection(payload, collectionKey);
     return collection.find((item) => item[idField] === id) ?? null;
   }
 
   return { list, get };
+}
+
+/**
+ * Fabbrica per una risorsa JSON singola (un oggetto, non una collezione).
+ * Primo consumo reale: data/scenarios/<scenarioId>/scenario.json
+ * (Fase 5 — js/scenarios/scenarioEngine.js).
+ *
+ * @param {{ url: string }} config
+ * @returns {{ get: () => Promise<object> }}
+ */
+export function createLocalJsonResource({ url }) {
+  async function get() {
+    return fetchJson(url);
+  }
+
+  return { get };
 }
