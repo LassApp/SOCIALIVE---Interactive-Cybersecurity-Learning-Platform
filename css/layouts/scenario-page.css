@@ -1,0 +1,63 @@
+/**
+ * scenario-page.css
+ * -----------------------------------------------------------------------
+ * Layout della rotta #/scenario/:scenarioId + aspetto del contenuto
+ * PLACEHOLDER prodotto da profileTimelineRenderer.js (Fase 5). Le classi
+ * .sl-scenario-page__placeholder-* sono di competenza del renderer
+ * segnaposto e verranno rimosse insieme ad esso in Fase 6, quando il
+ * vero profilo/timeline arriverà con il proprio CSS dedicato — non è
+ * quindi un file "component" a lungo termine, ma il layout+aspetto di
+ * questa fase, dichiaratamente temporaneo (stesso trattamento già
+ * riservato a home-page-placeholder.css in Fase 3/4).
+ *
+ * .sl-scenario-page__main: nessuna proprietà di page-container.css
+ * viene duplicata qui (il padding dell'area main è già suo) — questo
+ * file possiede solo ciò che sta DENTRO quell'area.
+ *
+ * Colori: NESSUN nuovo accostamento. info-bg-subtle + info-text è la
+ * stessa coppia "soft" già verificata e usata dal tono "info" di Badge
+ * (badge.css) — riuso diretto, zero verifiche numeriche necessarie.
+ * border-subtle è puramente decorativo (stesso uso già documentato in
+ * card.css: il blocco ha già sfondo e ombra propri).
+ */
+
+.sl-scenario-page__main {
+  display: flex;
+  flex-direction: column;
+}
+
+.sl-scenario-page__placeholder {
+  max-width: 640px;
+  margin-inline: auto;
+  margin-top: var(--sl-space-12);
+  padding: var(--sl-space-8);
+  text-align: center;
+  background-color: var(--sl-color-bg-surface);
+  border: 1px solid var(--sl-color-border-subtle);
+  border-radius: var(--sl-radius-lg);
+  box-shadow: var(--sl-shadow-1);
+}
+
+.sl-scenario-page__placeholder-title {
+  font-size: var(--sl-font-size-2xl);
+  font-weight: var(--sl-font-weight-bold);
+  color: var(--sl-color-text-primary);
+  margin-bottom: var(--sl-space-3);
+}
+
+.sl-scenario-page__placeholder-description {
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-md);
+  line-height: var(--sl-line-height-relaxed);
+  margin-bottom: var(--sl-space-5);
+}
+
+.sl-scenario-page__placeholder-notice {
+  display: inline-block;
+  padding: var(--sl-space-2) var(--sl-space-4);
+  border-radius: var(--sl-radius-full);
+  background-color: var(--sl-color-info-bg-subtle);
+  color: var(--sl-color-info-text);
+  font-size: var(--sl-font-size-sm);
+  font-weight: var(--sl-font-weight-medium);
+}
