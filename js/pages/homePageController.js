@@ -2,65 +2,57 @@
  * homePageController.js
  * -----------------------------------------------------------------------
  * Rotta protetta #/home — Home reale di SOCIALIVE (Prompt #4 della
- * Suite). SOSTITUISCE il placeholder di Fase 3 (dichiarato esplicitamente
- * "da non riusare senza revisione" nel proprio file originario): nessuna
- * riga di quel file viene mantenuta.
+ * Suite). Compone PageContainer (Fase 4) + appShell (Fase 5 — vedi sotto)
+ * + ModuleCard×6 (Fase 4) + Feed (Fase 2) — tutti componenti "dumb",
+ * zero modifiche a nessuno di essi: l'orchestrazione (chi ascolta cosa,
+ * chi aggiorna cosa) vive qui, unico luogo autorizzato (architettura
+ * Fase 1 §2.1, "le pagine sono le uniche autorizzate a orchestrare").
  *
- * Compone PageContainer (Fase 4) + AppHeader/ProfileMenu/Sidebar (Fase 2)
- * + ModuleCard×6 (Fase 4) + Feed (Fase 2) — tutti componenti "dumb", zero
- * modifiche a nessuno di essi: l'orchestrazione (chi ascolta cosa, chi
- * aggiorna cosa) vive qui, unico luogo autorizzato (architettura Fase 1
- * §2.1, "le pagine sono le uniche autorizzate a orchestrare").
+ * MODIFICATO in Fase 5, due cambi indipendenti:
  *
- * DATI DEL FEED: demo statica hardcoded in questo file, NON provenienti
- * da data/*.json. Deviazione consapevole rispetto al suggerimento nel §6
- * dell'handover di Fase 3 ("dati reali via data/*.json"): l'esternalizzazione
- * completa dei contenuti è il compito esplicito di Fase 8 (Prompt #8 —
- * "Spostare tutti i contenuti nei JSON"); introdurla ora per il solo feed
- * demo della Home anticiperebbe quel lavoro in modo parziale e
- * scoordinato (un file JSON isolato, senza lo schema/le convenzioni che
- * Fase 8 definirà per TUTTI i contenuti). Gli autori/contenuti sono del
- * tutto generici e slegati da qualunque scenario didattico: l'obiettivo
- * di questa fase è dimostrare che Home/Feed funzionano con dati nella
- * forma reale attesa da PostCard, non ancora la loro provenienza
- * definitiva.
+ * 1) L'orchestrazione di AppHeader/ProfileMenu/Sidebar/logout, scritta
+ *    qui in Fase 4, è stata estratta in js/pages/shared/appShell.js:
+ *    scenarioPageController (questo stesso step) ne ha bisogno
+ *    identica — un secondo consumo reale, non un'anticipazione (DRY,
+ *    stesso principio già seguito quando focusTrap.js fu estratto da
+ *    Modal e riusato da ProfileMenu in Fase 2/Step 5). Questo file non
+ *    importa più AppHeader/ProfileMenu/Sidebar/authService direttamente:
+ *    chiama createAppShell({ activeSidebarId: "home" }) e usa
+ *    shell.appHeader.element / shell.sidebar.element. Owneship di
+ *    header/sidebar passata ad appShell: questo controller non li
+ *    distrugge più singolarmente, chiama shell.destroy() una sola volta.
  *
- * MODULI: tutti "available:false" — nessuno scenario esiste ancora
- * (Scenario Engine è Fase 5, Oversharing è Fase 6): presentarne uno come
- * disponibile sarebbe un'affermazione falsa sullo stato reale del
- * progetto (stesso principio già dichiarato in ModuleCard.js).
+ * 2) Il modulo Cybersecurity è ora "available: true" e collegato allo
+ *    scenario Oversharing: ModuleCard emette già "sl:module-open" con
+ *    { moduleId } (invariato da Fase 4, zero modifiche al componente).
+ *    La corrispondenza moduleId → scenarioId vive in una mappa separata
+ *    di sola competenza di QUESTO controller (MODULE_TO_SCENARIO, sotto)
+ *    invece di un campo aggiunto direttamente alle entry di MODULES:
+ *    ModuleCard legge solo { moduleId, title, available }, un campo in
+ *    più su MODULES sarebbe silenziosamente ignorato da ModuleCard (che
+ *    non valida le props extra) — tenere la mappa separata rende
+ *    esplicito cosa alimenta la UI e cosa è solo metadato di navigazione
+ *    del controller. Le altre 5 categorie restano "available: false":
+ *    nessuno scenario esiste ancora per loro.
  *
- * SIDEBAR: solo "Home" è abilitata (rotta reale, corrisponde alla pagina
- * corrente). "Moduli"/"Impostazioni" sono disabilitate: le rotte
- * #/modules e #/settings non esistono ancora in router.js — un link
- * abilitato verso una rotta inesistente produrrebbe "Pagina non trovata"
- * al click, un'esperienza peggiore che non mostrarlo come disponibile.
+ * DATI DEL FEED: demo statica hardcoded, invariato da Fase 4 (decisione
+ * ancora aperta, da confermare prima di Fase 8 — vedi handover di Fase
+ * 4 §4/§9).
  *
- * PROFILEMENU: orchestrazione apertura/chiusura identica al pattern già
- * verificato in style-guide.html (Fase 2/Step 5) — AppHeader e
- * ProfileMenu restano reciprocamente ignari, questo controller è il
- * "collante". sl:logout → authService.logout(): il redirect a #/login è
- * già gestito centralmente da router.js (ascolta sl:auth-logout),
- * nessuna nuova logica di navigazione qui.
+ * SIDEBAR: voci invariate, ora definite dentro appShell.js, non più qui.
  *
  * sl:settings-click, sl:search, sl:post-open, sl:post-comment: nessun
- * listener attaccato. Le destinazioni (#/settings, ricerca reale, Media
- * Viewer) non esistono ancora (Fase 4+/Fase 7) — un evento senza
- * consumer bolle fino a "page" e si esaurisce silenziosamente, nessun
- * errore, nessun comportamento da simulare qui. sl:post-like resta
- * invece gestito (aggiornamento ottimistico locale): è già pienamente
- * funzionante senza bisogno di un backend, per il realismo richiesto
- * dal progetto.
+ * listener attaccato, invariato da Fase 4 — le destinazioni non esistono
+ * ancora. sl:post-like resta gestito qui (aggiornamento ottimistico
+ * locale sul feed demo).
  */
 
 import { createElement } from "../utils/dom.js";
 import { create as createPageContainer } from "../components/PageContainer.js";
-import { create as createAppHeader } from "../components/AppHeader.js";
-import { create as createProfileMenu } from "../components/ProfileMenu.js";
-import { create as createSidebar } from "../components/Sidebar.js";
 import { create as createModuleCard } from "../components/ModuleCard.js";
 import { create as createFeed } from "../components/Feed.js";
-import { getCurrentUser, logout } from "../services/authService.js";
+import { createAppShell } from "./shared/appShell.js";
+import { navigate } from "../core/router.js";
 
 // Immagini generate via data URI: nessuna dipendenza di rete, nessun
 // asset reale ancora presente in assets/images (Fase 8) — stesso motivo
@@ -91,8 +83,7 @@ const MOUNTAIN_IMAGE =
 // Contenuto generico, del tutto slegato da qualunque scenario didattico
 // (Fase 6+): il Feed della Home deve sembrare un normale feed social,
 // non un contenuto "preparato per la lezione" — realismo richiesto
-// esplicitamente dal progetto. Autori di fantasia diversi da qualunque
-// nome già usato altrove nel progetto.
+// esplicitamente dal progetto. Invariato da Fase 4.
 function buildDemoPosts() {
   return [
     {
@@ -116,7 +107,7 @@ function buildDemoPosts() {
     },
     {
       id: "home-post-3",
-      author: { name: "Laura Ferretti" }, // nessun avatarSrc: verifica fallback iniziali anche nella Home reale
+      author: { name: "Laura Ferretti" },
       timestamp: "1 giorno fa",
       content:
         "Torta di mele della nonna, rifatta oggi dopo anni. Non è uscita perfetta come la sua, ma ci siamo vicini.",
@@ -131,60 +122,21 @@ const MODULES = [
   { moduleId: "nissan-gtr", title: "Nissan GT-R R34/R35" },
   { moduleId: "beatbox", title: "Beatbox" },
   { moduleId: "fotografia", title: "Fotografia" },
-  { moduleId: "cybersecurity", title: "Cybersecurity" },
+  { moduleId: "cybersecurity", title: "Cybersecurity", available: true },
   { moduleId: "ricette", title: "Ricette" },
 ];
 
+// Collegamento moduleId → scenarioId: vedi rationale (2) in testa al
+// file sul perché resta una mappa separata invece di un campo su
+// MODULES.
+const MODULE_TO_SCENARIO = {
+  cybersecurity: "oversharing",
+};
+
 export function createHomePageController(container) {
-  const user = getCurrentUser();
   const childComponents = [];
-  let profileMenu = null;
 
-  // --- AppHeader + ProfileMenu ----------------------------------------
-  const appHeader = createAppHeader({
-    user: { name: user?.displayName, avatarSrc: user?.avatar || undefined },
-  });
-  childComponents.push(appHeader);
-
-  function closeProfileMenu() {
-    if (!profileMenu) return;
-    profileMenu.destroy();
-    profileMenu = null;
-  }
-
-  function handleProfileMenuToggle(event) {
-    if (!event.detail.open) {
-      closeProfileMenu();
-      return;
-    }
-    profileMenu = createProfileMenu({
-      user: { name: user?.displayName, avatarSrc: user?.avatar || undefined },
-      anchorElement: event.detail.anchorElement,
-    });
-    profileMenu.element.addEventListener("sl:profile-menu-close", () => {
-      appHeader.update({ profileMenuOpen: false });
-      profileMenu = null;
-    });
-    profileMenu.element.addEventListener("sl:logout", () => {
-      logout();
-    });
-  }
-
-  appHeader.element.addEventListener("sl:profile-menu-toggle", handleProfileMenuToggle);
-
-  // --- Sidebar -----------------------------------------------------------
-  // Solo "Home" corrisponde a una rotta reale oggi (vedi rationale in
-  // testa al file): le altre restano disabilitate finché #/modules e
-  // #/settings non esisteranno in router.js.
-  const sidebar = createSidebar({
-    items: [
-      { id: "home", label: "Home", route: "#/home" },
-      { id: "modules", label: "Moduli", disabled: true },
-      { id: "settings", label: "Impostazioni", disabled: true },
-    ],
-    activeId: "home",
-  });
-  childComponents.push(sidebar);
+  const shell = createAppShell({ activeSidebarId: "home" });
 
   // --- Sezione Moduli ------------------------------------------------------
   const moduleCards = MODULES.map((moduleData) => createModuleCard(moduleData));
@@ -195,6 +147,17 @@ export function createHomePageController(container) {
     { classNames: "sl-home-page__modules-grid" },
     moduleCards.map((card) => card.element)
   );
+
+  // ModuleCard emette sl:module-open SOLO se available===true (Fase 4):
+  // oggi il solo caso reale è Cybersecurity. Il ramo "scenarioId assente"
+  // è difensivo (non dovrebbe accadere data la mappa sopra), non un
+  // percorso pensato per verificarsi in condizioni normali.
+  function handleModuleOpen(event) {
+    const scenarioId = MODULE_TO_SCENARIO[event.detail.moduleId];
+    if (!scenarioId) return;
+    navigate(`#/scenario/${scenarioId}`);
+  }
+  modulesGrid.addEventListener("sl:module-open", handleModuleOpen);
 
   const modulesSection = createElement(
     "section",
@@ -210,9 +173,6 @@ export function createHomePageController(container) {
   );
 
   // --- Feed ----------------------------------------------------------------
-  // hasMore:false da subito: nessun backend reale da paginare in questa
-  // fase (vedi rationale in testa al file) — Feed non emetterà mai
-  // sl:feed-load-more in questo stato, nessun listener necessario.
   let demoPosts = buildDemoPosts();
   const feed = createFeed({ posts: demoPosts, isLoading: false, hasMore: false });
   childComponents.push(feed);
@@ -234,8 +194,8 @@ export function createHomePageController(container) {
   ]);
 
   const pageContainer = createPageContainer({
-    header: appHeader.element,
-    sidebar: sidebar.element,
+    header: shell.appHeader.element,
+    sidebar: shell.sidebar.element,
     main: content,
   });
   childComponents.push(pageContainer);
@@ -243,9 +203,9 @@ export function createHomePageController(container) {
   container.appendChild(pageContainer.element);
 
   return function destroy() {
-    appHeader.element.removeEventListener("sl:profile-menu-toggle", handleProfileMenuToggle);
+    modulesGrid.removeEventListener("sl:module-open", handleModuleOpen);
     feed.element.removeEventListener("sl:post-like", handlePostLike);
-    closeProfileMenu();
     childComponents.forEach((instance) => instance.destroy());
+    shell.destroy();
   };
 }
