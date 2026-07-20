@@ -1,0 +1,11 @@
+{
+  "id": "oversharing",
+  "type": "profile-timeline",
+  "title": "Oversharing",
+  "description": "Un profilo social realistico, ispirato a un caso reale, che mostra come informazioni innocue pubblicate nel tempo possano rivelare identità, abitudini e luoghi frequentati di una persona.",
+  "dataRefs": {
+    "profile": "data/scenarios/oversharing/profile.json",
+    "stories": "data/scenarios/oversharing/stories.json",
+    "posts": "data/scenarios/oversharing/posts.json"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "stories": [
+    { "id": "story-001", "label": "Viaggi", "thumbnail": "assets/posts/oversharing/story-001.jpg" },
+    { "id": "story-002", "label": "Weekend", "thumbnail": "assets/posts/oversharing/story-002.jpg" },
+    { "id": "story-003", "label": "Food", "thumbnail": "assets/posts/oversharing/story-003.jpg" },
+    { "id": "story-004", "label": "Mare", "thumbnail": "assets/posts/oversharing/story-004.jpg" },
+    { "id": "story-005", "label": "Amiche", "thumbnail": "assets/posts/oversharing/story-005.jpg" }
+  ]
+}
