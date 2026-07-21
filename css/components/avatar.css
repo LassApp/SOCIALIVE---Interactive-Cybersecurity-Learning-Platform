@@ -32,6 +32,14 @@
   width: 56px;
   height: 56px;
 }
+/* "xl" — Fase 6/Step 3, header di profilo reale. Stesso sfondo di
+   fallback (--sl-color-primary-600 + testo inverso, 6.13:1) già
+   verificato per sm/md/lg: nessuna nuova coppia colore, solo un nuovo
+   valore dimensionale. */
+.sl-avatar--xl {
+  width: 96px;
+  height: 96px;
+}
 
 .sl-avatar__image {
   width: 100%;
@@ -54,4 +62,8 @@
 
 .sl-avatar--lg .sl-avatar__fallback {
   font-size: var(--sl-font-size-sm);
+}
+
+.sl-avatar--xl .sl-avatar__fallback {
+  font-size: var(--sl-font-size-xl);
 }
