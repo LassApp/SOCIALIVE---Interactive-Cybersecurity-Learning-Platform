@@ -81,13 +81,9 @@
  */
 
 import { createElement, clearChildren } from "../utils/dom.js";
+import { formatFullDate } from "../utils/dateFormat.js";
 
 const MONTH_FORMATTER = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" });
-const TILE_DATE_FORMATTER = new Intl.DateTimeFormat("it-IT", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
 
 // Intl.DateTimeFormat restituisce il mese in minuscolo ("gennaio 2025"):
 // la maiuscola iniziale è solo un dettaglio tipografico per il titolo di
@@ -125,7 +121,7 @@ function groupByMonth(posts) {
 
 function buildTile(post, onOpen) {
   const isImagePost = Boolean(post.image && post.image.src);
-  const dateLabel = TILE_DATE_FORMATTER.format(post.parsedDate);
+  const dateLabel = formatFullDate(post.parsedDate);
 
   const tile = createElement("button", {
     classNames: ["sl-timeline__tile", isImagePost ? "sl-timeline__tile--image" : "sl-timeline__tile--text"],
