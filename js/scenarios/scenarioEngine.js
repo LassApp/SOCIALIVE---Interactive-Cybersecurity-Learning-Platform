@@ -62,6 +62,21 @@
  * SOLO quel wrapper, mai altro contenuto che il chiamante avesse già
  * montato — stesso principio "ogni nodo ha un proprietario" già seguito
  * da Modal/Feed (ognuno distrugge solo ciò che ha creato).
+ *
+ * BUG TROVATO E CORRETTO in Fase 6/Step 3: il placeholder di Fase 5 era
+ * sincrono (nessun fetch proprio), quindi il chiamante non aveva mai
+ * avuto bisogno di attendere il valore restituito da renderer(...). Un
+ * renderer che deve caricare dati propri (come il vero
+ * profileTimelineRenderer, Fase 6/Step 3 — profile/stories/posts) è
+ * necessariamente asincrono: senza "await", aria-busy veniva rimosso
+ * subito invece che a fine caricamento reale, e "rendererDestroy"
+ * restituiva una Promise invece della funzione di cleanup — la guardia
+ * "typeof rendererDestroy === 'function'" in destroy() falliva quindi
+ * silenziosamente, senza mai eseguire il cleanup del renderer (nessun
+ * errore visibile, un leak silenzioso). Fix minimo e retrocompatibile:
+ * "await" su un valore che non è già una Promise lo risolve
+ * immediatamente, quindi un renderer sincrono esistente non cambia
+ * comportamento.
  */
 
 import { createLocalJsonResource } from "../repositories/localJsonRepository.js";
@@ -74,7 +89,12 @@ const renderers = new Map(); // type -> (container, scenario) => destroy|undefin
  * risolvere una rotta #/scenario/:scenarioId — stesso momento e stesso
  * ruolo già svolto da router.registerRoute().
  * @param {string} type es. "profile-timeline"
- * @param {(container: HTMLElement, scenario: object) => (Function|void)} renderer
+ * @param {(container: HTMLElement, scenario: object) => (Function|void|Promise<Function|void>)} renderer
+ *   Può essere sincrono o asincrono (Fase 6/Step 3 — bug corretto in questo
+ *   stesso step: l'engine ora "awaita" sempre il valore restituito, anche
+ *   se non è una Promise, quindi entrambe le forme funzionano). Un
+ *   renderer che deve caricare dati propri (es. profile-timeline, che
+ *   fa fetch di profile/stories/posts) è necessariamente asincrono.
  */
 export function registerRenderer(type, renderer) {
   renderers.set(type, renderer);
@@ -123,7 +143,7 @@ export async function loadScenario(scenarioId, container) {
 
     const renderer = renderers.get(scenario.type);
     if (renderer) {
-      rendererDestroy = renderer(wrapper, scenario) || undefined;
+      rendererDestroy = (await renderer(wrapper, scenario)) || undefined;
     } else {
       wrapper.appendChild(
         buildFallbackMessage(`Lo scenario "${scenario.title || scenarioId}" è in preparazione.`)
