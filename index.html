@@ -45,10 +45,19 @@
   <link rel="stylesheet" href="css/base/global.css" />
 
   <!--
-    Elenco aggiornato in Fase 5: solo i componenti realmente montati
+    Elenco aggiornato in Fase 6: solo i componenti realmente montati
     dalle rotte esistenti (#/login, #/home, #/scenario/:scenarioId).
     Caricare CSS di componenti non ancora montati sarebbe peso morto
-    (stesso principio già seguito in questo file da Fase 3/4).
+    (stesso principio già seguito in questo file da Fase 3/4/5).
+
+    BUG TROVATO E CORRETTO in questo step: stories-bar.css, timeline.css
+    e css/scenarios/profile-timeline.css (Fase 6/Step 2-3) erano stati
+    consegnati come file ma non erano MAI stati collegati qui — la
+    StoriesBar veniva quindi mostrata senza alcun CSS proprio: senza
+    "display:flex" su .sl-stories-bar__list, il browser applica lo stile
+    di default di una <ul>/<li> (blocco, quindi impilata verticalmente),
+    esattamente il sintomo segnalato. Nessun bug nel componente stesso:
+    il problema era solo di collegamento in questo file.
   -->
   <link rel="stylesheet" href="css/components/button.css" />
   <link rel="stylesheet" href="css/components/avatar.css" />
@@ -66,6 +75,9 @@
   <link rel="stylesheet" href="css/components/feed.css" />
   <link rel="stylesheet" href="css/components/page-container.css" />
   <link rel="stylesheet" href="css/components/module-card.css" />
+  <link rel="stylesheet" href="css/components/stories-bar.css" />
+  <link rel="stylesheet" href="css/components/timeline.css" />
+  <link rel="stylesheet" href="css/scenarios/profile-timeline.css" />
   <link rel="stylesheet" href="css/layouts/login-page.css" />
   <link rel="stylesheet" href="css/layouts/home-page.css" />
   <link rel="stylesheet" href="css/layouts/scenario-page.css" />
