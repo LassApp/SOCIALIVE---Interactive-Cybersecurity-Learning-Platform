@@ -1,0 +1,53 @@
+/**
+ * stories-bar.css
+ * -----------------------------------------------------------------------
+ * Riga orizzontale con scroll nativo (overflow-x: auto): nessuno
+ * scrollbar personalizzato, per restare semplici e coerenti tra browser
+ * (KISS) — stesso principio di sobrietà già seguito ovunque nel Design
+ * System (nessun effetto "futuristico").
+ *
+ * Anello (.sl-stories-bar__ring): --sl-color-primary-500, già verificato
+ * per uso decorativo/non testuale (soglia 3:1 — cfr. colors.css/
+ * theme-light.css/theme-dark.css), lo stesso token già usato dalla barra
+ * attiva di Sidebar per lo stesso tipo di uso — nessuna nuova verifica di
+ * contrasto necessaria.
+ *
+ * Label (.sl-stories-bar__label): --sl-color-text-primary, già
+ * verificato ovunque su bg-canvas/bg-surface — nessun nuovo accostamento.
+ *
+ * Nessuno stato "vista/non vista" (vedi rationale in StoriesBar.js): un
+ * solo stile di anello per tutte le storie.
+ */
+
+.sl-stories-bar__list {
+  display: flex;
+  gap: var(--sl-space-4);
+  overflow-x: auto;
+  padding-block: var(--sl-space-2);
+}
+
+.sl-stories-bar__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sl-space-1);
+  flex-shrink: 0;
+  width: 72px;
+  padding: 0;
+}
+
+.sl-stories-bar__ring {
+  display: inline-flex;
+  padding: 3px;
+  border: 2px solid var(--sl-color-primary-500);
+  border-radius: var(--sl-radius-full);
+}
+
+.sl-stories-bar__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--sl-font-size-xs);
+  color: var(--sl-color-text-primary);
+}

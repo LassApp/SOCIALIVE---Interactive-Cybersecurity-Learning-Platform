@@ -1,0 +1,82 @@
+/**
+ * timeline.css
+ * -----------------------------------------------------------------------
+ * Vista a griglia dei post per mese — stesso principio a griglia
+ * responsive già usato in home-page.css per i Moduli (auto-fill,
+ * minmax), qui applicato a riquadri quadrati (aspect-ratio: 1/1) invece
+ * che a card di altezza variabile.
+ *
+ * Riquadro testuale (.sl-timeline__tile--text): --sl-color-bg-elevated +
+ * --sl-color-text-secondary, la stessa coppia già verificata (6.11:1
+ * Light / 5.81:1 Dark) e documentata in ProfileMenu.js — nessuna nuova
+ * verifica di contrasto necessaria.
+ *
+ * Nessun elemento didattico nello stile (vedi rationale in Timeline.js):
+ * nessun colore/badge distingue i riquadri "sensibili" dagli altri — a
+ * parità di tipo (immagine o testo) tutti i riquadri sono visivamente
+ * identici.
+ *
+ * -webkit-line-clamp sul riquadro testuale: tronca visivamente un testo
+ * lungo su più righe. Non è un problema di accessibilità: il nome
+ * accessibile del bottone arriva dall'aria-label impostato in
+ * Timeline.js, non dal testo visibile troncato (stesso principio già
+ * applicato a .sl-post-card__author con text-overflow:ellipsis).
+ */
+
+.sl-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-8);
+}
+
+.sl-timeline__month-title {
+  font-size: var(--sl-font-size-md);
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+  margin-bottom: var(--sl-space-3);
+}
+
+.sl-timeline__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: var(--sl-space-2);
+}
+
+.sl-timeline__tile {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: var(--sl-radius-sm);
+}
+
+.sl-timeline__tile-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: filter var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-timeline__tile--image:hover .sl-timeline__tile-image,
+.sl-timeline__tile--image:focus-visible .sl-timeline__tile-image {
+  filter: brightness(0.94);
+}
+
+.sl-timeline__tile--text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sl-space-2);
+  background-color: var(--sl-color-bg-elevated);
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-xs);
+  line-height: var(--sl-line-height-tight);
+  text-align: center;
+}
+
+.sl-timeline__tile-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
