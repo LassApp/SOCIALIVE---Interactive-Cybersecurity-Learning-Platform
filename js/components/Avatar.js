@@ -19,7 +19,12 @@
 
 import { createElement } from "../utils/dom.js";
 
-const SIZES = ["sm", "md", "lg"];
+// "xl" (96px) aggiunta in Fase 6/Step 3: l'header di un profilo reale
+// richiede un avatar più prominente di "lg" (56px, pensato per header/
+// liste). Estensione puramente additiva: sm/md/lg invariate, nessun
+// consumer esistente (AppHeader, PostCard, ProfileMenu, StoriesBar)
+// ne risente.
+const SIZES = ["sm", "md", "lg", "xl"];
 
 function resolveSize(size) {
   return SIZES.includes(size) ? size : "md";
