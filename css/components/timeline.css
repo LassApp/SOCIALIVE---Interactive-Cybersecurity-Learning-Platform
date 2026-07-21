@@ -29,6 +29,16 @@
   gap: var(--sl-space-8);
 }
 
+/* Stesso bug già documentato in post-card.css per .sl-post-card__media:
+   una dichiarazione d'autore di "display" batte SEMPRE lo stile UA di
+   [hidden], indipendentemente dalla specificità — va ridichiarato qui
+   esplicitamente, con selettore più specifico (classe + attributo).
+   Trovato in questo step: il toggle Feed/Archivio di
+   profileTimelineRenderer.js nasconde Timeline con l'attributo nativo. */
+.sl-timeline[hidden] {
+  display: none;
+}
+
 .sl-timeline__month-title {
   font-size: var(--sl-font-size-md);
   font-weight: var(--sl-font-weight-semibold);
