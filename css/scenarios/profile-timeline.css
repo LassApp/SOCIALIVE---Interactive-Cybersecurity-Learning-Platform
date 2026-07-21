@@ -1,0 +1,138 @@
+/**
+ * profile-timeline.css
+ * -----------------------------------------------------------------------
+ * Stile del renderer "profile-timeline" (Fase 6/Step 3), non della
+ * scenario specifica: un futuro secondo scenario con lo stesso type
+ * (es. "Privacy", Fase 1 §12) riuserebbe questo file senza modifiche —
+ * per questo il namespace BEM è .sl-profile-timeline-*, non
+ * .sl-oversharing-*.
+ *
+ * max-width + margin-inline qui, non in css/layouts/scenario-page.css:
+ * la larghezza "giusta" per un profilo è una decisione di QUESTO
+ * renderer, non della pagina generica di scenario (un futuro renderer
+ * di tipo diverso, es. una chat-simulation, potrebbe volere una
+ * larghezza differente) — stesso principio già seguito da
+ * home-page.css, che possiede la propria larghezza di colonna invece di
+ * imporla a livello di page-container.css.
+ *
+ * Copertina + avatar sovrapposto: pattern standard di molte piattaforme
+ * reali (Facebook, LinkedIn, X) — coerente con l'obiettivo di realismo
+ * del progetto. Il "ring" attorno all'avatar usa --sl-color-bg-canvas
+ * (lo sfondo di pagina, verificato da global.css) come bordo: crea un
+ * distacco visivo dalla copertina sottostante senza introdurre un nuovo
+ * colore — è lo sfondo su cui l'intera pagina già poggia, non un nuovo
+ * accostamento da verificare.
+ *
+ * Statistiche (<dl>/<dt>/<dd>): --sl-color-text-primary per il valore
+ * numerico, --sl-color-text-secondary per l'etichetta — entrambi già
+ * verificati ovunque su bg-canvas/bg-surface, nessun nuovo accostamento.
+ *
+ * Toggle Post/Archivio: NON un vero widget "tablist" (vedi rationale in
+ * profileTimelineRenderer.js) — due Button (variante ghost) con un
+ * sottolineatura che appare solo sul bottone "premuto"
+ * ([aria-pressed="true"]), stesso token decorativo (--sl-color-primary-500,
+ * soglia 3:1) già usato dalla barra attiva di Sidebar per lo stesso tipo
+ * di uso. border-bottom SEMPRE presente (trasparente quando non attivo,
+ * colorato quando attivo): riserva lo spazio fin da subito, così il
+ * cambio di stato non produce un salto di layout (stesso principio già
+ * seguito da Sidebar per il proprio indicatore attivo). border-radius:0
+ * sovrascrive il "pill" di default di Button: un indicatore ad angoli
+ * vivi si sposa meglio con una sottolineatura dritta.
+ */
+
+.sl-profile-timeline {
+  max-width: 640px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-6);
+}
+
+.sl-profile-timeline__cover {
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+  border-radius: var(--sl-radius-lg);
+  background-color: var(--sl-color-bg-elevated);
+}
+
+.sl-profile-timeline__cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sl-profile-timeline__identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--sl-space-2);
+  margin-top: calc(-1 * var(--sl-space-12));
+  padding-inline: var(--sl-space-4);
+}
+
+.sl-profile-timeline__avatar-wrap {
+  display: inline-flex;
+  border: 3px solid var(--sl-color-bg-canvas);
+  border-radius: var(--sl-radius-full);
+}
+
+.sl-profile-timeline__username {
+  font-size: var(--sl-font-size-lg);
+  font-weight: var(--sl-font-weight-bold);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-profile-timeline__bio {
+  max-width: 420px;
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-sm);
+}
+
+.sl-profile-timeline__stats {
+  display: flex;
+  gap: var(--sl-space-6);
+  margin-top: var(--sl-space-2);
+}
+
+.sl-profile-timeline__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sl-profile-timeline__stat-value {
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-md);
+}
+
+.sl-profile-timeline__stat-label {
+  margin: 0;
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-xs);
+}
+
+.sl-profile-timeline__tabs {
+  display: flex;
+  justify-content: center;
+  gap: var(--sl-space-2);
+  border-bottom: 1px solid var(--sl-color-border-subtle);
+}
+
+.sl-button.sl-profile-timeline__tab {
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--sl-color-text-secondary);
+}
+
+.sl-button.sl-profile-timeline__tab[aria-pressed="true"] {
+  color: var(--sl-color-text-primary);
+  border-bottom-color: var(--sl-color-primary-500);
+}
+
+.sl-profile-timeline__panels {
+  display: flex;
+  flex-direction: column;
+}
