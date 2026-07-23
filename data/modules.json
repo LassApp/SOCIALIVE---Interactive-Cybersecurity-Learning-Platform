@@ -1,0 +1,10 @@
+{
+  "modules": [
+    { "id": "yoga", "title": "Yoga", "available": false },
+    { "id": "nissan-gtr", "title": "Nissan GT-R R34/R35", "available": false },
+    { "id": "beatbox", "title": "Beatbox", "available": false },
+    { "id": "fotografia", "title": "Fotografia", "available": false },
+    { "id": "cybersecurity", "title": "Cybersecurity", "available": true, "scenarioId": "oversharing" },
+    { "id": "ricette", "title": "Ricette", "available": false }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "posts": [
+    {
+      "id": "home-post-1",
+      "author": { "name": "Marco Bianchi" },
+      "timestamp": "3 h fa",
+      "content": "Weekend in montagna, aria pulita e silenzio assoluto. Esattamente quello che serviva dopo due settimane no-stop.",
+      "image": {
+        "src": "assets/images/home/mountain-placeholder.svg",
+        "alt": "Paesaggio montano stilizzato con sole e picchi"
+      },
+      "stats": { "likes": 214, "comments": 18, "shares": 4 },
+      "liked": false
+    },
+    {
+      "id": "home-post-2",
+      "author": { "name": "Giulia Conti" },
+      "timestamp": "6 h fa",
+      "content": "Finito ieri notte questo libro che mi avevano consigliato in tre persone diverse. Consiglio a mia volta: si legge in un weekend.",
+      "stats": { "likes": 89, "comments": 7, "shares": 1 },
+      "liked": false
+    },
+    {
+      "id": "home-post-3",
+      "author": { "name": "Laura Ferretti" },
+      "timestamp": "1 giorno fa",
+      "content": "Torta di mele della nonna, rifatta oggi dopo anni. Non è uscita perfetta come la sua, ma ci siamo vicini.",
+      "stats": { "likes": 431, "comments": 52, "shares": 9 },
+      "liked": true
+    }
+  ]
+}
