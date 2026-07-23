@@ -72,4 +72,25 @@
 
   /* Focus ring — 6.13:1 su surface, 5.77:1 su canvas */
   --sl-color-focus-ring: var(--sl-palette-primary-600);
+
+  /* Media Viewer (Fase 7) — FISSI in entrambi i temi, non un valore che
+     si inverte con data-theme: un visualizzatore immersivo di foto è per
+     convenzione sempre scuro, in Light come in Dark (stesso comportamento
+     di Instagram/Facebook/X) — stesso principio già seguito da
+     --sl-color-text-inverse (valore fisso duplicato nei due file tema,
+     non un'eccezione nuova introdotta qui).
+     --sl-color-media-focus-ring usa il primitivo -300 anche in Light:
+     verificato numericamente 7.90:1 su gray-950, contro 3.06:1 che darebbe
+     invece primary-600 (il focus ring che Light usa ovunque altrove) sullo
+     stesso sfondo — margine troppo sottile su un fondo fisso scuro per
+     essere lasciato al valore teme-per-tema.
+     --sl-color-media-bg-hover/-active: overlay bianco translucido per il
+     feedback di hover/active dei bottoni icona (chiusura, navigazione) —
+     stessa natura puramente decorativa di --sl-color-bg-hover/-active
+     esistenti (mai stati soggetti a verifica di contrasto numerica, sono
+     rinforzi di stato non testuali). */
+  --sl-color-media-backdrop: var(--sl-palette-gray-950);
+  --sl-color-media-focus-ring: var(--sl-palette-primary-300);
+  --sl-color-media-bg-hover: rgba(247, 248, 250, 0.12);
+  --sl-color-media-bg-active: rgba(247, 248, 250, 0.2);
 }
