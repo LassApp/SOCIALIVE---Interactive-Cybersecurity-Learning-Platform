@@ -1,0 +1,218 @@
+/**
+ * media-viewer.css
+ * -----------------------------------------------------------------------
+ * Sfondo: --sl-color-media-backdrop, token FISSO (identico in Light e
+ * Dark, cfr. theme-light.css/theme-dark.css) — un visualizzatore di foto
+ * immersivo resta scuro indipendentemente dal tema dell'app, esattamente
+ * come si comportano le piattaforme reali. Testo/icone:
+ * --sl-color-text-inverse (già esistente, fisso, verificato 17.64:1 su
+ * questo sfondo — nessun nuovo colore introdotto per il testo, vedi
+ * rationale completo in MediaViewer.js).
+ *
+ * Focus ring ricolorato SOLO all'interno di questo componente
+ * (--sl-color-media-focus-ring, nuovo token fisso, 7.90:1) — necessario
+ * perché in Light il focus ring globale (primary-600) renderebbe solo
+ * 3.06:1 su questo sfondo scuro fisso: margine troppo sottile, non
+ * lasciato al caso. L'outline-width/offset restano quelli globali
+ * (css/base/global.css): si ricolora solo la variabile, stesso pattern
+ * già usato da input.css per lo stato di errore.
+ *
+ * z-index: 1000, stesso livello di .sl-modal-overlay (modal.css) — le
+ * due superfici non sono previste coesistere in nessun flusso attuale
+ * del progetto (nessun Modal aperto durante uno scenario), quindi non
+ * serve un livello dedicato più alto: se un giorno dovessero coesistere,
+ * andrà rivalutato allora (YAGNI).
+ */
+
+.sl-media-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--sl-color-media-backdrop);
+  animation: sl-media-viewer-overlay-in var(--sl-duration-base) var(--sl-ease-standard);
+}
+
+.sl-media-viewer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sl-space-6);
+}
+
+.sl-media-viewer :focus-visible {
+  outline-color: var(--sl-color-media-focus-ring);
+}
+
+/* --- Chiusura e navigazione: ancorate al pannello, non allo stage — */
+/* restano ferme mentre il contenuto centrale cambia da un post all'altro. */
+
+.sl-media-viewer__close {
+  position: absolute;
+  top: var(--sl-space-4);
+  right: var(--sl-space-4);
+  /* z-index esplicito: sotto ~720px di larghezza lo stage (anch'esso
+     "position: relative", necessario per il Loader centrato al suo
+     interno) si allarga a piena larghezza disponibile e, seguendo dopo
+     nell'ordine del DOM, coprirebbe altrimenti questo bottone — bug
+     reale trovato da Playwright sul viewport mobile (375px), assente a
+     larghezza desktop dove lo stage resta più stretto del pannello. */
+  z-index: 1;
+}
+
+.sl-media-viewer__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.sl-media-viewer__nav--prev {
+  left: var(--sl-space-4);
+}
+
+.sl-media-viewer__nav--next {
+  right: var(--sl-space-4);
+}
+
+/* Selettori a doppia classe per battere la specificità di button.css
+   senza dipendere dall'ordine di caricamento — stesso principio già
+   applicato in post-card.css/login-form.css. La variante "icon" di
+   default usa token theme-dependent (text-primary, bg-hover/-active):
+   qui vanno sempre forzati ai token fissi del backdrop scuro. */
+.sl-button.sl-media-viewer__close,
+.sl-button.sl-media-viewer__nav {
+  color: var(--sl-color-text-inverse);
+}
+.sl-button.sl-media-viewer__close:hover,
+.sl-button.sl-media-viewer__nav:hover {
+  background-color: var(--sl-color-media-bg-hover);
+}
+.sl-button.sl-media-viewer__close:active,
+.sl-button.sl-media-viewer__nav:active {
+  background-color: var(--sl-color-media-bg-active);
+}
+
+/* --- Stage: immagine con zoom, o testo per i post senza immagine --- */
+
+.sl-media-viewer__stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 720px;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sl-media-viewer__zoom-trigger {
+  display: flex;
+  max-width: 100%;
+  max-height: 100%;
+  cursor: zoom-in;
+}
+
+.sl-media-viewer__stage--zoomed .sl-media-viewer__zoom-trigger {
+  cursor: zoom-out;
+}
+
+.sl-media-viewer__image {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: var(--sl-radius-md);
+  transition: transform var(--sl-duration-base) var(--sl-ease-standard);
+}
+
+.sl-media-viewer__stage--zoomed .sl-media-viewer__image {
+  transform: scale(1.8);
+}
+
+.sl-media-viewer__loader {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--sl-color-text-inverse);
+}
+
+.sl-media-viewer__text-content {
+  max-width: 480px;
+  padding: var(--sl-space-8);
+  color: var(--sl-color-text-inverse);
+  font-size: var(--sl-font-size-lg);
+  line-height: var(--sl-line-height-relaxed);
+  text-align: center;
+  white-space: pre-line;
+}
+
+/* --- Footer: autore, didascalia, indicatore di posizione ------------ */
+
+.sl-media-viewer__footer {
+  width: 100%;
+  max-width: 720px;
+  margin-top: var(--sl-space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sl-space-1);
+  text-align: center;
+}
+
+.sl-media-viewer__author {
+  display: flex;
+  align-items: center;
+  gap: var(--sl-space-2);
+}
+
+.sl-media-viewer__author-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.sl-media-viewer__author-name {
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-inverse);
+  font-size: var(--sl-font-size-sm);
+}
+
+.sl-media-viewer__timestamp {
+  font-size: var(--sl-font-size-xs);
+  color: var(--sl-color-text-inverse);
+}
+
+.sl-media-viewer__caption {
+  max-width: 480px;
+  color: var(--sl-color-text-inverse);
+  font-size: var(--sl-font-size-sm);
+}
+
+/* Stesso bug pattern già documentato in post-card.css/timeline.css:
+   una regola d'autore con "display" batte sempre lo stile UA di
+   [hidden] — va ridichiarato esplicitamente. */
+.sl-media-viewer__caption[hidden] {
+  display: none;
+}
+
+.sl-media-viewer__position {
+  font-size: var(--sl-font-size-xs);
+  color: var(--sl-color-text-inverse);
+}
+
+@keyframes sl-media-viewer-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
