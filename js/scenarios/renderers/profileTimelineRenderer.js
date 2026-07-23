@@ -91,6 +91,7 @@ import { create as createButton } from "../../components/Button.js";
 import { create as createStoriesBar } from "../../components/StoriesBar.js";
 import { create as createFeed } from "../../components/Feed.js";
 import { create as createTimeline } from "../../components/Timeline.js";
+import { create as createMediaViewer } from "../../components/MediaViewer.js";
 
 function formatCount(value) {
   return (Number(value) || 0).toLocaleString("it-IT");
@@ -287,10 +288,34 @@ export async function renderProfileTimeline(container, scenario) {
     panels,
   ]);
 
+  // sl:post-open bolle sia da PostCard (dentro Feed) sia da Timeline —
+  // stesso evento, stesso "detail: { postId }" da entrambe le fonti
+  // (nessuna delle due emette un evento diverso). Il post completo si
+  // risolve qui, in "feedPosts" (già caricato e trasformato, autore+data
+  // compresi) — MAI un secondo fetch: MediaViewer riceve l'intero array
+  // + l'indice di partenza, così la navigazione prev/next avviene
+  // sull'intero profilo, non solo sulla vista di provenienza (Feed o
+  // Archivio). Ascoltato su "wrapper" (non su feed/timeline
+  // singolarmente): un solo listener copre entrambe le fonti, dato che
+  // sono entrambe discendenti di wrapper nel DOM.
+  let mediaViewer = null;
+
+  function handlePostOpen(event) {
+    const index = feedPosts.findIndex((post) => post.id === event.detail.postId);
+    if (index === -1) return;
+    if (mediaViewer) mediaViewer.destroy();
+    mediaViewer = createMediaViewer({ posts: feedPosts, startIndex: index });
+    mediaViewer.element.addEventListener("sl:media-viewer-close", () => {
+      mediaViewer = null;
+    });
+  }
+  wrapper.addEventListener("sl:post-open", handlePostOpen);
+
   container.appendChild(wrapper);
 
   return function destroy() {
     feed.element.removeEventListener("sl:post-like", handlePostLike);
+    wrapper.removeEventListener("sl:post-open", handlePostOpen);
     feedTab.element.removeEventListener("sl:click", showFeed);
     archiveTab.element.removeEventListener("sl:click", showArchive);
     header.destroy();
@@ -299,6 +324,14 @@ export async function renderProfileTimeline(container, scenario) {
     timeline.destroy();
     feedTab.destroy();
     archiveTab.destroy();
-    wrapper.remove();
+    // MediaViewer vive fuori da "wrapper" (montato direttamente su
+    // <body>, come Modal): se questo controller viene smontato mentre il
+    // visualizzatore è ancora aperto (caso limite, navigazione via router
+    // non passando per la chiusura naturale del visualizzatore), va
+    // distrutto esplicitamente qui — altrimenti resterebbe orfano sopra
+    // la pagina successiva. Stessa cautela non ancora applicata a Modal
+    // altrove nel progetto (debito tecnico noto e accettato lì, cfr.
+    // Modal.js "nessuno stacking"), qui risolta perché il costo è minimo.
+    if (mediaViewer) mediaViewer.destroy();
   };
 }
