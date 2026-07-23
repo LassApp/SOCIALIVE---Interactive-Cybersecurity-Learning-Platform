@@ -94,4 +94,16 @@
   /* Focus ring — primitivo dedicato (-300), non alias di primary-500/600:
      serve il massimo contrasto possibile su sfondo scuro (7.18–7.90:1) */
   --sl-color-focus-ring: var(--sl-palette-primary-300);
+
+  /* Media Viewer (Fase 7) — stessi valori FISSI di theme-light.css (vedi
+     commento lì per il rationale completo): un backdrop immersivo scuro
+     non dipende dal tema dell'app. In Dark coincidono già con
+     focus-ring/valori esistenti, ma restano token dedicati (non alias)
+     per lo stesso motivo per cui --sl-color-primary-text non è un alias
+     "a volte" di primary-600: un componente non deve mai dover sapere se
+     il proprio token coincide per caso con un altro in un tema specifico. */
+  --sl-color-media-backdrop: var(--sl-palette-gray-950);
+  --sl-color-media-focus-ring: var(--sl-palette-primary-300);
+  --sl-color-media-bg-hover: rgba(247, 248, 250, 0.12);
+  --sl-color-media-bg-active: rgba(247, 248, 250, 0.2);
 }
