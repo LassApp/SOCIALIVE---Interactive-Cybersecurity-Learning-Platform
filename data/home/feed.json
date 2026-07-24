@@ -2,7 +2,7 @@
   "posts": [
     {
       "id": "home-post-1",
-      "author": { "name": "Marco Bianchi" },
+      "author": { "name": "Mario Bianchi" },
       "timestamp": "3 h fa",
       "content": "Weekend in montagna, aria pulita e silenzio assoluto. Esattamente quello che serviva dopo due settimane no-stop.",
       "image": {
