@@ -33,16 +33,12 @@
  *   - size {'sm'|'md'|'lg'} default: 'md'
  */
 
+import { svgNode } from "../utils/svg.js";
+
 const SIZES = ["sm", "md", "lg"];
 
 function resolveSize(size) {
   return SIZES.includes(size) ? size : "md";
-}
-
-function svgNode(tag, attrs) {
-  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
-  Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, value));
-  return el;
 }
 
 export function create(props = {}) {
