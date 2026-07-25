@@ -70,16 +70,6 @@ function solidCircleAvatar(hexColor) {
   );
 }
 
-const MOUNTAIN_IMAGE =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320">' +
-      '<rect width="480" height="320" fill="#dce3ff"/>' +
-      '<circle cx="380" cy="70" r="36" fill="#f5cb6b"/>' +
-      '<polygon points="0,320 160,140 260,240 340,120 480,320" fill="#8fa3ff"/>' +
-      "</svg>"
-  );
-
 // Contenuto generico, del tutto slegato da qualunque scenario didattico
 // (Fase 6+): il Feed della Home deve sembrare un normale feed social,
 // non un contenuto "preparato per la lezione" — realismo richiesto
@@ -88,11 +78,14 @@ function buildDemoPosts() {
   return [
     {
       id: "home-post-1",
-      author: { name: "Marco Bianchi", avatarSrc: solidCircleAvatar("#8fa3ff") },
+      author: { name: "Mario Bianchi", avatarSrc: solidCircleAvatar("#8fa3ff") },
       timestamp: "3 h fa",
       content:
         "Weekend in montagna, aria pulita e silenzio assoluto. Esattamente quello che serviva dopo due settimane no-stop.",
-      image: { src: MOUNTAIN_IMAGE, alt: "Paesaggio montano stilizzato con sole e picchi" },
+      image: {
+        src: "assets/images/home/post_mario_bianchi.jpg",
+        alt: "Paesaggio montano stilizzato con sole e picchi",
+      },
       stats: { likes: 214, comments: 18, shares: 4 },
       liked: false,
     },
@@ -188,7 +181,22 @@ export function createHomePageController(container) {
   feed.element.addEventListener("sl:post-like", handlePostLike);
 
   // --- Composizione pagina ---------------------------------------------
+  // <h1> nascosto solo visivamente (Fase 9): la Home era l'unica delle
+  // tre pagine reali priva di un h1 (Login lo ha per il brand, la pagina
+  // di scenario per il nome profilo) — un salto di livello da nessun h1
+  // a h2 "Moduli" rompeva la struttura di intestazioni del documento.
+  // Testo "Home", non il brand "SocialAlive" (già coperto da LoginForm):
+  // coerente con l'etichetta già usata per questa stessa rotta in
+  // Sidebar/appShell.js ("Home" → "#/home"). Non visibile in pagina: un
+  // titolo "HOME" a vista stonerebbe con l'obiettivo di realismo del
+  // progetto (nessun vero feed social lo mostra).
+  const pageHeading = createElement("h1", {
+    classNames: "sl-visually-hidden",
+    text: "Home",
+  });
+
   const content = createElement("div", { classNames: "sl-home-page__content" }, [
+    pageHeading,
     modulesSection,
     feed.element,
   ]);
