@@ -43,11 +43,15 @@
  *     problema non critico" già seguito da authService per la sessione
  *     non persistita).
  *
- * Nessun nuovo file CSS per i messaggi di fallback: stesso trattamento
- * già riservato da router.js al proprio "Pagina non trovata" (stile
- * inline con i token --sl-*, non un componente/CSS dedicato) —
- * introdurre CSS reale per uno stato transitorio che Fase 6 sostituirà
- * per intero sarebbe lavoro gettato via, non riutilizzabilità (YAGNI).
+ * Costruzione del messaggio di fallback (Fase 9): estratta in
+ * js/utils/fallbackMessage.js — viveva qui come funzione locale
+ * identica, byte per byte, a quella di profileTimelineRenderer.js.
+ * Centralizzarla ha corretto anche un bug reale non presente in questo
+ * file ma nel terzo consumer (router.js, "Pagina non trovata"), che
+ * impostava solo "padding" e non "color"/"font-size" — vedi
+ * fallbackMessage.js per il rationale completo. Nessun nuovo file CSS:
+ * stesso trattamento inline con i token --sl-* già motivato in Fase 5
+ * (stati transitori, non un componente del Design System).
  *
  * Nessun indicatore di caricamento visibile (es. Loader, Fase 2): il
  * fetch è locale e la latenza percepita è oggi trascurabile — stesso
@@ -80,6 +84,7 @@
  */
 
 import { createLocalJsonResource } from "../repositories/localJsonRepository.js";
+import { buildFallbackMessage } from "../utils/fallbackMessage.js";
 
 const renderers = new Map(); // type -> (container, scenario) => destroy|undefined
 
@@ -98,15 +103,6 @@ const renderers = new Map(); // type -> (container, scenario) => destroy|undefin
  */
 export function registerRenderer(type, renderer) {
   renderers.set(type, renderer);
-}
-
-function buildFallbackMessage(text) {
-  const message = document.createElement("p");
-  message.textContent = text;
-  message.style.padding = "var(--sl-space-8)";
-  message.style.color = "var(--sl-color-text-secondary)";
-  message.style.fontSize = "var(--sl-font-size-md)";
-  return message;
 }
 
 /**
