@@ -94,9 +94,30 @@
   filter: brightness(0.94);
 }
 
+/* Fase 9: "max-height: 520px" (fisso, in px) sostituito con
+   "aspect-ratio" — l'attributo <img> non porta dimensioni intrinseche
+   (né i dati di posts.json/feed.json le portano: nessuna larghezza/
+   altezza per immagine, scelta consapevole per non richiedere al
+   docente di misurare ogni foto che carica), quindi prima di questo
+   intervento il browser non riservava ALCUNO spazio per l'immagine
+   prima del caricamento: card più basse, poi un salto di layout non
+   appena l'immagine arrivava — rischio reale e concreto proprio nel
+   momento in cui le foto reali di Oversharing sostituiranno gli attuali
+   placeholder a tinta unita (Fase 6, ancora in sospeso).
+   4:3 non è arbitrario: alla larghezza tipica di una card (480-640px,
+   cfr. home-page.css/profile-timeline.css) restituisce un'altezza
+   (~360-480px) prossima al precedente cap di 520px — cambio visivo
+   minimo — ma, diversamente da un valore assoluto in px, scala con la
+   larghezza reale della card invece di essere scollegato dal contesto:
+   un miglioramento, non solo la parità visiva. Object-fit:cover
+   (invariato) continua a ritagliare l'immagine per riempire il
+   rettangolo così riservato, qualunque sia il formato nativo della
+   foto — stessa filosofia di uniformità già scelta con il precedente
+   max-height fisso, non una fedeltà al formato originale mai stata nei
+   requisiti. */
 .sl-post-card__media-image {
   width: 100%;
-  max-height: 520px;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
 }
 
