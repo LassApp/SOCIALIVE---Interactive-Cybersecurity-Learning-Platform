@@ -5,16 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SocialAlive</title>
 
-  <!--
-    Script anti-FOUC: identico nel meccanismo a quello già presente in
-    style-guide.html (stessa chiave "sl-theme", stessa logica sincrona
-    non-module). Duplicato qui di proposito, non estratto in un file
-    condiviso: deve restare sincrono e indipendente dai moduli ES per
-    eliminare il flash del tema sbagliato — un file esterno introdurrebbe
-    una richiesta di rete che vanificherebbe lo scopo. Se la chiave
-    cambia, va aggiornata in ENTRAMBI i punti (commento presente anche in
-    js/services/themeService.js e in style-guide.html).
-  -->
   <script>
     (function () {
       var STORAGE_KEY = "sl-theme";
@@ -44,21 +34,6 @@
   <link rel="stylesheet" href="css/themes/theme-dark.css" />
   <link rel="stylesheet" href="css/base/global.css" />
 
-  <!--
-    Elenco aggiornato in Fase 6: solo i componenti realmente montati
-    dalle rotte esistenti (#/login, #/home, #/scenario/:scenarioId).
-    Caricare CSS di componenti non ancora montati sarebbe peso morto
-    (stesso principio già seguito in questo file da Fase 3/4/5).
-
-    BUG TROVATO E CORRETTO in questo step: stories-bar.css, timeline.css
-    e css/scenarios/profile-timeline.css (Fase 6/Step 2-3) erano stati
-    consegnati come file ma non erano MAI stati collegati qui — la
-    StoriesBar veniva quindi mostrata senza alcun CSS proprio: senza
-    "display:flex" su .sl-stories-bar__list, il browser applica lo stile
-    di default di una <ul>/<li> (blocco, quindi impilata verticalmente),
-    esattamente il sintomo segnalato. Nessun bug nel componente stesso:
-    il problema era solo di collegamento in questo file.
-  -->
   <link rel="stylesheet" href="css/components/button.css" />
   <link rel="stylesheet" href="css/components/avatar.css" />
   <link rel="stylesheet" href="css/components/badge.css" />
@@ -97,15 +72,14 @@
 
     initTheme();
 
-    // Registrazione dei renderer di scenario PRIMA di registrare le rotte
-    // che potrebbero risolverli (stesso ordine già richiesto da
-    // scenarioEngine.js: "PRIMA che scenarioPageController possa
-    // risolvere una rotta #/scenario/:scenarioId").
     registerRenderer("profile-timeline", renderProfileTimeline);
 
-    registerRoute("#/login", createLoginPageController, { protected: false });
-    registerRoute("#/home", createHomePageController, { protected: true });
-    registerRoute("#/scenario/:scenarioId", createScenarioPageController, { protected: true });
+    registerRoute("#/login", createLoginPageController, { protected: false, title: "Accedi" });
+    registerRoute("#/home", createHomePageController, { protected: true, title: "Home" });
+    registerRoute("#/scenario/:scenarioId", createScenarioPageController, {
+      protected: true,
+      title: "Scenario",
+    });
 
     initRouter(document.getElementById("app-root"));
   </script>
