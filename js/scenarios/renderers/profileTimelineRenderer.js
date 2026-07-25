@@ -68,10 +68,10 @@
  * post, poi Feed.update()) — Timeline non mostra contatori, non
  * necessita di alcun aggiornamento quando cambia un "mi piace".
  *
- * "sl:story-open"/"sl:post-open": nessun listener collegato, stesso
- * trattamento già riservato a molti altri eventi in questo progetto
- * (sl:search, sl:settings-click, ecc.) — le destinazioni (Media Viewer,
- * Fase 7) non esistono ancora.
+ * "sl:story-open": nessun listener collegato, stesso trattamento già
+ * riservato a molti altri eventi in questo progetto (sl:search,
+ * sl:settings-click, ecc.) — la destinazione (un futuro Story Viewer)
+ * non esiste ancora.
  *
  * ERRORE DI FETCH SUI DATASET SECONDARI: un try/catch dedicato, distinto
  * da quello già presente nell'engine per scenario.json stesso — se
@@ -80,11 +80,22 @@
  * un'infrastruttura di gestione errori condivisa per un solo consumer
  * reale (YAGNI, stesso principio già seguito ovunque nel progetto).
  *
+ * Costruzione del messaggio di errore (Fase 9): estratta in
+ * js/utils/fallbackMessage.js — la funzione locale "buildErrorMessage"
+ * era identica, byte per byte, a "buildFallbackMessage" di
+ * scenarioEngine.js (stesso padding/color/font-size). Centralizzarla in
+ * un'unica utility condivisa elimina la duplicazione e, come effetto
+ * collaterale utile, garantisce che ANCHE un terzo consumer (router.js,
+ * "Pagina non trovata" — bug reale corretto nello stesso step) riceva
+ * esattamente lo stesso trattamento visivo, invece di una copia
+ * divergente. Vedi fallbackMessage.js per il rationale completo.
+ *
  * Firma richiesta dall'engine: (container, scenario) => Promise<destroy|undefined>.
  */
 
 import { createElement } from "../../utils/dom.js";
 import { formatFullDate } from "../../utils/dateFormat.js";
+import { buildFallbackMessage } from "../../utils/fallbackMessage.js";
 import { createLocalJsonResource, createLocalJsonRepository } from "../../repositories/localJsonRepository.js";
 import { create as createAvatar } from "../../components/Avatar.js";
 import { create as createButton } from "../../components/Button.js";
@@ -180,20 +191,11 @@ function toFeedPost(rawPost, author) {
   };
 }
 
-function buildErrorMessage(text) {
-  const message = document.createElement("p");
-  message.textContent = text;
-  message.style.padding = "var(--sl-space-8)";
-  message.style.color = "var(--sl-color-text-secondary)";
-  message.style.fontSize = "var(--sl-font-size-md)";
-  return message;
-}
-
 export async function renderProfileTimeline(container, scenario) {
   const refs = scenario.dataRefs || {};
   if (!refs.profile || !refs.stories || !refs.posts) {
     console.error(`[profileTimelineRenderer] "dataRefs" incompleto per lo scenario "${scenario.id}".`);
-    container.appendChild(buildErrorMessage("I dati di questo profilo non sono disponibili al momento."));
+    container.appendChild(buildFallbackMessage("I dati di questo profilo non sono disponibili al momento."));
     return undefined;
   }
 
@@ -213,7 +215,7 @@ export async function renderProfileTimeline(container, scenario) {
     ]);
   } catch (error) {
     console.error(`[profileTimelineRenderer] Impossibile caricare i dati del profilo "${scenario.id}"`, error);
-    container.appendChild(buildErrorMessage("I dati di questo profilo non sono disponibili al momento."));
+    container.appendChild(buildFallbackMessage("I dati di questo profilo non sono disponibili al momento."));
     return undefined;
   }
 
