@@ -76,9 +76,20 @@
  * dell'interfaccia che scatena un logout (oggi ProfileMenu su #/home,
  * Fase 4) non deve "ricordarsi" di navigare a #/login — lo fa il router
  * una sola volta, per tutti i chiamanti presenti e futuri.
+ *
+ * FALLBACK "PAGINA NON TROVATA" (Fase 9): la costruzione del messaggio è
+ * stata estratta in js/utils/fallbackMessage.js — bug reale corretto in
+ * questo stesso step (non solo debito DRY): questo file impostava da solo
+ * SOLO "padding" sul messaggio, mentre scenarioEngine.js/
+ * profileTimelineRenderer.js impostavano anche "color"/"font-size" sulle
+ * proprie copie (identiche tra loro) della stessa funzione — "Pagina non
+ * trovata." rendeva quindi con colore/dimensione di default invece dello
+ * stile "soft" usato ovunque altrove per gli stati non felici. Vedi
+ * fallbackMessage.js per il rationale completo.
  */
 
 import { hasValidSession } from "../services/authService.js";
+import { buildFallbackMessage } from "../utils/fallbackMessage.js";
 
 const routes = new Map(); // corrispondenza esatta: hash -> { controller, protected }
 const parameterizedRoutes = []; // corrispondenza per pattern: [{ regex, paramNames, controller, protected }]
@@ -86,10 +97,7 @@ let currentDestroy = null;
 let rootElement = null;
 
 function renderNotFound(container) {
-  const message = document.createElement("p");
-  message.textContent = "Pagina non trovata.";
-  message.style.padding = "var(--sl-space-8)";
-  container.appendChild(message);
+  container.appendChild(buildFallbackMessage("Pagina non trovata."));
   return undefined; // nessun cleanup necessario per questo fallback minimale
 }
 
