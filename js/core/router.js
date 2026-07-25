@@ -86,6 +86,23 @@
  * trovata." rendeva quindi con colore/dimensione di default invece dello
  * stile "soft" usato ovunque altrove per gli stati non felici. Vedi
  * fallbackMessage.js per il rationale completo.
+ *
+ * document.title PER ROTTA (Fase 9, nuovo): nessuna pagina reale
+ * aggiornava finora il titolo della scheda del browser (rimaneva sempre
+ * "SocialAlive", il valore statico di index.html) — un doppio problema:
+ * WCAG 2.4.2 (Page Titled) da un lato, e un difetto di realismo
+ * dall'altro (un vero social aggiorna sempre il titolo scheda). Il
+ * titolo arriva da chi registra la rotta (index.html), non è derivato
+ * qui dall'hash: router.js resta ignaro del SIGNIFICATO delle pagine
+ * concrete, si limita ad applicarlo al momento del mount — stesso
+ * principio di dipendenza unidirezionale già seguito per "protected".
+ * Per la rotta parametrica di scenario, oggi il titolo è generico
+ * ("Scenario"): il nome reale del profilo si conosce solo dopo il fetch
+ * asincrono in profileTimelineRenderer.js, che non fa parte di questo
+ * intervento — un affinamento dinamico (il renderer sovrascrive
+ * document.title una volta risolto il profilo) resta un possibile passo
+ * futuro, non introdotto ora per restare nello scope dichiarato di
+ * questo step.
  */
 
 import { hasValidSession } from "../services/authService.js";
@@ -95,6 +112,21 @@ const routes = new Map(); // corrispondenza esatta: hash -> { controller, protec
 const parameterizedRoutes = []; // corrispondenza per pattern: [{ regex, paramNames, controller, protected }]
 let currentDestroy = null;
 let rootElement = null;
+
+// document.title per rotta (Fase 9): centralizzato qui, non nei singoli
+// page controller — stesso principio già seguito per la guardia di
+// sessione e per "Pagina non trovata" (un concern generico di ogni
+// rotta vive nel router, non ripetuto in ciascun controller). Il titolo
+// arriva da chi registra la rotta (index.html, unico punto che conosce
+// il significato di ciascuna — router.js resta ignaro delle pagine
+// concrete, stesso principio già seguito per "protected"). Nessun
+// titolo registrato (oggi: solo il fallback 404) → solo APP_NAME, senza
+// un trattino finale vuoto.
+const APP_NAME = "SocialAlive";
+
+function applyTitle(title) {
+  document.title = title ? `${title} — ${APP_NAME}` : APP_NAME;
+}
 
 function renderNotFound(container) {
   container.appendChild(buildFallbackMessage("Pagina non trovata."));
@@ -141,12 +173,13 @@ function matchParameterizedRoute(rawHash) {
   return null;
 }
 
-function mount(controller, params) {
+function mount(controller, params, title) {
   if (currentDestroy) {
     currentDestroy();
     currentDestroy = null;
   }
   while (rootElement.firstChild) rootElement.removeChild(rootElement.firstChild);
+  applyTitle(title);
   currentDestroy = controller(rootElement, params) || null;
 }
 
@@ -168,7 +201,7 @@ function resolve() {
       navigate("#/home");
       return;
     }
-    mount(exactRoute.controller, {});
+    mount(exactRoute.controller, {}, exactRoute.title);
     return;
   }
 
@@ -178,11 +211,11 @@ function resolve() {
       navigate("#/login");
       return;
     }
-    mount(matched.route.controller, matched.params);
+    mount(matched.route.controller, matched.params, matched.route.title);
     return;
   }
 
-  mount(renderNotFound, {});
+  mount(renderNotFound, {}, "Pagina non trovata");
 }
 
 /**
@@ -205,14 +238,18 @@ export function navigate(hash) {
  * (index.html), PRIMA di init().
  * @param {string} hash es. "#/home" oppure "#/scenario/:scenarioId"
  * @param {(container: HTMLElement, params: object) => (Function|void)} controller
- * @param {{ protected?: boolean }} [options]
+ * @param {{ protected?: boolean, title?: string }} [options] "title"
+ *   (Fase 9, additivo): testo mostrato come `${title} — SocialAlive` nel
+ *   titolo della scheda del browser quando questa rotta è attiva. Se
+ *   omesso, resta il solo APP_NAME — nessuna rotta esistente lo leggeva
+ *   prima di questo step, quindi ometterlo non cambia comportamento.
  */
-export function registerRoute(hash, controller, { protected: isProtected = false } = {}) {
+export function registerRoute(hash, controller, { protected: isProtected = false, title } = {}) {
   if (hash.includes(":")) {
     const { regex, paramNames } = compilePattern(hash);
-    parameterizedRoutes.push({ regex, paramNames, controller, protected: isProtected });
+    parameterizedRoutes.push({ regex, paramNames, controller, protected: isProtected, title });
   } else {
-    routes.set(hash, { controller, protected: isProtected });
+    routes.set(hash, { controller, protected: isProtected, title });
   }
 }
 
