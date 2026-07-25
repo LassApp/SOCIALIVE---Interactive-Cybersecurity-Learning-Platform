@@ -1,88 +1,3 @@
-/**
- * PostCard.js
- * -----------------------------------------------------------------------
- * Visualizza un post del feed (piano dei componenti, Fase 1 §4). NON
- * duplica Card: lo compone come contenitore base (header + corpo +
- * azioni passati come "content"), esattamente come già anticipato dal
- * commento in cima a Card.js ("PostCard lo comporrà come base, non lo
- * duplicherà").
- *
- * ICONE (like/commenta/condividi): nessuno sprite SVG esiste ancora
- * (assets/icons/icons.svg, YAGNI già applicato a Input/Modal/Sidebar).
- * Costruite qui inline, stesso identico pattern già usato da
- * Modal.buildCloseIcon(): quando lo sprite esisterà, sostituire con
- * <use href="#icon-...">, il markup esterno (Button, variante ghost)
- * resta identico — zero impatto sui consumer.
- *
- * STATO "MI PIACE" — PIENAMENTE CONTROLLATO, non locale:
- * il bottone like NON muta il proprio aspetto al click (a differenza di
- * ThemeSwitch, l'unica eccezione già prevista dal piano che chiama
- * direttamente un service). Non esiste ancora un likeService/repository
- * (arriverà con Fase 8, dati esterni): introdurre qui uno stato "di
- * business" violerebbe la regola dei componenti "dumb" (architettura
- * Fase 1 §2.1 — "ricevono dati come parametri e comunicano verso
- * l'esterno solo tramite eventi"). Al click viene emesso solo l'INTENTO
- * ("sl:post-like" col valore invertito); l'aspetto cambia solo quando
- * il consumer richiama update({ post: { ...con liked aggiornato } }),
- * esattamente come già Button non gestisce da sé lo stato "disabled"
- * dopo un click.
- *
- * COLORE STATO "LIKED": --sl-color-error-text, non --sl-color-error-500.
- * Il colore qui tinge anche la label visibile del bottone (il contatore
- * numerico, testo vero — non solo l'icona), quindi la soglia applicabile
- * è 4.5:1 (testo), non 3:1 (icona/decorativo) — la stessa distinzione
- * fill-vs-testo già alla base del bug primary-600 documentato in
- * theme-dark.css. error-text è già verificato ESATTAMENTE su bg-surface
- * (8.17:1 Light / 8.55:1 Dark — numeri già presenti in input.css):
- * nessuna nuova verifica necessaria, è lo stesso token sullo stesso
- * sfondo, non un nuovo accostamento. Lo stato non è affidato al solo
- * colore (§5.7 architettura Fase 1): l'icona cambia FORMA (contorno →
- * piena) e aria-pressed riflette lo stato per gli screen reader.
- *
- * APERTURA POST ("sl:post-open"): scatta SOLO cliccando l'eventuale
- * immagine, non l'intera card né il testo. Il testo resta selezionabile
- * (renderlo "cliccabile per aprire" comprometterebbe la selezione,
- * pattern comune nei social reali); un post senza immagine non ha oggi
- * nulla da "aprire" (Media Viewer è Fase 7) — comportamento rimandato,
- * non uno scope creep introdotto ora.
- *
- * IMMAGINE FULL-BLEED: l'immagine del post "sfonda" il padding laterale
- * della card (margine negativo pari a --sl-space-5 in post-card.css, lo
- * stesso valore del padding di .sl-card) per apparire a piena larghezza
- * come nei social reali, pur restando distanziata da header/azioni (mai
- * a contatto con gli angoli arrotondati della card, nessun overflow da
- * gestire). Accoppiamento noto: se in futuro il padding di Card
- * cambiasse, il valore in post-card.css andrebbe aggiornato di
- * conseguenza (annotato anche lì).
- *
- * Contatori (mi piace/commenti/condivisioni): formattati con
- * Number.prototype.toLocaleString("it-IT") — corretto raggruppamento
- * delle migliaia senza introdurre una libreria o una logica di
- * abbreviazione ("1,2k") non richiesta ora (YAGNI: aggiungerla in
- * futuro non cambierebbe l'interfaccia pubblica del componente).
- *
- * Interfaccia: create(props) → { element, update(props), destroy() }
- *
- * Props:
- *   - post {{
- *       id: string,
- *       author?: { name?: string, avatarSrc?: string },
- *       timestamp?: string   (stringa già formattata dal chiamante —
- *         PostCard non calcola tempi relativi, stessa regola già
- *         seguita da Card/Input: i dati arrivano pronti, non grezzi),
- *       content?: string,    (testo del post, opzionale)
- *       image?: { src: string, alt: string },
- *       stats?: { likes?: number, comments?: number, shares?: number },
- *       liked?: boolean
- *     }}
- *
- * Eventi emessi (su element, bubbling):
- *   - sl:post-open     detail: { postId }  (click sull'immagine)
- *   - sl:post-like     detail: { postId, liked }  (liked = valore INTENTO, non applicato)
- *   - sl:post-comment  detail: { postId }
- *   - sl:post-share    detail: { postId }
- */
-
 import { createElement } from "../utils/dom.js";
 import { create as createCard } from "./Card.js";
 import { create as createAvatar } from "./Avatar.js";
@@ -98,9 +13,6 @@ function svgNode(tag, attrs) {
   return el;
 }
 
-// Cuore: contorno (non "mi piace") oppure pieno (mi piace) — la FORMA
-// cambia, non solo il colore (§5.7 architettura Fase 1: mai il solo colore
-// come unico segnale di stato).
 function buildHeartIcon(filled) {
   const svg = svgNode("svg", { viewBox: "0 0 24 24" });
   const path = svgNode("path", {
@@ -119,9 +31,6 @@ function buildHeartIcon(filled) {
   return svg;
 }
 
-// Fumetto di commento: rettangolo arrotondato (corpo) + piccola coda,
-// costruito con primitive SVG invece di un unico path complesso — più
-// semplice da mantenere leggibile qui nel codice.
 function buildCommentIcon() {
   const svg = svgNode("svg", { viewBox: "0 0 24 24", fill: "none" });
   svg.appendChild(
@@ -139,8 +48,6 @@ function buildCommentIcon() {
   return svg;
 }
 
-// Condividi: tre nodi collegati da due segmenti (icona "condividi"
-// convenzionale, riconoscibile senza ambiguità).
 function buildShareIcon() {
   const svg = svgNode("svg", { viewBox: "0 0 24 24", fill: "none" });
   svg.appendChild(svgNode("circle", { cx: "18", cy: "5", r: "2.5", fill: "currentColor" }));
@@ -210,7 +117,19 @@ export function create(props = {}) {
   ]);
 
   const contentEl = createElement("p", { classNames: "sl-post-card__content" });
-  const mediaImg = createElement("img", { classNames: "sl-post-card__media-image" });
+  // loading="lazy" (Fase 9): statico per l'intera vita del componente
+  // (non cambia mai a runtime, quindi impostato qui in creazione, non in
+  // render() ad ogni update) — stesso attributo già usato da Timeline.js
+  // per le proprie anteprime (Fase 6), qui esteso al Feed reale (Home e
+  // Oversharing), l'unico consumer che ne era ancora privo. Il browser
+  // decide autonomamente quando l'immagine è "vicina" al viewport
+  // (margine simile, concettualmente, al rootMargin già usato da Feed.js
+  // per il proprio IntersectionObserver): nessuna nuova logica da
+  // scrivere qui, solo l'attributo nativo.
+  const mediaImg = createElement("img", {
+    classNames: "sl-post-card__media-image",
+    attrs: { loading: "lazy" },
+  });
   const mediaButton = createElement("button", { classNames: "sl-post-card__media", attrs: { type: "button" } }, [
     mediaImg,
   ]);
