@@ -2,15 +2,10 @@ import { createElement } from "../utils/dom.js";
 import { create as createCard } from "./Card.js";
 import { create as createAvatar } from "./Avatar.js";
 import { create as createButton } from "./Button.js";
+import { svgNode } from "../utils/svg.js";
 
 function formatCount(value) {
   return (Number(value) || 0).toLocaleString("it-IT");
-}
-
-function svgNode(tag, attrs) {
-  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
-  Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, value));
-  return el;
 }
 
 function buildHeartIcon(filled) {
