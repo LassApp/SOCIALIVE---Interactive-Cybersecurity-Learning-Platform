@@ -104,12 +104,7 @@ import { getFocusableElements, trapTabKey } from "../utils/focusTrap.js";
 import { create as createButton } from "./Button.js";
 import { create as createAvatar } from "./Avatar.js";
 import { create as createLoader } from "./Loader.js";
-
-function svgNode(tag, attrs) {
-  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
-  Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, value));
-  return el;
-}
+import { svgNode } from "../utils/svg.js";
 
 // Icona × — stesso identico pattern già usato da Modal.buildCloseIcon():
 // nessuno sprite SVG esiste ancora (debito tecnico noto da Fase 2).
