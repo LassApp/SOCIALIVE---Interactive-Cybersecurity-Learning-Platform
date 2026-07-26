@@ -47,3 +47,39 @@
   min-width: 0;
   padding: var(--sl-space-6) var(--sl-space-5);
 }
+
+/**
+ * Skip-link (Fase 9, WCAG 2.4.1): nascosto di default via transform
+ * (non la tecnica clip/1px già usata da .sl-visually-hidden in
+ * global.css — quella resta permanentemente invisibile anche a fuoco
+ * ricevuto, qui serve l'opposto: comparire quando un utente da
+ * tastiera lo raggiunge con Tab). z-index 2000: sopra qualunque altro
+ * layer del Design System (Modal/MediaViewer a 1000, ProfileMenu a
+ * 900, AppHeader a 10) — deve restare sempre raggiungibile e visibile,
+ * indipendentemente da cosa altro sia aperto sulla pagina in quel
+ * momento. position:fixed (non absolute, a differenza di
+ * ProfileMenu): deve restare ancorato alla viewport indipendentemente
+ * dallo scroll, non a un antenato posizionato specifico.
+ *
+ * Colori: --sl-color-primary-600 + --sl-color-text-inverse, la stessa
+ * coppia già verificata (6.13:1) e riusata da Button primary/Avatar
+ * fallback/thumb di ThemeSwitch — nessun nuovo accostamento introdotto.
+ */
+.sl-page-container__skip-link {
+  position: fixed;
+  top: var(--sl-space-3);
+  left: var(--sl-space-3);
+  z-index: 2000;
+  padding: var(--sl-space-2) var(--sl-space-4);
+  border-radius: var(--sl-radius-md);
+  background-color: var(--sl-color-primary-600);
+  color: var(--sl-color-text-inverse);
+  font-size: var(--sl-font-size-sm);
+  font-weight: var(--sl-font-weight-semibold);
+  transform: translateY(-200%);
+  transition: transform var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-page-container__skip-link:focus-visible {
+  transform: translateY(0);
+}
