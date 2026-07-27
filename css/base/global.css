@@ -76,3 +76,22 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Transizione tra pagine (Fase 9): applicata da router.js a qualunque
+ * elemento radice gli venga passato in init() — vive qui e non nel CSS
+ * di un componente perché è un concern generico del router, non di una
+ * pagina specifica (stesso principio già seguito dalla rete di
+ * sicurezza reduced-motion qui sopra). Solo opacity: nessun nuovo colore
+ * introdotto, nessuna verifica di contrasto necessaria. Rispetta
+ * prefers-reduced-motion senza bisogno di codice dedicato:
+ * --sl-duration-base è già azzerato dal token (motion.css) per chi lo
+ * richiede, e la rete di sicurezza qui sopra lo garantirebbe comunque.
+ */
+.sl-route-transition {
+  transition: opacity var(--sl-duration-base) var(--sl-ease-standard);
+}
+
+.sl-route-transition--hidden {
+  opacity: 0;
+}
