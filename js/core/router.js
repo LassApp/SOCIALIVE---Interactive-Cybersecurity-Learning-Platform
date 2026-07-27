@@ -103,6 +103,44 @@
  * document.title una volta risolto il profilo) resta un possibile passo
  * futuro, non introdotto ora per restare nello scope dichiarato di
  * questo step.
+ *
+ * TRANSIZIONE TRA PAGINE (Fase 9, nuovo): il cambio rotta era l'unico
+ * punto dell'intera app senza alcuna cura di transizione — mount()
+ * smonta/rimonta in modo sincrono, zero opacity/transform. Si applica
+ * SOLO un fade-IN del contenuto nuovo, non un fade-out del vecchio: lo
+ * scambio DOM è già istantaneo e impercettibile (rimozione sincrona di
+ * tutti i figli), coordinare anche un'uscita animata richiederebbe
+ * ritardare la distruzione del controller precedente — complessità non
+ * necessaria per l'effetto percepito voluto (un arrivo più morbido, non
+ * una vera coreografia a due fasi). Le due classi (.sl-route-transition
+ * base + .sl-route-transition--hidden modificatore) vivono in
+ * css/base/global.css, non nel CSS di un componente: è un concern
+ * generico applicato a QUALUNQUE elemento passato a init(), stesso
+ * principio già seguito per la rete di sicurezza reduced-motion definita
+ * nello stesso file. Nessun nuovo colore introdotto (solo opacity),
+ * nessuna verifica di contrasto necessaria. Rispetta
+ * prefers-reduced-motion automaticamente: --sl-duration-base è già
+ * azzerato dal token (motion.css) per chi lo richiede, la rete di
+ * sicurezza generale in global.css lo garantisce comunque anche se
+ * questo file smettesse per errore di leggere il token in futuro —
+ * stesso doppio livello di difesa già documentato per Modal/Skeleton/
+ * ThemeSwitch.
+ *
+ * DOPPIO requestAnimationFrame in mount(), NON un reflow sincrono
+ * (verificato empiricamente, non assunto sulla carta): il pattern
+ * "aggiungi classe, forza un reflow con una lettura di offsetHeight,
+ * rimuovi la classe" è la tecnica da manuale per ri-innescare una
+ * transizione CSS — ma un harness isolato ha mostrato che NON scatta
+ * "transitionstart"/"transitionend" quando eseguita dentro un handler
+ * "hashchange" (esattamente il contesto in cui mount() viene SEMPRE
+ * invocato in questa app, incluso il primo mount reale innescato dal
+ * redirect di bootstrap): stessa identica sequenza, nessuna transizione
+ * osservata. Anche un singolo requestAnimationFrame si è rivelato
+ * insufficiente nello stesso harness. Solo il doppio rAF ha prodotto una
+ * transizione realmente animata in modo affidabile — garantisce che il
+ * browser abbia effettivamente reso un frame con lo stato "hidden"
+ * applicato prima di rimuoverlo, indipendentemente dal contesto
+ * (hashchange vs. script top-level) da cui mount() viene chiamato.
  */
 
 import { hasValidSession } from "../services/authService.js";
@@ -181,6 +219,25 @@ function mount(controller, params, title) {
   while (rootElement.firstChild) rootElement.removeChild(rootElement.firstChild);
   applyTitle(title);
   currentDestroy = controller(rootElement, params) || null;
+
+  // Fade-in del contenuto appena montato — vedi rationale in testa al
+  // file. Doppio requestAnimationFrame, non il solo reflow sincrono
+  // (void rootElement.offsetHeight): verificato empiricamente che
+  // mount() viene SEMPRE invocato da dentro un handler "hashchange" in
+  // questa app (anche il primo mount reale, innescato dal redirect di
+  // bootstrap) — e in quel contesto specifico un reflow sincrono, o
+  // anche un singolo rAF, non fanno scattare transitionstart/-end
+  // (verificato con un harness isolato: stessa identica sequenza,
+  // eseguita in un handler "hashchange" invece che nello script top-level
+  // della pagina, non anima). Il doppio rAF garantisce che il browser
+  // abbia effettivamente reso un frame con "hidden" applicato prima di
+  // rimuoverlo, indipendentemente dal contesto di chiamata.
+  rootElement.classList.add("sl-route-transition--hidden");
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      rootElement.classList.remove("sl-route-transition--hidden");
+    });
+  });
 }
 
 function resolve() {
@@ -260,6 +317,7 @@ export function registerRoute(hash, controller, { protected: isProtected = false
  */
 export function init(root) {
   rootElement = root;
+  rootElement.classList.add("sl-route-transition");
   window.addEventListener("hashchange", resolve);
   document.addEventListener("sl:auth-logout", () => navigate("#/login"));
   resolve();
