@@ -1,0 +1,15 @@
+{
+  "name": "socialive-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Suite di test end-to-end (Playwright) per SOCIALIVE. Strumento di sviluppo: non fa parte dell'app spedita, mai referenziata da index.html, non viola il vincolo di progetto \"nessun framework/bundler\" (quel vincolo riguarda l'app consegnata su GitHub Pages).",
+  "scripts": {
+    "test": "node run-all.js",
+    "test:login": "node login.spec.js",
+    "test:home": "node home.spec.js",
+    "test:scenario": "node scenario.spec.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.0"
+  }
+}
