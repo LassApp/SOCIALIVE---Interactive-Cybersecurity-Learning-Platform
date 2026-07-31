@@ -36,6 +36,21 @@
   gap: var(--sl-space-8);
 }
 
+/* Fase 10: wrapper dell'area popolata in modo asincrono (moduli + feed),
+   introdotto insieme alla riscrittura di homePageController.js che
+   legge davvero data/modules.json/data/home/feed.json. Stessa
+   disposizione flex/gap che prima apparteneva direttamente a
+   .sl-home-page__content quando conteneva Moduli e Feed come figli
+   immediati — ora tra i due si inserisce questo contenitore (il solo
+   nodo su cui il controller imposta aria-busy durante il caricamento),
+   quindi deve replicare la stessa disposizione per non alterare la
+   resa visiva. */
+.sl-home-page__dynamic {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-8);
+}
+
 .sl-home-page__section-title {
   font-size: var(--sl-font-size-lg);
   font-weight: var(--sl-font-weight-semibold);
