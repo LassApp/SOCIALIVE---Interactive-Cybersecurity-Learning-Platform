@@ -34,6 +34,7 @@ async function run() {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
+    await page.waitForSelector(".sl-home-page__modules-grid"); // popolato in modo asincrono da data/modules.json+feed.json
 
     await suite.test("document.title corretto su #/home", async () => {
       assert.equal(await page.title(), "Home \u2014 SocialAlive");
@@ -78,9 +79,9 @@ async function run() {
       assert.ok(!bodyText.includes("Anna Ferrari"), "trovato il nome placeholder scartato 'Prof. Anna Ferrari'");
     });
 
-    await suite.test("Avatar senza src (Laura Ferretti) mostra fallback a iniziali 'LF'", async () => {
-      const lastAvatar = page.locator(".sl-post-card").nth(2).locator(".sl-avatar__fallback");
-      assert.equal((await lastAvatar.textContent()).trim(), "LF");
+    await suite.test("nessun autore ha avatarSrc (feed.json): fallback a iniziali per tutti e tre", async () => {
+      const initials = await page.locator(".sl-post-card .sl-avatar__fallback").allTextContents();
+      assert.deepEqual(initials.map((t) => t.trim()), ["MB", "GC", "LF"]);
     });
 
     await suite.test("immagine del primo post: aspect-ratio riservato + loading=lazy (Fase 9)", async () => {
@@ -88,6 +89,24 @@ async function run() {
       assert.equal(await img.getAttribute("loading"), "lazy");
       const aspectRatio = await img.evaluate((el) => getComputedStyle(el).aspectRatio);
       assert.notEqual(aspectRatio, "auto", "aspect-ratio non applicato: rischio di layout shift");
+    });
+
+    await suite.test("Fase 9/#11: l'immagine del post riceve la classe di fade-in al caricamento", async () => {
+      const img = page.locator(".sl-post-card").nth(0).locator(".sl-post-card__media-image");
+      await img.evaluate((el) => el.classList.contains("sl-fade-in-image"));
+      await page.waitForFunction(
+        (selector) => document.querySelector(selector)?.classList.contains("sl-fade-in-image--loaded"),
+        ".sl-post-card__media-image",
+        { timeout: 2000 }
+      );
+    });
+
+    await suite.test("Fase 9/#11: un update() per il solo 'mi piace' non fa ripartire il fade-in della stessa immagine", async () => {
+      const img = page.locator(".sl-post-card").nth(0).locator(".sl-post-card__media-image");
+      const likeButton = page.locator(".sl-post-card").nth(0).locator(".sl-post-card__action--like");
+      await likeButton.click();
+      await page.waitForTimeout(50);
+      assert.ok(await img.evaluate((el) => el.classList.contains("sl-fade-in-image--loaded")));
     });
 
     await suite.test("Mi piace: click aggiorna aria-pressed e contatore", async () => {
@@ -141,6 +160,11 @@ async function run() {
       assert.equal(await page.locator(".sl-profile-menu .sl-theme-switch").count(), 1);
     });
 
+    await suite.test("Fase 9/#12: ProfileMenu ha una micro-transizione di apertura dichiarata", async () => {
+      const animationName = await page.locator(".sl-profile-menu").evaluate((el) => getComputedStyle(el).animationName);
+      assert.equal(animationName, "sl-profile-menu-in");
+    });
+
     await suite.test("ProfileMenu: chiusura con Escape", async () => {
       await page.keyboard.press("Escape");
       await page.waitForSelector(".sl-profile-menu", { state: "detached" });
@@ -154,6 +178,7 @@ async function run() {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
+    await page.waitForSelector(".sl-home-page__modules-grid");
 
     await suite.test("screenshot Home — desktop Light", async () => {
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, "home-desktop-light.png"), fullPage: true });
@@ -193,6 +218,7 @@ async function run() {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
+    await page.waitForSelector(".sl-home-page__modules-grid");
 
     await suite.test("navigazione Home -> Cybersecurity -> Home: nessun componente duplicato", async () => {
       await page.click(".sl-home-page__modules-grid .sl-module-card >> nth=4");
