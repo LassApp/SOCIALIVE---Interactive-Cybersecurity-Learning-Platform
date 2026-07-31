@@ -2,49 +2,55 @@
  * homePageController.js
  * -----------------------------------------------------------------------
  * Rotta protetta #/home — Home reale di SOCIALIVE (Prompt #4 della
- * Suite). Compone PageContainer (Fase 4) + appShell (Fase 5 — vedi sotto)
- * + ModuleCard×6 (Fase 4) + Feed (Fase 2) — tutti componenti "dumb",
- * zero modifiche a nessuno di essi: l'orchestrazione (chi ascolta cosa,
- * chi aggiorna cosa) vive qui, unico luogo autorizzato (architettura
- * Fase 1 §2.1, "le pagine sono le uniche autorizzate a orchestrare").
+ * Suite). Compone PageContainer (Fase 4) + appShell (Fase 5) +
+ * ModuleCard×N (Fase 4) + Feed (Fase 2) — tutti componenti "dumb", zero
+ * modifiche a nessuno di essi.
  *
- * MODIFICATO in Fase 5, due cambi indipendenti:
+ * RISCRITTO all'inizio di Fase 10 per chiudere un punto aperto segnalato
+ * in Fase 9: l'handover di Fase 8 dichiarava che questo file leggesse
+ * già "data/modules.json"/"data/home/feed.json", ma il file reale era
+ * rimasto la versione hardcoded di Fase 5 (MODULES/MODULE_TO_SCENARIO/
+ * buildDemoPosts/solidCircleAvatar) — verificato con grep sul file
+ * reale, non per assunzione. Questa versione applica DAVVERO quella
+ * riscrittura, riusando "js/repositories/localJsonRepository.js" già
+ * esistente (nessuna nuova astrazione: stessa fabbrica già usata da
+ * localAuthAdapter.js/scenarioEngine.js).
  *
- * 1) L'orchestrazione di AppHeader/ProfileMenu/Sidebar/logout, scritta
- *    qui in Fase 4, è stata estratta in js/pages/shared/appShell.js:
- *    scenarioPageController (questo stesso step) ne ha bisogno
- *    identica — un secondo consumo reale, non un'anticipazione (DRY,
- *    stesso principio già seguito quando focusTrap.js fu estratto da
- *    Modal e riusato da ProfileMenu in Fase 2/Step 5). Questo file non
- *    importa più AppHeader/ProfileMenu/Sidebar/authService direttamente:
- *    chiama createAppShell({ activeSidebarId: "home" }) e usa
- *    shell.appHeader.element / shell.sidebar.element. Owneship di
- *    header/sidebar passata ad appShell: questo controller non li
- *    distrugge più singolarmente, chiama shell.destroy() una sola volta.
+ * PATTERN ASINCRONO — identico a quello già stabilito da
+ * scenarioPageController.js (Fase 5): il controller resta SINCRONO
+ * verso router.js ((container) => destroy, mai una Promise), costruisce
+ * subito lo scheletro (appShell + PageContainer, <h1> incluso — non deve
+ * dipendere dalla rete) con un'area dinamica vuota e aria-busy="true", e
+ * popola moduli+feed solo quando Promise.all([...]) risolve. Guardia
+ * "destroyed": se l'utente naviga altrove prima che il fetch risolva, il
+ * .then()/.catch() non costruisce alcun componente — stessa protezione
+ * già verificata con un test dedicato in Fase 5/8.
  *
- * 2) Il modulo Cybersecurity è ora "available: true" e collegato allo
- *    scenario Oversharing: ModuleCard emette già "sl:module-open" con
- *    { moduleId } (invariato da Fase 4, zero modifiche al componente).
- *    La corrispondenza moduleId → scenarioId vive in una mappa separata
- *    di sola competenza di QUESTO controller (MODULE_TO_SCENARIO, sotto)
- *    invece di un campo aggiunto direttamente alle entry di MODULES:
- *    ModuleCard legge solo { moduleId, title, available }, un campo in
- *    più su MODULES sarebbe silenziosamente ignorato da ModuleCard (che
- *    non valida le props extra) — tenere la mappa separata rende
- *    esplicito cosa alimenta la UI e cosa è solo metadato di navigazione
- *    del controller. Le altre 5 categorie restano "available: false":
- *    nessuno scenario esiste ancora per loro.
+ * FALLBACK DI ERRORE: buildFallbackMessage() condiviso (Fase 9), stesso
+ * trattamento visivo già usato da scenarioEngine.js/router.js per i
+ * propri stati non felici — nessun nuovo stile inventato qui.
  *
- * DATI DEL FEED: demo statica hardcoded, invariato da Fase 4 (decisione
- * ancora aperta, da confermare prima di Fase 8 — vedi handover di Fase
- * 4 §4/§9).
+ * SCENARIO ID DAL RECORD DEL MODULO, NON DA UNA MAPPA SEPARATA: il campo
+ * opzionale "scenarioId" vive direttamente nel record JSON di ciascun
+ * modulo (presente solo dove "available: true") — un'unica fonte di
+ * verità, non una MODULE_TO_SCENARIO da tenere sincronizzata a mano
+ * (quella mappa esisteva SOLO perché i moduli erano hardcoded qui; ora
+ * che arrivano dal JSON, il campo può viaggiare con il resto del
+ * record). ModuleCard continua a ricevere SOLO { moduleId, title,
+ * available } (zero modifiche al componente: un campo extra come
+ * "scenarioId" viene semplicemente ignorato da ModuleCard, che non
+ * valida le props extra) — è questo controller, non ModuleCard, a
+ * conservare il record completo per risolvere la navigazione.
  *
- * SIDEBAR: voci invariate, ora definite dentro appShell.js, non più qui.
+ * AVATAR: feed.json non porta più alcun "avatarSrc" per nessun autore
+ * (decisione già presa, ora davvero applicata): tutti e tre gli autori
+ * demo usano il fallback a iniziali già esistente e verificato in
+ * Avatar.js — nessun generatore di SVG inline da mantenere qui.
  *
  * sl:settings-click, sl:search, sl:post-open, sl:post-comment: nessun
- * listener attaccato, invariato da Fase 4 — le destinazioni non esistono
- * ancora. sl:post-like resta gestito qui (aggiornamento ottimistico
- * locale sul feed demo).
+ * listener attaccato, invariato dalle fasi precedenti — le destinazioni
+ * non esistono ancora. sl:post-like resta gestito qui (aggiornamento
+ * ottimistico locale sui post caricati da feed.json).
  */
 
 import { createElement } from "../utils/dom.js";
@@ -53,153 +59,41 @@ import { create as createModuleCard } from "../components/ModuleCard.js";
 import { create as createFeed } from "../components/Feed.js";
 import { createAppShell } from "./shared/appShell.js";
 import { navigate } from "../core/router.js";
+import { createLocalJsonRepository } from "../repositories/localJsonRepository.js";
+import { buildFallbackMessage } from "../utils/fallbackMessage.js";
 
-// Immagini generate via data URI: nessuna dipendenza di rete, nessun
-// asset reale ancora presente in assets/images (Fase 8) — stesso motivo
-// già documentato in style-guide.html per placeholderPhoto/-PostImage.
-function solidCircleAvatar(hexColor) {
-  return (
-    "data:image/svg+xml;utf8," +
-    encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">` +
-        `<rect width="100" height="100" fill="${hexColor}"/>` +
-        `<circle cx="50" cy="38" r="18" fill="#ffffff" opacity="0.85"/>` +
-        `<rect x="20" y="62" width="60" height="34" rx="30" fill="#ffffff" opacity="0.85"/>` +
-        `</svg>`
-    )
-  );
-}
-
-// Contenuto generico, del tutto slegato da qualunque scenario didattico
-// (Fase 6+): il Feed della Home deve sembrare un normale feed social,
-// non un contenuto "preparato per la lezione" — realismo richiesto
-// esplicitamente dal progetto. Invariato da Fase 4.
-function buildDemoPosts() {
-  return [
-    {
-      id: "home-post-1",
-      author: { name: "Mario Bianchi", avatarSrc: solidCircleAvatar("#8fa3ff") },
-      timestamp: "3 h fa",
-      content:
-        "Weekend in montagna, aria pulita e silenzio assoluto. Esattamente quello che serviva dopo due settimane no-stop.",
-      image: {
-        src: "assets/images/home/post_mario_bianchi.jpg",
-        alt: "Paesaggio montano stilizzato con sole e picchi",
-      },
-      stats: { likes: 214, comments: 18, shares: 4 },
-      liked: false,
-    },
-    {
-      id: "home-post-2",
-      author: { name: "Giulia Conti", avatarSrc: solidCircleAvatar("#7fe3b4") },
-      timestamp: "6 h fa",
-      content:
-        "Finito ieri notte questo libro che mi avevano consigliato in tre persone diverse. Consiglio a mia volta: si legge in un weekend.",
-      stats: { likes: 89, comments: 7, shares: 1 },
-      liked: false,
-    },
-    {
-      id: "home-post-3",
-      author: { name: "Laura Ferretti" },
-      timestamp: "1 giorno fa",
-      content:
-        "Torta di mele della nonna, rifatta oggi dopo anni. Non è uscita perfetta come la sua, ma ci siamo vicini.",
-      stats: { likes: 431, comments: 52, shares: 9 },
-      liked: true,
-    },
-  ];
-}
-
-const MODULES = [
-  { moduleId: "yoga", title: "Yoga" },
-  { moduleId: "nissan-gtr", title: "Nissan GT-R R34/R35" },
-  { moduleId: "beatbox", title: "Beatbox" },
-  { moduleId: "fotografia", title: "Fotografia" },
-  { moduleId: "cybersecurity", title: "Cybersecurity", available: true },
-  { moduleId: "ricette", title: "Ricette" },
-];
-
-// Collegamento moduleId → scenarioId: vedi rationale (2) in testa al
-// file sul perché resta una mappa separata invece di un campo su
-// MODULES.
-const MODULE_TO_SCENARIO = {
-  cybersecurity: "oversharing",
-};
+// Istanze create una sola volta a livello di modulo, non ad ogni
+// montaggio della rotta: la cache interna di localJsonRepository.js è
+// per URL, non per istanza di repository — crearne una nuova ad ogni
+// visita di #/home rifarebbe comunque una fetch la prima volta ma non
+// guadagnerebbe nulla in cambio. Stesso pattern già usato da
+// localAuthAdapter.js per users/roles.
+const modulesRepository = createLocalJsonRepository({ url: "data/modules.json", collectionKey: "modules", idField: "id" });
+const feedRepository = createLocalJsonRepository({ url: "data/home/feed.json", collectionKey: "posts", idField: "id" });
 
 export function createHomePageController(container) {
   const childComponents = [];
+  let destroyed = false;
 
   const shell = createAppShell({ activeSidebarId: "home" });
 
-  // --- Sezione Moduli ------------------------------------------------------
-  const moduleCards = MODULES.map((moduleData) => createModuleCard(moduleData));
-  childComponents.push(...moduleCards);
+  // <h1> nascosto solo visivamente (Fase 9): non deve dipendere dalla
+  // rete, quindi viene creato subito insieme allo scheletro — la Home
+  // era l'unica delle tre pagine reali priva di un h1 (Login lo ha per
+  // il brand, la pagina di scenario per il nome profilo). Testo "Home",
+  // non il brand "SocialAlive" (già coperto da LoginForm): coerente con
+  // l'etichetta già usata per questa stessa rotta in Sidebar/appShell.js.
+  const pageHeading = createElement("h1", { classNames: "sl-visually-hidden", text: "Home" });
 
-  const modulesGrid = createElement(
-    "div",
-    { classNames: "sl-home-page__modules-grid" },
-    moduleCards.map((card) => card.element)
-  );
-
-  // ModuleCard emette sl:module-open SOLO se available===true (Fase 4):
-  // oggi il solo caso reale è Cybersecurity. Il ramo "scenarioId assente"
-  // è difensivo (non dovrebbe accadere data la mappa sopra), non un
-  // percorso pensato per verificarsi in condizioni normali.
-  function handleModuleOpen(event) {
-    const scenarioId = MODULE_TO_SCENARIO[event.detail.moduleId];
-    if (!scenarioId) return;
-    navigate(`#/scenario/${scenarioId}`);
-  }
-  modulesGrid.addEventListener("sl:module-open", handleModuleOpen);
-
-  const modulesSection = createElement(
-    "section",
-    { attrs: { "aria-labelledby": "home-modules-heading" } },
-    [
-      createElement("h2", {
-        classNames: "sl-home-page__section-title",
-        attrs: { id: "home-modules-heading" },
-        text: "Moduli",
-      }),
-      modulesGrid,
-    ]
-  );
-
-  // --- Feed ----------------------------------------------------------------
-  let demoPosts = buildDemoPosts();
-  const feed = createFeed({ posts: demoPosts, isLoading: false, hasMore: false });
-  childComponents.push(feed);
-
-  function handlePostLike(event) {
-    const { postId, liked } = event.detail;
-    const target = demoPosts.find((post) => post.id === postId);
-    if (!target) return;
-    target.liked = liked;
-    target.stats.likes += liked ? 1 : -1;
-    feed.update({ posts: demoPosts });
-  }
-  feed.element.addEventListener("sl:post-like", handlePostLike);
-
-  // --- Composizione pagina ---------------------------------------------
-  // <h1> nascosto solo visivamente (Fase 9): la Home era l'unica delle
-  // tre pagine reali priva di un h1 (Login lo ha per il brand, la pagina
-  // di scenario per il nome profilo) — un salto di livello da nessun h1
-  // a h2 "Moduli" rompeva la struttura di intestazioni del documento.
-  // Testo "Home", non il brand "SocialAlive" (già coperto da LoginForm):
-  // coerente con l'etichetta già usata per questa stessa rotta in
-  // Sidebar/appShell.js ("Home" → "#/home"). Non visibile in pagina: un
-  // titolo "HOME" a vista stonerebbe con l'obiettivo di realismo del
-  // progetto (nessun vero feed social lo mostra).
-  const pageHeading = createElement("h1", {
-    classNames: "sl-visually-hidden",
-    text: "Home",
+  // Area popolata in modo asincrono: aria-busy comunica lo stato di
+  // caricamento a chi usa uno screen reader, stesso principio già
+  // seguito da scenarioEngine.js per il proprio wrapper.
+  const dynamicArea = createElement("div", {
+    classNames: "sl-home-page__dynamic",
+    attrs: { "aria-busy": "true" },
   });
 
-  const content = createElement("div", { classNames: "sl-home-page__content" }, [
-    pageHeading,
-    modulesSection,
-    feed.element,
-  ]);
+  const content = createElement("div", { classNames: "sl-home-page__content" }, [pageHeading, dynamicArea]);
 
   const pageContainer = createPageContainer({
     header: shell.appHeader.element,
@@ -207,12 +101,86 @@ export function createHomePageController(container) {
     main: content,
   });
   childComponents.push(pageContainer);
-
   container.appendChild(pageContainer.element);
 
+  // Record COMPLETI dei moduli caricati (incl. "scenarioId" quando
+  // presente) — conservati qui, non solo nelle prop passate a
+  // ModuleCard, per poter risolvere sl:module-open senza una mappa
+  // separata (vedi rationale in testa al file).
+  let loadedModules = [];
+  let feedPosts = [];
+  let modulesGrid = null;
+  let feed = null;
+
+  function handleModuleOpen(event) {
+    const moduleRecord = loadedModules.find((m) => m.id === event.detail.moduleId);
+    const scenarioId = moduleRecord && moduleRecord.scenarioId;
+    if (!scenarioId) return;
+    navigate(`#/scenario/${scenarioId}`);
+  }
+
+  function handlePostLike(event) {
+    const { postId, liked } = event.detail;
+    const target = feedPosts.find((post) => post.id === postId);
+    if (!target) return;
+    target.liked = liked;
+    target.stats.likes += liked ? 1 : -1;
+    feed.update({ posts: feedPosts });
+  }
+
+  function renderContent() {
+    const moduleCards = loadedModules.map((moduleData) =>
+      createModuleCard({ moduleId: moduleData.id, title: moduleData.title, available: moduleData.available })
+    );
+    childComponents.push(...moduleCards);
+
+    modulesGrid = createElement(
+      "div",
+      { classNames: "sl-home-page__modules-grid" },
+      moduleCards.map((card) => card.element)
+    );
+    modulesGrid.addEventListener("sl:module-open", handleModuleOpen);
+
+    const modulesSection = createElement(
+      "section",
+      { attrs: { "aria-labelledby": "home-modules-heading" } },
+      [
+        createElement("h2", {
+          classNames: "sl-home-page__section-title",
+          attrs: { id: "home-modules-heading" },
+          text: "Moduli",
+        }),
+        modulesGrid,
+      ]
+    );
+
+    feed = createFeed({ posts: feedPosts, isLoading: false, hasMore: false });
+    childComponents.push(feed);
+    feed.element.addEventListener("sl:post-like", handlePostLike);
+
+    dynamicArea.append(modulesSection, feed.element);
+  }
+
+  Promise.all([modulesRepository.list(), feedRepository.list()])
+    .then(([modules, posts]) => {
+      if (destroyed) return;
+      loadedModules = modules;
+      feedPosts = posts;
+      renderContent();
+    })
+    .catch((error) => {
+      if (destroyed) return;
+      console.error("[homePageController] Impossibile caricare i dati della Home", error);
+      dynamicArea.appendChild(buildFallbackMessage("Impossibile caricare la Home. Riprova più tardi."));
+    })
+    .finally(() => {
+      if (!destroyed) dynamicArea.removeAttribute("aria-busy");
+    });
+
   return function destroy() {
-    modulesGrid.removeEventListener("sl:module-open", handleModuleOpen);
-    feed.element.removeEventListener("sl:post-like", handlePostLike);
+    destroyed = true;
+    if (modulesGrid) modulesGrid.removeEventListener("sl:module-open", handleModuleOpen);
+    if (feed) feed.element.removeEventListener("sl:post-like", handlePostLike);
     childComponents.forEach((instance) => instance.destroy());
     shell.destroy();
   };
