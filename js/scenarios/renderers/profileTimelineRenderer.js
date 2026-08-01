@@ -96,6 +96,7 @@
 import { createElement } from "../../utils/dom.js";
 import { formatFullDate } from "../../utils/dateFormat.js";
 import { buildFallbackMessage } from "../../utils/fallbackMessage.js";
+import { applyImageFadeIn } from "../../utils/imageFadeIn.js";
 import { createLocalJsonResource, createLocalJsonRepository } from "../../repositories/localJsonRepository.js";
 import { create as createAvatar } from "../../components/Avatar.js";
 import { create as createButton } from "../../components/Button.js";
@@ -123,6 +124,12 @@ function buildProfileHeader(profile, postsCount) {
     classNames: "sl-profile-timeline__cover-image",
     attrs: { src: profile.coverImage || "", alt: "" },
   });
+  // Fase 9/#11 (implementato realmente in Fase 10): questo header viene
+  // costruito una sola volta all'apertura della pagina (nessun update()
+  // successivo per questo renderer), quindi qui il confronto idempotente
+  // sulla src non è strettamente necessario — applicato comunque per
+  // usare sempre lo stesso punto di ingresso della utility condivisa.
+  applyImageFadeIn(coverImage);
   const cover = createElement("div", { classNames: "sl-profile-timeline__cover" }, [coverImage]);
 
   // ariaHidden: true — l'username subito sotto è già il nome accessibile
