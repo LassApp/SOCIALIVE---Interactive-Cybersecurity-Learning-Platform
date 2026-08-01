@@ -23,6 +23,21 @@
  * Larghezza fissa in px (260px): decisione di sizing del componente, non
  * spaziatura tra elementi — stesso criterio già usato in avatar.css /
  * theme-switch.css.
+ *
+ * Animazione di apertura (Fase 9, intervento 🟢 #12 — DICHIARATO in
+ * quella fase ma non applicato al codice: implementato realmente solo
+ * ora, in Fase 10, dopo che l'audit finale ha eseguito per la prima
+ * volta la suite Playwright persistita e trovato il controllo dedicato
+ * ancora fallito). Stesso principio di sl-modal-panel-in (modal.css):
+ * fade + piccolo spostamento verticale — ma PIÙ LEGGERO (4px, non 8px,
+ * nessun scale()): un popover ancorato al proprio trigger deve sentirsi
+ * meno "importante" di un dialogo centrale con overlay scuro dietro —
+ * qui non c'è nessun secondo layer da animare in coordinazione, a
+ * differenza di Modal (overlay + pannello). -4px (non +4px): il
+ * pannello sembra "aprirsi" leggermente dall'alto verso la propria
+ * posizione finale, coerente con l'ancoraggio subito sotto il trigger
+ * in AppHeader. Nessuna transizione di chiusura (il pannello viene
+ * rimosso dal DOM da destroy(), stesso principio già seguito da Modal).
  */
 
 .sl-profile-menu {
@@ -35,6 +50,18 @@
   background-color: var(--sl-color-bg-elevated);
   border-radius: var(--sl-radius-lg);
   box-shadow: var(--sl-shadow-2);
+  animation: sl-profile-menu-in var(--sl-duration-base) var(--sl-ease-standard);
+}
+
+@keyframes sl-profile-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .sl-profile-menu__header {
