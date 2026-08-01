@@ -1,14 +1,26 @@
 /**
  * home.spec.js
  * -----------------------------------------------------------------------
- * Copre la Home reale (Fase 4/5) così com'è oggi nel codice sorgente —
- * inclusa la nota di continuità: homePageController.js in produzione è
- * ancora la versione con dati demo hardcoded (Fase 5), non la riscrittura
- * a JSON esterni descritta nell'handover di Fase 8 (mai realmente
- * applicata al repository). Questa suite verifica il comportamento
- * EFFETTIVO del codice, non quello narrato nella documentazione — stessa
- * disciplina già raccomandata più volte nei prompt di continuità del
- * progetto ("verificare sempre coi file reali, non per assunzione").
+ * Copre la Home reale così com'è oggi nel codice sorgente DOPO la
+ * riscrittura di Fase 10: homePageController.js legge realmente
+ * data/modules.json e data/home/feed.json tramite localJsonRepository.js
+ * (pattern asincrono identico a scenarioPageController.js), non più la
+ * versione con dati demo hardcoded di Fase 5 — verificato con grep sul
+ * file reale prima di aggiornare questo commento, non per assunzione
+ * (stessa disciplina già raccomandata più volte nei prompt di
+ * continuità del progetto: "verificare sempre coi file reali, non per
+ * assunzione"). Include anche le rifiniture di Fase 9/10 sulla Home:
+ * skip-link (WCAG 2.4.1), <h1> nascosto, fade-in dell'immagine del post,
+ * micro-transizione di ProfileMenu.
+ *
+ * NOTA STORICA: fino a questa correzione, questo stesso file conteneva
+ * un docstring non aggiornato che descriveva ancora lo stato pre-Fase-10
+ * (dati hardcoded), mentre il corpo dei test sottostanti verificava già
+ * il comportamento post-riscrittura — un disallineamento tra commento e
+ * codice nello stesso file, della stessa classe di errore già
+ * documentata più volte nel progetto (handover che descrive un lavoro
+ * non rispecchiato nel codice). Corretto in Fase 10, durante la verifica
+ * pre-handover.
  */
 const assert = require("node:assert/strict");
 const path = require("node:path");
