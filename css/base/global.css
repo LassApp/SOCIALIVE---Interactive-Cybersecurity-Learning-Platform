@@ -95,3 +95,40 @@ body {
 .sl-route-transition--hidden {
   opacity: 0;
 }
+
+/*
+ * Fade-in immagini al caricamento (Fase 9, intervento 🟢 #11 —
+ * DICHIARATO in quella fase ma non applicato al codice: implementato
+ * realmente solo ora, in Fase 10, dopo che l'audit finale ha eseguito
+ * per la prima volta la suite Playwright persistita e trovato 2
+ * controlli falliti su un'assunzione mai scritta — vedi handover di
+ * Fase 10 per il dettaglio). Vive qui, non nel CSS di PostCard/
+ * profile-timeline, per lo stesso motivo già documentato sopra per
+ * .sl-route-transition: è un concern trasversale a QUALUNQUE immagine
+ * futura del progetto, applicato via classe da js/utils/imageFadeIn.js,
+ * non da un componente specifico.
+ *
+ * Nessun rischio di layout shift aggiunto: le due immagini che oggi la
+ * usano (PostCard, aspect-ratio già riservato dall'intervento #2 della
+ * stessa fase; copertina del profilo, altezza fissa in
+ * profile-timeline.css) hanno già lo spazio riservato PRIMA che questa
+ * transizione entri in gioco — qui si anima solo l'opacità, mai
+ * dimensioni/posizione.
+ *
+ * --sl-duration-slow (320ms, non -base): una rivelazione di contenuto
+ * percepibile beneficia di un ritmo leggermente più lento delle
+ * transizioni di interfaccia (overlay, route change), che restano su
+ * -base altrove nel progetto — stessa distinzione semantica già
+ * esistente nei token di motion.css, qui usata per la prima volta.
+ * Rispetta prefers-reduced-motion senza codice dedicato: la rete di
+ * sicurezza generale qui sopra azzera comunque animation/transition-
+ * duration per chi lo richiede.
+ */
+.sl-fade-in-image {
+  opacity: 0;
+  transition: opacity var(--sl-duration-slow) var(--sl-ease-standard);
+}
+
+.sl-fade-in-image--loaded {
+  opacity: 1;
+}
