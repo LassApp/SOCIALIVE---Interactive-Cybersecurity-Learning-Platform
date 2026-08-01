@@ -700,7 +700,7 @@
     const appHeaderFeedback = document.getElementById("app-header-feedback");
 
     const appHeader = createAppHeader({
-      user: { name: "Prof. Anna Ferrari", avatarSrc: placeholderPhoto },
+      user: { name: "Prof. Erasmo Lassandro", avatarSrc: placeholderPhoto },
     });
 
     appHeader.element.addEventListener("sl:search", (event) => {
@@ -730,7 +730,7 @@
       }
 
       profileMenu = createProfileMenu({
-        user: { name: "Prof. Anna Ferrari", avatarSrc: placeholderPhoto },
+        user: { name: "Prof. Erasmo Lassandro", avatarSrc: placeholderPhoto },
         anchorElement: event.detail.anchorElement,
       });
 
@@ -793,7 +793,7 @@
     const demoPosts = [
       {
         id: "post-1",
-        author: { name: "Prof. Anna Ferrari", avatarSrc: placeholderPhoto },
+        author: { name: "Prof. Erasmo Lassandro", avatarSrc: placeholderPhoto },
         timestamp: "2 h fa",
         content:
           "Oggi in laboratorio abbiamo parlato di quanto sia facile ricostruire le abitudini di una persona partendo solo dai post pubblici. Uno spunto interessante per la lezione di domani.",
@@ -806,7 +806,7 @@
       },
       {
         id: "post-2",
-        author: { name: "Prof. Anna Ferrari", avatarSrc: placeholderPhoto },
+        author: { name: "Prof. Erasmo Lassandro", avatarSrc: placeholderPhoto },
         timestamp: "5 h fa",
         content: "Promemoria per i colleghi: la prossima riunione dipartimentale è stata spostata a giovedì alle 15:00.",
         stats: { likes: 342, comments: 12, shares: 3 },
@@ -874,7 +874,7 @@
     function buildFeedPost(index) {
       return {
         id: `feed-post-${index}`,
-        author: { name: "Prof. Anna Ferrari", avatarSrc: placeholderPhoto },
+        author: { name: "Prof. Erasmo Lassandro", avatarSrc: placeholderPhoto },
         timestamp: `${index} giorni fa`,
         content: `Post generato per la demo di Feed — numero ${index}. Utile per verificare scroll, riordino e caricamento incrementale.`,
         stats: { likes: index * 12, comments: index, shares: 0 },
