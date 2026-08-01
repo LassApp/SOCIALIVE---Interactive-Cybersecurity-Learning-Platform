@@ -3,6 +3,7 @@ import { create as createCard } from "./Card.js";
 import { create as createAvatar } from "./Avatar.js";
 import { create as createButton } from "./Button.js";
 import { svgNode } from "../utils/svg.js";
+import { applyImageFadeIn } from "../utils/imageFadeIn.js";
 
 function formatCount(value) {
   return (Number(value) || 0).toLocaleString("it-IT");
@@ -76,6 +77,12 @@ function render(refs, props) {
     refs.mediaImg.src = post.image.src;
     refs.mediaImg.alt = post.image.alt || "";
     refs.mediaButton.setAttribute("aria-label", `Apri immagine del post di ${authorName}`);
+    // Fase 9/#11 (implementato realmente in Fase 10): applyImageFadeIn è
+    // idempotente sulla stessa src — un update() richiamato solo per il
+    // contatore "mi piace" (vedi handleLikeClick) non fa ripartire il
+    // fade-in di un'immagine già caricata (cfr. rationale in
+    // js/utils/imageFadeIn.js).
+    applyImageFadeIn(refs.mediaImg);
   }
 
   refs.likeButton.update({
