@@ -38,6 +38,30 @@
  * seguito da Sidebar per il proprio indicatore attivo). border-radius:0
  * sovrascrive il "pill" di default di Button: un indicatore ad angoli
  * vivi si sposa meglio con una sottolineatura dritta.
+ *
+ * Toggle pubblico/privato (nuovo): il bottone lucchetto (variante
+ * "icon" di Button, già circolare/dimensionata di suo — nessun override
+ * di forma necessario qui) siede accanto alle statistiche dentro
+ * .sl-profile-timeline__stats-row, non più .sl-profile-timeline__stats
+ * da sola — il margin-top che prima apparteneva a .stats è stato
+ * spostato sul nuovo contenitore per preservare la stessa spaziatura
+ * visiva rispetto alla bio (nessuna regressione). Colore del lucchetto:
+ * text-secondary a riposo (stesso trattamento già riservato ai bottoni
+ * ghost/icon "secondari" del progetto), primary-text quando premuto
+ * (stato "privato" attivo) — nessuna nuova verifica di contrasto,
+ * entrambi i token sono già verificati come testo/icona su bg-surface.
+ *
+ * Pannello "profilo privato" (.sl-profile-timeline__private-notice):
+ * stessa ricetta visiva già usata da .sl-scenario-page__placeholder
+ * (Fase 5, poi rimosso) — bg-surface + border-subtle + shadow-1 + radius
+ * lg, un piccolo "stato vuoto" centrato. Icona su sfondo bg-elevated con
+ * colore text-secondary: stessa combinazione già verificata numericamente
+ * per il tono "info" di badge/notice altrove nel progetto (≥3:1, uso
+ * decorativo/icona) — nessuna nuova verifica necessaria. Regola
+ * "[hidden]" ridichiarata esplicitamente: questo blocco impone un
+ * proprio "display: flex" sulla stessa classe che il renderer nasconde/
+ * mostra con l'attributo nativo — stesso bug pattern già corretto tre
+ * volte nel progetto (post-card.css, timeline.css, media-viewer.css).
  */
 
 .sl-profile-timeline {
@@ -90,10 +114,30 @@
   font-size: var(--sl-font-size-sm);
 }
 
+.sl-profile-timeline__stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sl-space-4);
+  margin-top: var(--sl-space-2);
+}
+
 .sl-profile-timeline__stats {
   display: flex;
   gap: var(--sl-space-6);
-  margin-top: var(--sl-space-2);
+}
+
+/* A riposo (profilo pubblico): stesso trattamento "secondario" già
+   usato da altri bottoni ghost/icon del Design System. */
+.sl-button.sl-profile-timeline__privacy-toggle {
+  color: var(--sl-color-text-secondary);
+}
+
+/* Premuto (profilo privato): primary-text, già verificato come colore
+   di TESTO/icona su bg-surface in entrambi i temi (6.13:1 Light /
+   5.21:1 Dark) — nessun nuovo accostamento. */
+.sl-button.sl-profile-timeline__privacy-toggle[aria-pressed="true"] {
+  color: var(--sl-color-primary-text);
 }
 
 .sl-profile-timeline__stat {
@@ -135,4 +179,61 @@
 .sl-profile-timeline__panels {
   display: flex;
   flex-direction: column;
+}
+
+.sl-profile-timeline__private-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--sl-space-3);
+  max-width: 380px;
+  margin-inline: auto;
+  margin-top: var(--sl-space-8);
+  padding: var(--sl-space-8) var(--sl-space-6);
+  background-color: var(--sl-color-bg-surface);
+  border: 1px solid var(--sl-color-border-subtle);
+  border-radius: var(--sl-radius-lg);
+  box-shadow: var(--sl-shadow-1);
+}
+
+/* Bug pattern già corretto tre volte nel progetto (post-card.css,
+   timeline.css, media-viewer.css): una regola d'autore con "display"
+   batte sempre lo stile UA di [hidden] — ridichiarato esplicitamente. */
+.sl-profile-timeline__private-notice[hidden] {
+  display: none;
+}
+
+.sl-profile-timeline__private-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--sl-radius-full);
+  background-color: var(--sl-color-bg-elevated);
+  color: var(--sl-color-text-secondary);
+}
+
+.sl-profile-timeline__private-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.sl-profile-timeline__private-title {
+  font-size: var(--sl-font-size-lg);
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-profile-timeline__private-description {
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-sm);
+  line-height: var(--sl-line-height-relaxed);
+}
+
+.sl-button.sl-profile-timeline__private-follow {
+  margin-top: var(--sl-space-2);
+  min-width: 160px;
+  justify-content: center;
 }
