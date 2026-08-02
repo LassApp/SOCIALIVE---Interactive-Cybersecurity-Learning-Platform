@@ -90,6 +90,34 @@
  * esattamente lo stesso trattamento visivo, invece di una copia
  * divergente. Vedi fallbackMessage.js per il rationale completo.
  *
+ * TOGGLE PUBBLICO/PRIVATO — dimostrazione pedagogica di cosa cambia
+ * quando un profilo decide di diventare privato. Icona lucchetto, posta
+ * accanto alle statistiche (post/follower/seguiti — richiesta esplicita:
+ * "accanto a" i tre numeri, non altrove nella pagina). Stato SEMPRE
+ * locale a questo mount (una variabile nello scope della funzione, mai
+ * scritta su storage.js): ogni apertura/refresh dello scenario riparte
+ * da "pubblico" — persisterlo vanificherebbe l'effetto didattico della
+ * demo (il docente deve poter ripetere il confronto più volte in classi
+ * diverse, sempre a partire dallo stesso stato).
+ *   - PUBBLICO (default): lucchetto aperto, aria-pressed="false". Storie,
+ *     tab Post/Archivio ed entrambi i pannelli restano visibili come
+ *     sono oggi — nessuna modifica al comportamento esistente in questo
+ *     stato.
+ *   - PRIVATO: lucchetto chiuso, aria-pressed="true". Copertina, avatar,
+ *     bio e le TRE statistiche restano identiche e visibili (un profilo
+ *     privato reale le mostra comunque a chiunque — solo i contenuti
+ *     sono riservati): storie e i due pannelli Post/Archivio vengono
+ *     sostituiti da un pannello "Questo profilo è privato" con un
+ *     bottone "Segui" — volutamente fittizio (nessun listener
+ *     applicativo, stesso trattamento già riservato altrove nel
+ *     progetto a interazioni non implementate, es. sl:search/
+ *     sl:settings-click), presente solo per rinforzare il realismo.
+ * Vive in QUESTO renderer (non in un componente dedicato, non nello
+ * scenario Oversharing) perché è un comportamento del TYPE
+ * "profile-timeline", non del profilo "marti.travel" — un futuro
+ * scenario con lo stesso type (es. "Privacy", Fase 1 §12) erediterebbe
+ * gratuitamente questa stessa demo, senza alcuna modifica.
+ *
  * Firma richiesta dall'engine: (container, scenario) => Promise<destroy|undefined>.
  */
 
@@ -98,6 +126,7 @@ import { formatFullDate } from "../../utils/dateFormat.js";
 import { buildFallbackMessage } from "../../utils/fallbackMessage.js";
 import { applyImageFadeIn } from "../../utils/imageFadeIn.js";
 import { createLocalJsonResource, createLocalJsonRepository } from "../../repositories/localJsonRepository.js";
+import { svgNode } from "../../utils/svg.js";
 import { create as createAvatar } from "../../components/Avatar.js";
 import { create as createButton } from "../../components/Button.js";
 import { create as createStoriesBar } from "../../components/StoriesBar.js";
@@ -107,6 +136,38 @@ import { create as createMediaViewer } from "../../components/MediaViewer.js";
 
 function formatCount(value) {
   return (Number(value) || 0).toLocaleString("it-IT");
+}
+
+// Icona lucchetto: due varianti, aperto/chiuso, stesso pattern inline
+// già usato per il cuore di PostCard (buildHeartIcon) — nessuna
+// dipendenza dallo sprite (assets/icons/icons.svg, ancora assente,
+// debito noto da Fase 2). Corpo del lucchetto identico nelle due
+// varianti; solo l'arco superiore (shackle) cambia: chiuso quando
+// ridiscende su entrambi i lati nel corpo, aperto quando si stacca su
+// un lato — la stessa convenzione visiva di qualunque icona reale di
+// "lucchetto aperto/chiuso".
+function buildLockIcon(locked) {
+  const svg = svgNode("svg", { viewBox: "0 0 24 24", fill: "none" });
+  svg.appendChild(
+    svgNode("rect", {
+      x: "5",
+      y: "11",
+      width: "14",
+      height: "9",
+      rx: "2",
+      stroke: "currentColor",
+      "stroke-width": "1.5",
+    })
+  );
+  svg.appendChild(
+    svgNode("path", {
+      d: locked ? "M8 11V8a4 4 0 1 1 8 0v3" : "M8 11V8a4 4 0 0 1 7.6-1.6",
+      stroke: "currentColor",
+      "stroke-width": "1.5",
+      "stroke-linecap": "round",
+    })
+  );
+  return svg;
 }
 
 function buildStat(label, value) {
@@ -119,7 +180,7 @@ function buildStat(label, value) {
 // postsCount NON arriva da profile.json (decisione di Fase 6/Step 1: un
 // conteggio derivabile da un'altra fonte non va duplicato) — qui viene
 // calcolato da rawPosts.length, l'unica fonte di verità.
-function buildProfileHeader(profile, postsCount) {
+function buildProfileHeader(profile, postsCount, privacyToggleElement) {
   const coverImage = createElement("img", {
     classNames: "sl-profile-timeline__cover-image",
     attrs: { src: profile.coverImage || "", alt: "" },
@@ -163,11 +224,20 @@ function buildProfileHeader(profile, postsCount) {
     buildStat("seguiti", profile.stats?.followingCount),
   ]);
 
+  // Riga che affianca le statistiche al lucchetto — richiesta esplicita:
+  // il toggle deve stare "accanto a" post/follower/seguiti, non altrove
+  // nella pagina (es. nell'header dell'app, dove non avrebbe relazione
+  // visiva col profilo che descrive).
+  const statsRow = createElement("div", { classNames: "sl-profile-timeline__stats-row" }, [
+    stats,
+    privacyToggleElement,
+  ]);
+
   const identity = createElement("div", { classNames: "sl-profile-timeline__identity" }, [
     avatarWrap,
     username,
     bio,
-    stats,
+    statsRow,
   ]);
 
   const element = createElement("header", { classNames: "sl-profile-timeline__header" }, [cover, identity]);
@@ -195,6 +265,63 @@ function toFeedPost(rawPost, author) {
     image: rawPost.image,
     stats: rawPost.stats,
     liked: rawPost.liked,
+  };
+}
+
+// Pannello mostrato al posto di storie/post quando il profilo è
+// impostato su privato (vedi rationale "TOGGLE PUBBLICO/PRIVATO" in
+// testa al file). "profile.displayName" rende il messaggio generico
+// rispetto allo scenario (nessun nome hardcoded): un futuro secondo
+// scenario con lo stesso type mostrerebbe il PROPRIO nome utente senza
+// alcuna modifica a questa funzione.
+//
+// Bottone "Segui" volutamente inerte: emette solo un evento
+// "sl:profile-follow-request" senza alcun listener applicativo — stesso
+// trattamento già riservato altrove nel progetto a interazioni non
+// implementate (es. sl:search, sl:settings-click). Presente solo per
+// realismo: un vero profilo privato mostra sempre un invito a seguire.
+function buildPrivateNotice(profile) {
+  const icon = createElement(
+    "div",
+    { classNames: "sl-profile-timeline__private-icon", attrs: { "aria-hidden": "true" } },
+    [buildLockIcon(true)]
+  );
+
+  const title = createElement("h2", {
+    classNames: "sl-profile-timeline__private-title",
+    text: "Questo profilo è privato",
+  });
+
+  const description = createElement("p", {
+    classNames: "sl-profile-timeline__private-description",
+    text: `Segui ${profile.displayName || "questo profilo"} per vedere le sue foto, i suoi video e le sue storie.`,
+  });
+
+  const followButton = createButton({ variant: "primary", label: "Segui" });
+  followButton.element.classList.add("sl-profile-timeline__private-follow");
+
+  const element = createElement(
+    "div",
+    { classNames: "sl-profile-timeline__private-notice" },
+    [icon, title, description, followButton.element]
+  );
+  // Nascosto di default (attributo nativo, non una classe CSS): il
+  // profilo è pubblico al primo mount — stesso principio già seguito da
+  // "timeline.element.hidden = true" qualche riga più sotto in questo
+  // stesso file per il pannello Archivio.
+  element.hidden = true;
+
+  function handleFollowClick() {
+    element.dispatchEvent(new CustomEvent("sl:profile-follow-request", { bubbles: true, detail: {} }));
+  }
+  followButton.element.addEventListener("sl:click", handleFollowClick);
+
+  return {
+    element,
+    destroy() {
+      followButton.element.removeEventListener("sl:click", handleFollowClick);
+      followButton.destroy();
+    },
   };
 }
 
@@ -229,7 +356,20 @@ export async function renderProfileTimeline(container, scenario) {
   const author = { name: profile.displayName, avatarSrc: profile.avatar };
   const feedPosts = rawPosts.map((post) => toFeedPost(post, author));
 
-  const header = buildProfileHeader(profile, rawPosts.length);
+  // Stato del toggle pubblico/privato — SOLO in questa variabile, mai in
+  // storage.js (vedi rationale "TOGGLE PUBBLICO/PRIVATO" in testa al
+  // file): ogni mount riparte da "pubblico", nessuna eccezione.
+  let isPrivate = false;
+
+  const privacyToggle = createButton({
+    variant: "icon",
+    icon: buildLockIcon(false),
+    pressed: false,
+    ariaLabel: "Rendi il profilo privato",
+  });
+  privacyToggle.element.classList.add("sl-profile-timeline__privacy-toggle");
+
+  const header = buildProfileHeader(profile, rawPosts.length, privacyToggle.element);
   const storiesBar = createStoriesBar({ stories });
 
   // hasMore:false — il dataset di uno scenario è un insieme fisso e già
@@ -289,12 +429,63 @@ export async function renderProfileTimeline(container, scenario) {
     timeline.element,
   ]);
 
-  const wrapper = createElement("div", { classNames: "sl-profile-timeline" }, [
-    header.element,
+  // Raggruppa TUTTO ciò che il profilo privato nasconde (storie, tab,
+  // entrambi i pannelli) in un solo contenitore: un solo "hidden" da
+  // commutare invece di quattro, stesso principio già seguito da questo
+  // stesso file per Feed/Timeline (un "hidden" per pannello, non uno per
+  // ciascun figlio interno). Nessun "display" proprio dichiarato su
+  // questa classe: l'attributo nativo [hidden] basta, nessuna
+  // ridichiarazione CSS necessaria (a differenza di .sl-timeline/
+  // .sl-post-card__media, che invece impongono un proprio display).
+  const publicContent = createElement("div", { classNames: "sl-profile-timeline__public-content" }, [
     storiesBar.element,
     viewStatus,
     tabs,
     panels,
+  ]);
+
+  const privateNotice = buildPrivateNotice(profile);
+
+  // Annuncio invisibile DEDICATO al cambio pubblico/privato — separato
+  // da "viewStatus" (Post/Archivio, sopra): sono due stati indipendenti,
+  // un solo screen reader status condiviso tra i due rischierebbe di far
+  // perdere l'annuncio più recente se entrambi cambiassero vicini nel
+  // tempo (non il caso reale qui, ma nessun motivo per condividerli).
+  const privacyStatus = createElement("p", {
+    classNames: ["sl-visually-hidden", "sl-profile-timeline__privacy-status"],
+    attrs: { role: "status", "aria-live": "polite" },
+  });
+
+  // Unico punto che applica lo stato "pubblico"/"privato" a UI + focus
+  // management: nessuno spostamento forzato del focus (il bottone resta
+  // dov'è, il contenuto sotto si aggiorna) — stesso comportamento già
+  // scelto per il toggle Feed/Archivio poco sopra in questo file. Il
+  // pannello Feed/Archivio che era attivo prima di passare a "privato"
+  // resta quello attivo quando si ritorna a "pubblico" (publicContent
+  // viene solo nascosto, mai smontato: showFeed()/showArchive() non
+  // vengono richiamate qui).
+  function setPrivacy(nextIsPrivate) {
+    isPrivate = nextIsPrivate;
+    publicContent.hidden = isPrivate;
+    privateNotice.element.hidden = !isPrivate;
+    privacyToggle.update({
+      icon: buildLockIcon(isPrivate),
+      pressed: isPrivate,
+      ariaLabel: isPrivate ? "Rendi il profilo pubblico" : "Rendi il profilo privato",
+    });
+    privacyStatus.textContent = isPrivate ? "Profilo impostato su privato." : "Profilo impostato su pubblico.";
+  }
+
+  function handlePrivacyToggleClick() {
+    setPrivacy(!isPrivate);
+  }
+  privacyToggle.element.addEventListener("sl:click", handlePrivacyToggleClick);
+
+  const wrapper = createElement("div", { classNames: "sl-profile-timeline" }, [
+    header.element,
+    publicContent,
+    privateNotice.element,
+    privacyStatus,
   ]);
 
   // sl:post-open bolle sia da PostCard (dentro Feed) sia da Timeline —
@@ -327,12 +518,15 @@ export async function renderProfileTimeline(container, scenario) {
     wrapper.removeEventListener("sl:post-open", handlePostOpen);
     feedTab.element.removeEventListener("sl:click", showFeed);
     archiveTab.element.removeEventListener("sl:click", showArchive);
+    privacyToggle.element.removeEventListener("sl:click", handlePrivacyToggleClick);
     header.destroy();
     storiesBar.destroy();
     feed.destroy();
     timeline.destroy();
     feedTab.destroy();
     archiveTab.destroy();
+    privacyToggle.destroy();
+    privateNotice.destroy();
     // MediaViewer vive fuori da "wrapper" (montato direttamente su
     // <body>, come Modal): se questo controller viene smontato mentre il
     // visualizzatore è ancora aperto (caso limite, navigazione via router
