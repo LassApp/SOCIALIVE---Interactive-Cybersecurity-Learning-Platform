@@ -2,10 +2,24 @@
  * scenario.spec.js
  * -----------------------------------------------------------------------
  * Copre il primo (e oggi unico) scenario reale, Oversharing (Fase 6),
- * incluso il Media Viewer collegato in Fase 7. L'ultimo test del file
- * chiude l'intervento #9 dell'audit di Fase 9 ("percorrere l'intero
- * flusso da tastiera Home→Scenario→MediaViewer"), mai verificato per
- * intero in nessuna fase precedente (segnalato ricorrente dalla Fase 4).
+ * incluso il Media Viewer collegato in Fase 7.
+ *
+ * ESTESO (post Fase 10) con i controlli sul toggle pubblico/privato del
+ * profilo (icona lucchetto accanto alle statistiche post/follower/
+ * seguiti): stato iniziale pubblico, transizione a privato (contenuto
+ * pubblico nascosto, pannello "Questo profilo è privato" visibile,
+ * statistiche identiche, annuncio aria-live), transizione di ritorno a
+ * pubblico (nessuna perdita di post, vista Feed/Archivio preservata),
+ * nessuna regressione sul toggle Post/Archivio esistente. Prima di
+ * questa estensione, la verifica era stata eseguita solo su un harness
+ * Playwright isolato (non persistito) — vedi
+ * handover-toggle-privacy-profilo.md per il dettaglio dell'intervento
+ * originario. Questo file la rende parte della regressione automatica
+ * di "npm test", chiudendo il gap di copertura segnalato in quell'
+ * handover (§9).
+ *
+ * L'ultimo test del file chiude l'intervento #9 dell'audit di Fase 9
+ * ("percorrere l'intero flusso da tastiera Home→Scenario→MediaViewer").
  */
 const assert = require("node:assert/strict");
 const path = require("node:path");
@@ -90,7 +104,7 @@ async function run() {
       assert.equal(await page.locator(".sl-feed").isHidden(), true);
       const status = await page.locator(".sl-profile-timeline__view-status").textContent();
       assert.equal(status.trim(), "Vista: Archivio");
-      assert.equal(await page.locator(".sl-timeline__tile").count(), 12); // un riquadro per ciascun post, post-004 incluso (fallback testuale)
+      assert.equal(await page.locator(".sl-timeline__tile").count(), 12);
     });
 
     await suite.test("post-004 (solo testo) ha un riquadro di fallback testuale in Archivio", async () => {
@@ -101,6 +115,114 @@ async function run() {
       await page.click(".sl-profile-timeline__tabs >> text=Post");
       await page.waitForSelector(".sl-feed:not([hidden])");
       assert.equal(await page.locator(".sl-timeline").isHidden(), true);
+    });
+
+    await context.close();
+  }
+
+  // --- Toggle pubblico/privato (nuovo, post Fase 10) --------------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await gotoScenario(page, server.url);
+
+    const toggle = () => page.locator(".sl-profile-timeline__privacy-toggle");
+    const publicContent = () => page.locator(".sl-profile-timeline__public-content");
+    const privateNotice = () => page.locator(".sl-profile-timeline__private-notice");
+
+    await suite.test("privacy: bottone lucchetto presente accanto alle statistiche", async () => {
+      assert.equal(await toggle().count(), 1);
+    });
+
+    await suite.test("privacy: stato iniziale pubblico (aria-pressed=false, aria-label corretto)", async () => {
+      assert.equal(await toggle().getAttribute("aria-pressed"), "false");
+      assert.equal(await toggle().getAttribute("aria-label"), "Rendi il profilo privato");
+    });
+
+    await suite.test("privacy: contenuto pubblico visibile, pannello privato nascosto all'apertura", async () => {
+      assert.equal(await publicContent().isVisible(), true);
+      assert.equal(await privateNotice().isHidden(), true);
+    });
+
+    let statsBefore;
+    await suite.test("privacy: 3 statistiche leggibili prima del toggle (baseline per il confronto)", async () => {
+      statsBefore = await page.locator(".sl-profile-timeline__stat-value").allTextContents();
+      assert.equal(statsBefore.length, 3);
+    });
+
+    await suite.test("privacy: click sul lucchetto -> aria-pressed=true, aria-label invertito", async () => {
+      await toggle().click();
+      await page.waitForTimeout(30);
+      assert.equal(await toggle().getAttribute("aria-pressed"), "true");
+      assert.equal(await toggle().getAttribute("aria-label"), "Rendi il profilo pubblico");
+    });
+
+    await suite.test("privacy: contenuto pubblico nascosto, pannello privato visibile", async () => {
+      assert.equal(await publicContent().isHidden(), true);
+      assert.equal(await privateNotice().isVisible(), true);
+    });
+
+    await suite.test("privacy: titolo del pannello 'Questo profilo è privato'", async () => {
+      const title = await page.locator(".sl-profile-timeline__private-title").textContent();
+      assert.equal(title.trim(), "Questo profilo è privato");
+    });
+
+    await suite.test("privacy: descrizione contiene il nome utente reale (da profile.json)", async () => {
+      const description = await page.locator(".sl-profile-timeline__private-description").textContent();
+      assert.ok(description.includes("marti.travel"), "il nome utente non compare nella descrizione");
+    });
+
+    await suite.test("privacy: bottone 'Segui' presente", async () => {
+      const label = await page.locator(".sl-profile-timeline__private-follow").textContent();
+      assert.equal(label.trim(), "Segui");
+    });
+
+    await suite.test("privacy: statistiche IDENTICHE in stato privato (stessi valori del pubblico)", async () => {
+      const statsAfter = await page.locator(".sl-profile-timeline__stat-value").allTextContents();
+      assert.deepEqual(statsAfter, statsBefore);
+    });
+
+    await suite.test("privacy: annuncio aria-live 'Profilo impostato su privato.'", async () => {
+      const status = await page.locator(".sl-profile-timeline__privacy-status").textContent();
+      assert.equal(status.trim(), "Profilo impostato su privato.");
+    });
+
+    await suite.test("privacy: click su 'Segui' non genera errori (evento fittizio)", async () => {
+      let errored = false;
+      page.once("pageerror", () => { errored = true; });
+      await page.click(".sl-profile-timeline__private-follow");
+      await page.waitForTimeout(30);
+      assert.equal(errored, false);
+    });
+
+    await suite.test("privacy: click di nuovo -> torna pubblico (aria-pressed=false)", async () => {
+      await toggle().click();
+      await page.waitForTimeout(30);
+      assert.equal(await toggle().getAttribute("aria-pressed"), "false");
+      assert.equal(await publicContent().isVisible(), true);
+      assert.equal(await privateNotice().isHidden(), true);
+    });
+
+    await suite.test("privacy: dopo il ritorno a pubblico, ancora 12 post (nessun duplicato/perdita)", async () => {
+      assert.equal(await page.locator(".sl-feed .sl-post-card").count(), 12);
+    });
+
+    await suite.test("privacy: annuncio aria-live 'Profilo impostato su pubblico.'", async () => {
+      const status = await page.locator(".sl-profile-timeline__privacy-status").textContent();
+      assert.equal(status.trim(), "Profilo impostato su pubblico.");
+    });
+
+    await suite.test("privacy: la vista Archivio selezionata prima del privato viene preservata", async () => {
+      await page.click(".sl-profile-timeline__tabs >> text=Archivio");
+      await page.waitForSelector(".sl-timeline:not([hidden])");
+      await toggle().click(); // -> privato
+      await page.waitForTimeout(30);
+      await toggle().click(); // -> pubblico
+      await page.waitForTimeout(30);
+      assert.equal(await page.locator(".sl-timeline").isHidden(), false, "l'Archivio non è più visibile dopo il round-trip privato/pubblico");
+      assert.equal(await page.locator(".sl-feed").isHidden(), true, "il Feed è tornato visibile invece dell'Archivio (reset non richiesto)");
+      // Ripristina la vista Post per non alterare lo stato dei blocchi successivi.
+      await page.click(".sl-profile-timeline__tabs >> text=Post");
     });
 
     await context.close();
@@ -181,29 +303,31 @@ async function run() {
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, "scenario-archive-mobile-375.png"), fullPage: true });
     });
 
+    // Screenshot dedicato al pannello privato a 375px (Fase toggle privacy):
+    // colmava una lacuna già segnalata nell'handover originario dell'
+    // intervento ("Screenshot a viewport mobile del pannello privato — non
+    // eseguito in questo giro").
+    await suite.test("screenshot scenario — mobile 375px, pannello privato", async () => {
+      await page.click(".sl-profile-timeline__tabs >> text=Post");
+      await page.click(".sl-profile-timeline__privacy-toggle");
+      await page.waitForSelector(".sl-profile-timeline__private-notice:not([hidden])");
+      await page.screenshot({ path: path.join(SCREENSHOT_DIR, "scenario-private-mobile-375.png"), fullPage: true });
+      const hasOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+      );
+      assert.equal(hasOverflow, false, "overflow orizzontale rilevato nel pannello privato a 375px");
+    });
+
     await context.close();
   }
 
   // --- Flusso completo da tastiera: Home -> Scenario -> MediaViewer ----
-  // Intervento #9 dell'audit Fase 9, aperto fin dalla Fase 4: mai
-  // percorso per intero in un unico test. Nessun click del mouse in
-  // questo blocco (a parte il login, che non fa parte del flusso da
-  // verificare): solo Tab/Shift+Tab/Invio/Frecce/Escape.
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
 
     await suite.test("flusso da tastiera: Sidebar -> Moduli -> Cybersecurity (Invio)", async () => {
-      // Ordine di tabulazione naturale della Home: skip-link, ricerca
-      // header, trigger profilo, voci Sidebar (solo "Home" è focalizzabile,
-      // le altre due sono <span aria-disabled>, fuori dall'ordine di tab —
-      // verificato in home.spec.js), poi le ModuleCard disponibili (solo
-      // Cybersecurity ha tabindex="0", le altre 5 sono <div> non
-      // focalizzabili). Invece di contare i Tab a mano (fragile: basta un
-      // futuro campo di ricerca in più a rompere il conteggio), si esegue
-      // Tab ripetutamente finché il focus non raggiunge la card
-      // Cybersecurity, con un tetto massimo di sicurezza.
       let focused = null;
       for (let i = 0; i < 15; i += 1) {
         await page.keyboard.press("Tab");
@@ -240,9 +364,6 @@ async function run() {
     });
 
     await suite.test("flusso da tastiera: torna alla Home cliccando 'Home' in Sidebar", async () => {
-      // Ultimo passo del percorso (non l'oggetto del test #9, che riguarda
-      // l'andata): un click qui è accettabile, l'obiettivo era verificare
-      // l'INTERO percorso di apertura da tastiera, non anche il ritorno.
       await page.click(".sl-sidebar__link[href='#/home']");
       await page.waitForFunction(() => window.location.hash === "#/home");
     });
