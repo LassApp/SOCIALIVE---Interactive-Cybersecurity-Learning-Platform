@@ -1,30 +1,36 @@
 /**
  * MediaViewer.js
  * -----------------------------------------------------------------------
- * Visualizzatore immersivo di post (Fase 7, Prompt #7 — "apertura post,
- * zoom immagini, navigazione fluida, microinterazioni, caricamento
- * immagini ottimizzato"). Componente pianificato in Fase 1 §4 e
- * esplicitamente differito per YAGNI ("MediaViewer" — progettato a
- * ridosso della fase che lo richiede), ora costruito perché
- * `sl:post-open` ha finalmente un consumer reale (emesso da PostCard,
+ * Visualizzatore immersivo di contenuti multimediali (Fase 7, Prompt #7
+ * — "apertura post, zoom immagini, navigazione fluida, microinterazioni,
+ * caricamento immagini ottimizzato"). Componente pianificato in Fase 1
+ * §4 e esplicitamente differito per YAGNI ("MediaViewer" — progettato a
+ * ridosso della fase che lo richiede), costruito in Fase 7 perché
+ * `sl:post-open` aveva finalmente un consumer reale (emesso da PostCard,
  * Fase 2, e da Timeline, Fase 6, con lo stesso `detail: { postId }`).
  *
- * RISOLUZIONE DEL POST DAL SOLO postId — decisione presa PRIMA di questo
- * file, non dentro di esso: MediaViewer non riceve mai un "postId" da
- * cercare. Il chiamante (profileTimelineRenderer.js, prossimo step) ha
- * già in scope l'intero array di post risolti (autore + data formattata,
- * niente secondo fetch) e traduce l'evento "sl:post-open" in
- * `{ posts, startIndex }` prima di chiamare create() — stesso principio
- * "dumb" già seguito ovunque (i componenti ricevono dati, non li
- * cercano). Nessuna modifica a PostCard.js/Timeline.js: entrambi
- * continuano a emettere lo stesso evento generico di sempre.
+ * GENERALIZZAZIONE (post Fase 10): la prop principale è stata rinominata
+ * da "posts" a "items" — il componente non ha MAI letto `.stats` e ha
+ * sempre trattato un elemento privo di immagine come testo centrato
+ * (vedi "AMBITO DI NAVIGAZIONE" sotto): era già un visualizzatore
+ * generico "di fatto", solo con un nome legato al suo primo consumer.
+ * Oggi un secondo consumer reale (il feed della Home, non solo lo
+ * scenario Oversharing) e un terzo tipo di contenuto (foto profilo,
+ * copertina, storie in evidenza — non "post" in senso proprio) rendono
+ * il nome "items" più onesto rispetto al contratto effettivo. Zero
+ * cambi di comportamento: qualunque oggetto con la forma minima
+ * `{ id, image?: {src, alt}, content?, author?, timestamp? }` funziona
+ * esattamente come prima. La risoluzione "da un id a un item" resta,
+ * come già deciso in Fase 7, responsabilità del chiamante (oggi tramite
+ * js/utils/mediaViewerLauncher.js, che estrae la stessa identica logica
+ * che profileTimelineRenderer.js già gestiva "a mano") — MediaViewer non
+ * cerca mai nulla da solo, riceve sempre l'intero array + un indice.
  *
- * AMBITO DI NAVIGAZIONE — l'intero set di post, non solo quelli con
- * immagine: il Prompt #7 dice "apertura POST", non "apertura immagine".
- * Un post di solo testo (es. post-004 di Oversharing) mostra il proprio
- * contenuto grande e centrato nello stage, esattamente come Timeline
- * tratta lo stesso caso con un riquadro di fallback testuale — nessuna
- * eccezione introdotta qui.
+ * AMBITO DI NAVIGAZIONE — l'intero set di "items", non solo quelli con
+ * immagine: un item di solo testo (es. post-004 di Oversharing) mostra
+ * il proprio contenuto grande e centrato nello stage, esattamente come
+ * Timeline tratta lo stesso caso con un riquadro di fallback testuale —
+ * nessuna eccezione introdotta qui.
  *
  * NON è una variante di Modal, pur riusandone la logica di focus trap
  * (js/utils/focusTrap.js, già condivisa con ProfileMenu): sono due
@@ -55,28 +61,26 @@
  * deliberata, non una semplificazione dimenticata.
  *
  * ZOOM — click/Invio sull'immagine ne alterna lo stato (scale 1× ↔ 1.8×,
- * cursore zoom-in/zoom-out). Nessun pan/drag: for a v1 sarebbe
- * complessità (gestione puntatore, inerzia) senza un bisogno reale oggi
- * (dataset con immagini singole, non gallerie a scorrimento interno) —
- * annotato come possibile estensione futura, non introdotto ora (YAGNI).
- * Lo zoom si azzera SEMPRE quando si passa a un post diverso (evita
- * disorientamento: ogni nuovo post riparte alla vista naturale).
+ * cursore zoom-in/zoom-out). Lo zoom si azzera SEMPRE quando si passa a
+ * un item diverso (evita disorientamento: ogni nuovo item riparte alla
+ * vista naturale).
  *
  * NAVIGAZIONE — bottoni prev/next (disabilitati ai due estremi, nessun
  * wraparound: un visualizzatore reale si ferma a inizio/fine) + tasti
  * ArrowLeft/ArrowRight con lo stesso identico effetto, catturati sullo
  * stesso listener "keydown" di document già usato per Escape/Tab (stesso
  * pattern già seguito da Modal). Annuncio invisibile (aria-live) ad ogni
- * cambio post, stesso principio già seguito da Feed.js per il proprio
+ * cambio item, stesso principio già seguito da Feed.js per il proprio
  * annuncio di caricamento.
  *
  * CARICAMENTO IMMAGINI — nessuna infrastruttura di precaricamento
- * dedicata: la stessa "src" è già stata caricata dal Feed/Timeline
- * sottostante PRIMA che l'utente potesse cliccarci sopra (il post era
- * già visibile come card/miniatura) — la cache HTTP del browser risolve
- * la richiesta senza round-trip in ogni caso reale. Il Loader (Fase 2)
- * qui è solo una rete di sicurezza per il caso limite (cache assente/
- * scaduta), non un'infrastruttura di precaricamento da costruire.
+ * dedicata: la stessa "src" è già stata caricata dalla superficie
+ * sottostante (Feed/Timeline/StoriesBar/header di profilo) PRIMA che
+ * l'utente potesse cliccarci sopra (l'item era già visibile come card/
+ * miniatura/avatar) — la cache HTTP del browser risolve la richiesta
+ * senza round-trip in ogni caso reale. Il Loader (Fase 2) qui è solo una
+ * rete di sicurezza per il caso limite (cache assente/scaduta), non
+ * un'infrastruttura di precaricamento da costruire.
  *
  * A differenza di Modal, create() qui equivale ad "apri il
  * visualizzatore": monta l'overlay in <body>, sposta e intrappola il
@@ -87,11 +91,13 @@
  * Interfaccia: create(props) → { element, update(props), destroy() }
  *
  * Props:
- *   - posts       {Array<post>}  richiesto — stessa forma del prop
- *     "post" di PostCard/Feed (id, author, timestamp, content, image,
- *     stats). Si assume non vuoto: il chiamante lo costruisce sempre a
- *     partire da un post realmente cliccato, mai da un set vuoto.
- *   - startIndex  {number}       default: 0 — indice iniziale in "posts"
+ *   - items       {Array<object>} richiesto — ogni elemento ha la stessa
+ *     forma minima già usata da PostCard/Feed (id, author?, timestamp?,
+ *     content?, image?, stats? — "stats" non viene mai letto qui). Un
+ *     item senza "image" mostra "content" come testo centrato. Si
+ *     assume non vuoto: il chiamante lo costruisce sempre a partire da
+ *     un elemento realmente cliccato, mai da un set vuoto.
+ *   - startIndex  {number}       default: 0 — indice iniziale in "items"
  *   - closeOnOverlayClick {boolean} default: true
  *   - closeOnEsc          {boolean} default: true
  *
@@ -136,28 +142,28 @@ function buildChevronIcon(direction) {
   return svg;
 }
 
-function hasImage(post) {
-  return Boolean(post && post.image && post.image.src);
+function hasImage(item) {
+  return Boolean(item && item.image && item.image.src);
 }
 
 export function create(props = {}) {
-  let posts = [...(Array.isArray(props.posts) ? props.posts : [])];
+  let items = [...(Array.isArray(props.items) ? props.items : [])];
   const previouslyFocused = document.activeElement;
   const childComponents = [];
 
   const state = {
-    index: Math.min(Math.max(props.startIndex || 0, 0), Math.max(posts.length - 1, 0)),
+    index: Math.min(Math.max(props.startIndex || 0, 0), Math.max(items.length - 1, 0)),
     zoomed: false,
   };
 
-  // --- struttura statica (identica per ogni post) --------------------
+  // --- struttura statica (identica per ogni item) --------------------
   const closeButton = createButton({ variant: "icon", ariaLabel: "Chiudi", icon: buildCloseIcon() });
   closeButton.element.classList.add("sl-media-viewer__close");
   childComponents.push(closeButton);
 
   const prevButton = createButton({
     variant: "icon",
-    ariaLabel: "Post precedente",
+    ariaLabel: "Precedente",
     icon: buildChevronIcon("prev"),
   });
   prevButton.element.classList.add("sl-media-viewer__nav", "sl-media-viewer__nav--prev");
@@ -165,7 +171,7 @@ export function create(props = {}) {
 
   const nextButton = createButton({
     variant: "icon",
-    ariaLabel: "Post successivo",
+    ariaLabel: "Successivo",
     icon: buildChevronIcon("next"),
   });
   nextButton.element.classList.add("sl-media-viewer__nav", "sl-media-viewer__nav--next");
@@ -205,7 +211,7 @@ export function create(props = {}) {
       attrs: {
         role: "dialog",
         "aria-modal": "true",
-        "aria-label": "Visualizzatore post",
+        "aria-label": "Visualizzatore multimediale",
         tabindex: "-1",
       },
     },
@@ -214,20 +220,20 @@ export function create(props = {}) {
 
   const overlay = createElement("div", { classNames: "sl-media-viewer-overlay" }, [panel]);
 
-  // --- rendering del post corrente ------------------------------------
+  // --- rendering dell'item corrente ------------------------------------
   let zoomButton = null; // ricreato ad ogni renderStage() insieme all'immagine
 
   function renderStage() {
     while (stage.firstChild) stage.removeChild(stage.firstChild);
     zoomButton = null;
 
-    const post = posts[state.index];
-    if (!post) return;
+    const item = items[state.index];
+    if (!item) return;
 
-    if (hasImage(post)) {
+    if (hasImage(item)) {
       const img = createElement("img", {
         classNames: "sl-media-viewer__image",
-        attrs: { src: post.image.src, alt: post.image.alt || "" },
+        attrs: { src: item.image.src, alt: item.image.alt || "" },
       });
 
       const loader = createLoader({ size: "md" });
@@ -248,7 +254,7 @@ export function create(props = {}) {
       stage.appendChild(zoomButton);
     } else {
       stage.appendChild(
-        createElement("p", { classNames: "sl-media-viewer__text-content", text: post.content || "" })
+        createElement("p", { classNames: "sl-media-viewer__text-content", text: item.content || "" })
       );
     }
 
@@ -256,32 +262,32 @@ export function create(props = {}) {
   }
 
   function renderFooter() {
-    const post = posts[state.index];
-    if (!post) return;
+    const item = items[state.index];
+    if (!item) return;
 
-    avatar.update({ src: post.author?.avatarSrc, name: post.author?.name });
-    authorName.textContent = post.author?.name || "";
-    timestamp.textContent = post.timestamp || "";
+    avatar.update({ src: item.author?.avatarSrc, name: item.author?.name });
+    authorName.textContent = item.author?.name || "";
+    timestamp.textContent = item.timestamp || "";
 
-    // Didascalia mostrata SOLO per i post con immagine: per un post di
+    // Didascalia mostrata SOLO per gli item con immagine: per un item di
     // solo testo il contenuto è già il protagonista dello stage, non va
     // duplicato anche qui sotto.
-    const showCaption = hasImage(post) && Boolean(post.content);
-    caption.textContent = showCaption ? post.content : "";
+    const showCaption = hasImage(item) && Boolean(item.content);
+    caption.textContent = showCaption ? item.content : "";
     caption.hidden = !showCaption;
 
-    position.textContent = `${state.index + 1} di ${posts.length}`;
+    position.textContent = `${state.index + 1} di ${items.length}`;
   }
 
   function renderNavState() {
     prevButton.update({ disabled: state.index <= 0 });
-    nextButton.update({ disabled: state.index >= posts.length - 1 });
+    nextButton.update({ disabled: state.index >= items.length - 1 });
   }
 
   function announce() {
-    const post = posts[state.index];
-    const kind = hasImage(post) ? "Foto" : "Post";
-    status.textContent = `${kind} ${state.index + 1} di ${posts.length}`;
+    const item = items[state.index];
+    const kind = hasImage(item) ? "Foto" : "Contenuto";
+    status.textContent = `${kind} ${state.index + 1} di ${items.length}`;
   }
 
   function toggleZoom() {
@@ -293,9 +299,9 @@ export function create(props = {}) {
   }
 
   function goTo(nextIndex) {
-    if (nextIndex < 0 || nextIndex >= posts.length || nextIndex === state.index) return;
+    if (nextIndex < 0 || nextIndex >= items.length || nextIndex === state.index) return;
     state.index = nextIndex;
-    state.zoomed = false; // ogni nuovo post riparte alla vista naturale
+    state.zoomed = false; // ogni nuovo item riparte alla vista naturale
     renderStage();
     renderFooter();
     renderNavState();
@@ -319,8 +325,8 @@ export function create(props = {}) {
   const initialFocusTarget = getFocusableElements(panel)[0] || panel;
   initialFocusTarget.focus();
 
-  // BUG TROVATO in questo step (Playwright): a differenza di Modal, qui
-  // il pannello riempie l'intero overlay (necessario per ancorare i
+  // BUG TROVATO in Fase 7 (Playwright): a differenza di Modal, qui il
+  // pannello riempie l'intero overlay (necessario per ancorare i
   // controlli position:absolute a schermo intero) — un click sullo
   // sfondo ha quindi come target il PANNELLO, non l'overlay (che non ha
   // mai area propria esposta). "Click fuori per chiudere" deve perciò
@@ -382,16 +388,16 @@ export function create(props = {}) {
     overlay.remove();
   }
 
-  // update({ posts }) copia il nuovo array (mai l'array del chiamante
+  // update({ items }) copia il nuovo array (mai l'array del chiamante
   // per riferimento — stessa cautela già seguita da list() in
   // localJsonRepository.js): nessun consumer reale lo richiede oggi
-  // (il dataset di uno scenario è fisso), presente per uniformità
+  // (il dataset di una galleria è fisso), presente per uniformità
   // d'interfaccia e per non bloccare un futuro bisogno reale.
   function update(nextProps = {}) {
     props = { ...props, ...nextProps };
-    if (nextProps.posts !== undefined) {
-      posts = [...nextProps.posts];
-      state.index = Math.min(state.index, Math.max(posts.length - 1, 0));
+    if (nextProps.items !== undefined) {
+      items = [...nextProps.items];
+      state.index = Math.min(state.index, Math.max(items.length - 1, 0));
       renderStage();
       renderFooter();
       renderNavState();
