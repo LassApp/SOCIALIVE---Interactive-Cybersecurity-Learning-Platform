@@ -132,7 +132,7 @@ import { create as createButton } from "../../components/Button.js";
 import { create as createStoriesBar } from "../../components/StoriesBar.js";
 import { create as createFeed } from "../../components/Feed.js";
 import { create as createTimeline } from "../../components/Timeline.js";
-import { create as createMediaViewer } from "../../components/MediaViewer.js";
+import { createMediaViewerLauncher } from "../../utils/mediaViewerLauncher.js";
 
 function formatCount(value) {
   return (Number(value) || 0).toLocaleString("it-IT");
@@ -498,16 +498,19 @@ export async function renderProfileTimeline(container, scenario) {
   // Archivio). Ascoltato su "wrapper" (non su feed/timeline
   // singolarmente): un solo listener copre entrambe le fonti, dato che
   // sono entrambe discendenti di wrapper nel DOM.
-  let mediaViewer = null;
+  //
+  // mediaViewerLauncher (post Fase 10): la gestione dell'istanza singola
+  // di MediaViewer — apri/chiudi/distruggi — non vive più qui a mano ma
+  // in js/utils/mediaViewerLauncher.js, estratta perché homePageController
+  // (stesso intervento) ha bisogno della stessa identica logica per il
+  // feed della Home. "openById" copre il caso "sl:post-open" (un id da
+  // risolvere in feedPosts); avatar/copertina/storie, poco più sotto in
+  // questo stesso file, usano invece "open" con una galleria già pronta
+  // (un solo elemento per avatar/copertina, l'intero set per le storie).
+  const mediaViewerLauncher = createMediaViewerLauncher();
 
   function handlePostOpen(event) {
-    const index = feedPosts.findIndex((post) => post.id === event.detail.postId);
-    if (index === -1) return;
-    if (mediaViewer) mediaViewer.destroy();
-    mediaViewer = createMediaViewer({ posts: feedPosts, startIndex: index });
-    mediaViewer.element.addEventListener("sl:media-viewer-close", () => {
-      mediaViewer = null;
-    });
+    mediaViewerLauncher.openById(feedPosts, event.detail.postId);
   }
   wrapper.addEventListener("sl:post-open", handlePostOpen);
 
@@ -534,7 +537,8 @@ export async function renderProfileTimeline(container, scenario) {
     // distrutto esplicitamente qui — altrimenti resterebbe orfano sopra
     // la pagina successiva. Stessa cautela non ancora applicata a Modal
     // altrove nel progetto (debito tecnico noto e accettato lì, cfr.
-    // Modal.js "nessuno stacking"), qui risolta perché il costo è minimo.
-    if (mediaViewer) mediaViewer.destroy();
+    // Modal.js "nessuno stacking"), qui risolta perché il costo è minimo
+    // (mediaViewerLauncher.destroy() è un no-op sicuro se nulla è aperto).
+    mediaViewerLauncher.destroy();
   };
 }
