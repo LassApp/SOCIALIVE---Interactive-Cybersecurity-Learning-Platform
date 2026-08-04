@@ -13,15 +13,22 @@ e, per costruzione, ogni futuro scenario che riuserà lo stesso `type`.
 ## 1. Stato del progetto
 
 - Suite dei 10 prompt originari (Fase 1 → Fase 10): ✅ completa, invariata.
-- **Nuovo miglioramento: ✅ COMPLETATO.** Il profilo Oversharing (e, genericamente, qualunque
-  profilo mostrato dal renderer `profile-timeline`) ha ora due stati commutabili in tempo reale
-  tramite un'icona a lucchetto: **pubblico** (default, invariato da Fase 6/7) e **privato**
-  (nuovo — storie e post sostituiti da un pannello "Questo profilo è privato").
+- **Miglioramento "toggle privacy profilo": ✅ COMPLETATO E COMPLETAMENTE COPERTO DA TEST
+  PERSISTITI.** Il profilo Oversharing (e, genericamente, qualunque profilo mostrato dal renderer
+  `profile-timeline`) ha ora due stati commutabili in tempo reale tramite un'icona a lucchetto:
+  **pubblico** (default, invariato da Fase 6/7) e **privato** (nuovo — storie e post sostituiti
+  da un pannello "Questo profilo è privato").
 - Stato **non persistito**, come richiesto esplicitamente: ogni mount/refresh dello scenario
   riparte sempre da "pubblico".
-- **26 controlli automatizzati** eseguiti con Playwright (Chromium reale, browser headless, mai
-  mock) su un harness che monta `renderProfileTimeline` con fetch reale dei dati JSON — tutti
-  superati. 4 screenshot ispezionati (pubblico/privato × Light/Dark).
+- **Step 1 (implementazione)**: 26 controlli automatizzati eseguiti con Playwright su un harness
+  isolato (fetch reale dei dati JSON, mai mock) — tutti superati, 4 screenshot ispezionati.
+- **Step 2 (questo aggiornamento — persistenza nella suite reale)**: `tests/scenario.spec.js`
+  esteso con 15 nuovi controlli dedicati al toggle privacy, integrati nella suite ufficiale del
+  repository. **Intera suite ri-eseguita attraverso il vero `index.html`** (login reale, router
+  reale, nessun harness isolato): **61/61 controlli superati** (15 `login.spec.js` + 7
+  `home.spec.js` + 39 `scenario.spec.js`, di cui 15 sul toggle privacy). Aggiunto anche uno
+  screenshot dedicato al pannello privato a 375px, lacuna esplicitamente segnalata nella versione
+  precedente di questo documento.
 - **Zero modifiche** a componenti condivisi del Design System, a `router.js`, `scenarioEngine.js`,
   `appShell.js`, `authService.js`, o a qualunque file JSON di dati.
 
@@ -58,6 +65,27 @@ e, per costruzione, ogni futuro scenario che riuserà lo stesso `type`.
   messaggio arriva da `profile.displayName`). Un futuro scenario con lo stesso `type`
   (`"Privacy"`, Fase 1 §12) erediterebbe questa stessa demo senza alcuna modifica.
 
+### Step 2 — Persistenza nella suite di test reale
+
+- **`tests/scenario.spec.js` esteso** con un nuovo blocco dedicato (`--- Toggle pubblico/privato
+  (nuovo, post Fase 10) ---`), inserito tra il blocco "Toggle Post/Archivio" e il blocco
+  "MediaViewer" — ordine di lettura naturale per un futuro manutentore. 15 controlli: bottone
+  presente, stato iniziale pubblico (`aria-pressed`/`aria-label`), contenuto pubblico visibile/
+  pannello privato nascosto, transizione a privato (attributi, visibilità, titolo, descrizione
+  col nome utente reale, bottone "Segui", statistiche identiche, annuncio `aria-live`), click su
+  "Segui" senza errori, transizione di ritorno a pubblico (attributi, 12 post ancora presenti,
+  annuncio corretto), preservazione della vista Archivio dopo un giro privato→pubblico.
+- **Nuovo screenshot** `scenario-private-mobile-375.png` nel blocco screenshot esistente — colma
+  la lacuna esplicitamente segnalata nella versione precedente di questo handover ("non eseguito
+  in questo giro").
+- **Verifica eseguita attraverso l'intero progetto reale ricostruito** (`index.html`, tutti i
+  componenti/servizi, tutti i dati JSON reali di Oversharing), non un harness isolato — stessa
+  lezione di processo già imposta dal progetto fin dalla Fase 6 ("ogni modifica va verificata
+  anche con un test che carica l'entry point reale"). `node`/`playwright` (package npm globale,
+  versione 1.56.0, coerente con `tests/package.json`) + Chromium reale.
+- **Nessuna modifica** a `login.spec.js`/`home.spec.js`/agli helper (`server.js`, `testKit.js`,
+  `auth.js`) — riusati esattamente come sono.
+
 ---
 
 ## 3. Architettura attuale — file coinvolti
@@ -66,11 +94,13 @@ e, per costruzione, ogni futuro scenario che riuserà lo stesso `type`.
 |---|---|---|
 | `js/scenarios/renderers/profileTimelineRenderer.js` | **MODIFICATO** | import `svgNode`; nuova funzione `buildLockIcon(locked)`; nuova funzione `buildPrivateNotice(profile)`; `buildProfileHeader` riceve ora anche l'elemento del toggle e lo dispone in una riga dedicata (`.stats-row`) accanto alle statistiche; stato locale `isPrivate` (mai persistito); funzione `setPrivacy()`/handler di click; wrapper `.public-content` che raggruppa storie+tab+pannelli in un solo nodo commutabile; `destroy()` aggiornato con il cleanup del nuovo bottone e del pannello privato |
 | `css/scenarios/profile-timeline.css` | **MODIFICATO** | nuova `.sl-profile-timeline__stats-row` (contenitore statistiche+lucchetto); `.sl-profile-timeline__stats` non ha più margin-top proprio (spostato sulla row, zero regressione visiva); colore del bottone lucchetto a riposo/premuto; intero blocco nuovo `.sl-profile-timeline__private-notice*` (pannello, icona, titolo, descrizione, bottone Segui) incl. la regola `[hidden]` esplicita (stesso bug pattern già corretto 3 volte nel progetto: post-card.css/timeline.css/media-viewer.css) |
+| `tests/scenario.spec.js` | **MODIFICATO** | +15 controlli sul toggle privacy (nuovo blocco dedicato) + 1 screenshot mobile del pannello privato; docstring di testa al file aggiornato |
 
-**Nessun nuovo file.** Nessuna modifica a `index.html` (nessun nuovo asset da collegare — i due
-file toccati sono già linkati). Nessuna modifica a `data/*.json`, a `Button.js`, `Avatar.js`,
-`StoriesBar.js`, `Feed.js`, `Timeline.js`, `MediaViewer.js`, `scenarioEngine.js`,
-`scenarioPageController.js`, `appShell.js`.
+**Nessun nuovo file.** Nessuna modifica a `index.html` (nessun nuovo asset da collegare — i file
+toccati sono già linkati/referenziati). Nessuna modifica a `data/*.json`, a `Button.js`,
+`Avatar.js`, `StoriesBar.js`, `Feed.js`, `Timeline.js`, `MediaViewer.js`, `scenarioEngine.js`,
+`scenarioPageController.js`, `appShell.js`, `router.js`, `authService.js`,
+`tests/login.spec.js`, `tests/home.spec.js`, `tests/helpers/*`.
 
 ---
 
@@ -109,31 +139,30 @@ file toccati sono già linkati). Nessuna modifica a `data/*.json`, a `Button.js`
 
 ## 5. Attività rimanenti
 
-Nessuna attività aperta relativa a questo specifico miglioramento. Punti pre-esistenti e
-indipendenti (invariati, per completezza):
+**Nessuna attività aperta relativa a questo miglioramento** — il gap di copertura segnalato nella
+versione precedente di questo documento (§9 di quella versione) è stato chiuso in questo stesso
+aggiornamento. Punti pre-esistenti e indipendenti (invariati, per completezza, non legati a
+questo intervento):
 
 1. Immagini reali di Oversharing (18 placeholder a tinta unita, gestiti autonomamente
    dall'utente).
-2. Suite di test Playwright del repository (`tests/`, persistita da Fase 9) — **non ancora
-   estesa** con i controlli su questo nuovo toggle: la verifica di questo intervento è stata
-   eseguita su un harness isolato dedicato (Playwright/Python), non ancora trascritta come
-   `.spec.js` dentro `tests/scenario.spec.js`. Consigliato come prossimo micro-step (vedi §6).
-3. Gap dichiarati e invariati da Fase 10: icon sprite, `js/config/env.js` (Supabase), integrazione
+2. Gap dichiarati e invariati da Fase 10: icon sprite, `js/config/env.js` (Supabase), integrazione
    CI, secondo scenario reale con un `type` diverso da `profile-timeline`.
 
 ---
 
 ## 6. Prossima fase
 
-Nessuna fase numerata pendente dalla Suite originaria. Come prossimo micro-step consigliato (non
-bloccante):
+Nessuna fase numerata pendente dalla Suite originaria, e nessun micro-step pendente su questo
+specifico miglioramento — è stato chiuso end-to-end (implementazione + copertura test persistita
++ verifica attraverso l'app reale). Le due direzioni indipendenti già proposte in chiusura di
+Fase 10 restano valide come possibili prossimi passi generali del progetto:
 
-**Estendere `tests/scenario.spec.js`** con i controlli equivalenti a quelli già eseguiti
-sull'harness isolato di questo intervento — stato iniziale pubblico, click → privato (contenuto
-nascosto, pannello visibile, stats identiche, annuncio corretto), click → pubblico (ripristino,
-nessuna vista persa), assenza di regressioni su Feed/Archivio/MediaViewer — così che il toggle
-diventi parte della regressione automatica ad ogni `npm test`, coerente con la disciplina di test
-già adottata in tutte le fasi precedenti.
+- **Consolidamento**: integrazione CI per `tests/`, controllo anti-regressione per contenuti
+  testuali banditi.
+- **Espansione**: primo secondo scenario reale (Phishing o Password Security consigliati, per
+  validare il pattern Registry di `scenarioEngine.js` con un `type` diverso da
+  `"profile-timeline"`).
 
 ---
 
@@ -147,29 +176,34 @@ dell'utente è stato aggiunto un miglioramento al profilo Oversharing: un toggle
 su "privato" (lucchetto chiuso), copertina/avatar/bio/statistiche restano visibili e identiche,
 ma storie e post vengono sostituiti da un pannello "Questo profilo è privato" con un bottone
 "Segui" fittizio. Lo stato NON è persistito: ogni refresh/apertura dello scenario riparte sempre
-da "pubblico". Il documento di handover completo di questo intervento è allegato: consideralo la
-fonte di verità primaria.
+da "pubblico". L'intervento è stato completato in due step: implementazione (renderer+CSS) e
+persistenza della copertura test nella suite ufficiale del repository. Il documento di handover
+completo è allegato: consideralo la fonte di verità primaria.
 
 FILE MODIFICATI (nessun file nuovo): js/scenarios/renderers/profileTimelineRenderer.js,
-css/scenarios/profile-timeline.css. Nessun altro file del progetto è stato toccato.
+css/scenarios/profile-timeline.css, tests/scenario.spec.js. Nessun altro file del progetto è
+stato toccato.
 
-VERIFICA ESEGUITA: 26 controlli automatizzati Playwright (Chromium reale) su un harness isolato
-dedicato (non ancora nella suite persistita tests/), tutti superati, incl. 4 screenshot
-Light/Dark × pubblico/privato ispezionati.
+VERIFICA ESEGUITA: suite completa (login.spec.js + home.spec.js + scenario.spec.js, incl. i 15
+nuovi controlli sul toggle privacy) eseguita attraverso il vero index.html (login reale, router
+reale, tutti i dati JSON reali di Oversharing) — 61/61 controlli superati, incl. uno screenshot
+dedicato al pannello privato a 375px (lacuna precedente ora chiusa).
 
 RUOLO/REGOLE INVARIATE: agisci come Lead Software Architect, Senior Front-end/UI Engineer, UX
 Designer, Accessibility Specialist (WCAG) e Full Stack Architect. Motiva ogni decisione prima di
 implementarla. Mai duplicare componenti/moduli per la stessa funzione; interfaccia uniforme
 create(props)→{element,update,destroy} per i componenti UI; eventi "sl:nome-evento"; componenti
-"dumb"; documentazione in italiano; test reali (mai mock) prima di consegnare; handover completo
-a 10 sezioni + file .md separato ad ogni milestone.
+"dumb"; documentazione in italiano; test reali (mai mock) prima di consegnare, verificati anche
+attraverso l'index.html reale (non solo harness isolati); handover completo a 10 sezioni + file
+.md separato ad ogni milestone.
 
-DA FARE ORA (consigliato, non bloccante): estendere tests/scenario.spec.js con i controlli
-equivalenti a quelli già eseguiti sull'harness isolato per il toggle privacy (stato iniziale
-pubblico, transizione a privato/pubblico, preservazione della vista Feed/Archivio, statistiche
-identiche nei due stati), così che rientri nella regressione automatica di "npm test".
+STATO: nessuna attività pendente su questo specifico miglioramento. Le due direzioni generali
+proposte in chiusura di Fase 10 restano disponibili come prossimo passo del progetto:
+(A) consolidamento (CI, controllo anti-regressione contenuti banditi) o (B) espansione (primo
+secondo scenario reale, con un "type" diverso da "profile-timeline" per validare il pattern
+Registry di scenarioEngine.js con un secondo caso reale).
 
-Procedi estendendo tests/scenario.spec.js, oppure indica un'altra priorità.
+Indica quale direzione preferisci, o un'altra priorità.
 ```
 
 ---
@@ -203,9 +237,9 @@ harness con fetch reale dei dati — mai mock) durante questo intervento.
 - [x] Screenshot privato — Light.
 - [x] Screenshot privato — Dark.
 - [x] Screenshot pubblico — Dark.
-- [ ] Screenshot a viewport mobile (375px) del pannello privato — non eseguito in questo giro
-  (rischio basso: il pannello riusa lo stesso layout centrato a colonna unica già verificato
-  altrove per Light/Dark desktop).
+- [x] Screenshot a viewport mobile (375px) del pannello privato — **eseguito in questo
+  aggiornamento** (`scenario-private-mobile-375.png`), nessun overflow orizzontale, layout
+  coerente con il resto del Design System.
 
 ### Test UX
 - [x] Nessun movimento forzato del focus al cambio stato.
@@ -221,41 +255,39 @@ harness con fetch reale dei dati — mai mock) durante questo intervento.
 
 ### Test di regressione
 - [x] Toggle Post/Archivio (Fase 6) invariato e funzionante in entrambi gli stati pubblico/privato.
-- [ ] Flusso reale completo attraverso `index.html` (login → Home → Cybersecurity → scenario) con
-  questo intervento — non ripetuto in questo giro (verificato invece su harness isolato,
-  sufficiente a validare la logica; nessun nuovo asset da collegare in `index.html`, quindi il
-  rischio di un gap "file consegnato ma mai collegato" — già accaduto in Fase 6 — non si applica
-  qui). Consigliato comunque un passaggio sul flusso reale alla prossima occasione di test
-  integrale.
+- [x] **Flusso reale completo attraverso `index.html`** (login → Home → Cybersecurity → scenario)
+  con questo intervento — **eseguito in questo aggiornamento**: 61/61 controlli superati
+  sull'intera suite (`login.spec.js`/`home.spec.js`/`scenario.spec.js`), non solo sull'harness
+  isolato dello Step 1.
+- [x] Flusso completo da tastiera Home→Scenario→MediaViewer (Fase 9, intervento #9): confermato
+  invariato dopo l'inserimento del nuovo blocco di test — il toggle privacy non introduce nuovi
+  elementi nell'ordine di tabulazione prima della card Cybersecurity/del primo post del Feed.
 
 ---
 
 ## 9. Criticità
 
-- **Nessuna copertura nella suite persistita `tests/`**: la verifica di questo intervento è stata
-  eseguita su un harness Playwright dedicato e isolato (Python), non ancora trascritta come
-  `.spec.js` dentro il repository — a differenza di ogni altra funzionalità del progetto, oggi
-  coperta da `npm test`. Non bloccante (26 controlli reali già eseguiti e superati), ma da
-  chiudere per non reintrodurre il debito "verifica solo manuale" che il progetto aveva già
-  eliminato in Fase 9.
-- **Non ripetuto sul flusso reale completo `index.html`**: verificato solo su harness isolato.
-  Rischio basso (nessun nuovo asset da collegare, nessuna modifica a file di routing/auth), ma
-  non una verifica end-to-end eseguita in questo giro.
+**Nessuna criticità aperta relativa a questo miglioramento.** Le due segnalate nella versione
+precedente di questo documento sono state chiuse in questo aggiornamento:
+- ~~Nessuna copertura nella suite persistita `tests/`~~ → **chiusa**: 15 controlli dedicati ora
+  in `tests/scenario.spec.js`, parte di `npm test`.
+- ~~Non ripetuto sul flusso reale completo `index.html`~~ → **chiusa**: intera suite (61
+  controlli) eseguita attraverso l'app reale ricostruita per intero (non un harness), tutti
+  superati.
 
 ---
 
 ## 10. Debito tecnico
 
 ### Compromessi temporanei
-- 🟡 Toggle privacy verificato solo su harness isolato, non ancora nella suite persistita
-  `tests/` — vedi §9.
+- 🟢 Nessuno introdotto da questo miglioramento. Il compromesso temporaneo segnalato nella
+  versione precedente di questo documento (copertura solo su harness isolato) è stato chiuso.
 
 ### Refactoring consigliati
 - 🟢 Nessuno: l'intervento riusa esclusivamente componenti/pattern già esistenti (Button variante
   icon, `svgNode()`, `createElement()`), zero nuova indirection introdotta.
 
 ### Ottimizzazioni future
-- 🟢 Screenshot mobile (375px) del pannello privato — non eseguito in questo giro, rischio basso.
 - 🟢 Valutare se un futuro secondo scenario con `type: "profile-timeline"` richiederà varianti del
   messaggio privato (oggi generico e già parametrico su `profile.displayName`, nessuna modifica
   prevista come necessaria).
@@ -263,14 +295,16 @@ harness con fetch reale dei dati — mai mock) durante questo intervento.
 ### Rischi architetturali
 - 🟢 Nessun rischio nuovo: l'intervento è puramente additivo all'interno di un singolo renderer
   già isolato dal resto dell'architettura (nessuna modifica a componenti condivisi, router,
-  servizi, o schema dati).
+  servizi, o schema dati). Il secondo blocco di verifica (Step 2) ha inoltre confermato che
+  l'inserimento del nuovo blocco di test non altera l'ordine di tabulazione né introduce
+  regressioni nel flusso da tastiera Home→Scenario→MediaViewer già validato in Fase 9.
 
 ### Priorità
-- 🟡 Media: estendere `tests/scenario.spec.js` con i controlli sul toggle privacy, per chiudere il
-  gap di copertura segnalato in §9.
-- 🟢 Bassa: screenshot mobile del pannello privato.
+- 🟢 Bassa: nessun elemento ad alta o media priorità residuo su questo intervento. Le priorità
+  aperte sul progetto restano quelle generali già note da Fase 10 (icon sprite, `env.js` Supabase,
+  integrazione CI, secondo scenario reale).
 
 ### Obiettivo
-Questo intervento resta pienamente coerente con l'architettura consolidata nelle 10 fasi
-precedenti: nessuna nuova astrazione, nessuna modifica a componenti condivisi, verifica reale
-(non a occhio, non mock) prima della consegna.
+Questo intervento è ora chiuso end-to-end: implementazione, verifica reale, e persistenza della
+copertura nella suite ufficiale del repository — pienamente coerente con l'architettura
+consolidata nelle 10 fasi precedenti, senza debito residuo.
