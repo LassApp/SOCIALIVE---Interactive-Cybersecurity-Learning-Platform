@@ -47,10 +47,20 @@
  * demo usano il fallback a iniziali già esistente e verificato in
  * Avatar.js — nessun generatore di SVG inline da mantenere qui.
  *
- * sl:settings-click, sl:search, sl:post-open, sl:post-comment: nessun
- * listener attaccato, invariato dalle fasi precedenti — le destinazioni
- * non esistono ancora. sl:post-like resta gestito qui (aggiornamento
+ * sl:settings-click, sl:search, sl:post-comment: nessun listener
+ * attaccato, invariato dalle fasi precedenti — le destinazioni non
+ * esistono ancora. sl:post-like resta gestito qui (aggiornamento
  * ottimistico locale sui post caricati da feed.json).
+ *
+ * sl:post-open → MediaViewer (nuovo, post Fase 10): PRIMA il click
+ * sull'immagine del post (es. quello di Mario Bianchi) emetteva già
+ * "sl:post-open" — stesso identico evento di PostCard usato da Fase 2 —
+ * ma senza alcun consumer: qui non succedeva nulla. Ora si apre
+ * MediaViewer tramite js/utils/mediaViewerLauncher.js, lo stesso helper
+ * già usato da profileTimelineRenderer.js — nessuna modifica a
+ * PostCard.js/Feed.js/MediaViewer.js è stata necessaria: è la prova
+ * concreta che il visualizzatore, generico fin dalla propria interfaccia
+ * (Fase 7), funziona identico su un secondo consumer reale.
  */
 
 import { createElement } from "../utils/dom.js";
@@ -61,6 +71,7 @@ import { createAppShell } from "./shared/appShell.js";
 import { navigate } from "../core/router.js";
 import { createLocalJsonRepository } from "../repositories/localJsonRepository.js";
 import { buildFallbackMessage } from "../utils/fallbackMessage.js";
+import { createMediaViewerLauncher } from "../utils/mediaViewerLauncher.js";
 
 // Istanze create una sola volta a livello di modulo, non ad ogni
 // montaggio della rotta: la cache interna di localJsonRepository.js è
@@ -112,6 +123,14 @@ export function createHomePageController(container) {
   let modulesGrid = null;
   let feed = null;
 
+  // Istanza singola del launcher per l'intera vita di questa rotta —
+  // stesso pattern già usato da profileTimelineRenderer.js: possiede
+  // l'eventuale MediaViewer aperto, lo chiude/apre in sicurezza, e va
+  // distrutta esplicitamente nel destroy() di questo controller (vedi
+  // sotto) per il caso limite di navigazione via router mentre il
+  // visualizzatore è ancora aperto.
+  const mediaViewerLauncher = createMediaViewerLauncher();
+
   function handleModuleOpen(event) {
     const moduleRecord = loadedModules.find((m) => m.id === event.detail.moduleId);
     const scenarioId = moduleRecord && moduleRecord.scenarioId;
@@ -126,6 +145,10 @@ export function createHomePageController(container) {
     target.liked = liked;
     target.stats.likes += liked ? 1 : -1;
     feed.update({ posts: feedPosts });
+  }
+
+  function handlePostOpen(event) {
+    mediaViewerLauncher.openById(feedPosts, event.detail.postId);
   }
 
   function renderContent() {
@@ -157,6 +180,7 @@ export function createHomePageController(container) {
     feed = createFeed({ posts: feedPosts, isLoading: false, hasMore: false });
     childComponents.push(feed);
     feed.element.addEventListener("sl:post-like", handlePostLike);
+    feed.element.addEventListener("sl:post-open", handlePostOpen);
 
     dynamicArea.append(modulesSection, feed.element);
   }
@@ -180,8 +204,16 @@ export function createHomePageController(container) {
   return function destroy() {
     destroyed = true;
     if (modulesGrid) modulesGrid.removeEventListener("sl:module-open", handleModuleOpen);
-    if (feed) feed.element.removeEventListener("sl:post-like", handlePostLike);
+    if (feed) {
+      feed.element.removeEventListener("sl:post-like", handlePostLike);
+      feed.element.removeEventListener("sl:post-open", handlePostOpen);
+    }
     childComponents.forEach((instance) => instance.destroy());
     shell.destroy();
+    // Stesso caso limite già gestito da profileTimelineRenderer.js: se
+    // si naviga altrove mentre MediaViewer è ancora aperto, va chiuso
+    // esplicitamente qui — altrimenti resterebbe orfano sopra la pagina
+    // successiva. No-op sicuro se nulla è aperto.
+    mediaViewerLauncher.destroy();
   };
 }
