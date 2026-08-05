@@ -80,6 +80,37 @@
   background-color: var(--sl-color-bg-elevated);
 }
 
+/* Copertina/avatar apribili nel MediaViewer (nuovo, post Fase 10):
+   stesso trattamento hover/focus già usato per le immagini cliccabili
+   del progetto (.sl-post-card__media in post-card.css, i riquadri di
+   Timeline) — filter:brightness(0.94), nessun nuovo colore introdotto.
+   .cover-trigger riempie l'intero .cover (stesso ruolo di
+   .sl-post-card__media rispetto al proprio contenitore); .avatar-trigger
+   resta inline-flex per non alterare la dimensione intrinseca
+   dell'Avatar che avvolge. */
+.sl-profile-timeline__cover-trigger,
+.sl-profile-timeline__avatar-trigger {
+  cursor: zoom-in;
+  transition: filter var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-profile-timeline__cover-trigger:hover,
+.sl-profile-timeline__cover-trigger:focus-visible,
+.sl-profile-timeline__avatar-trigger:hover,
+.sl-profile-timeline__avatar-trigger:focus-visible {
+  filter: brightness(0.94);
+}
+
+.sl-profile-timeline__cover-trigger {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.sl-profile-timeline__avatar-trigger {
+  display: inline-flex;
+}
+
 .sl-profile-timeline__cover-image {
   width: 100%;
   height: 100%;
