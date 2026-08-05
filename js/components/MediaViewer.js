@@ -60,10 +60,43 @@
  * translucido introdotto ad hoc e non verificato numericamente — scelta
  * deliberata, non una semplificazione dimenticata.
  *
- * ZOOM — click/Invio sull'immagine ne alterna lo stato (scale 1× ↔ 1.8×,
- * cursore zoom-in/zoom-out). Lo zoom si azzera SEMPRE quando si passa a
- * un item diverso (evita disorientamento: ogni nuovo item riparte alla
- * vista naturale).
+ * ZOOM — click sull'immagine ne alterna lo stato (scale 1× ↔ 1.8×).
+ * PAN/DRAG (nuovo): da zoomato, trascinare con il puntatore (mouse,
+ * touch o pen — Pointer Events, un solo set di listener per tutti)
+ * sposta l'immagine all'interno dello stage, "limitato" (clamp) così da
+ * non mostrare mai spazio vuoto oltre i bordi dell'immagine scalata —
+ * stesso comportamento di Google Foto/Instagram. Il limite di pan viene
+ * calcolato UNA VOLTA all'attivazione dello zoom (quando la scala è
+ * ancora 1×, prima di applicare la trasformazione — leggere le
+ * dimensioni "naturali" renderizzate DOPO aver già scalato darebbe un
+ * numero già scalato, sbagliato per il calcolo), non ricalcolato durante
+ * il drag: nessun consumer reale ridimensiona la finestra a zoom aperto
+ * (stesso principio YAGNI già applicato da ProfileMenu per il proprio
+ * mancato reposizionamento su resize).
+ *
+ * Click vs drag: un semplice click (nessun movimento oltre una soglia
+ * minima) continua ad alternare lo zoom; un trascinamento reale (oltre
+ * la soglia) NON lo alterna al rilascio — altrimenti ogni pan
+ * chiuderebbe lo zoom appena rilasciato il puntatore (il "click" nativo
+ * scatta comunque dopo un pointerup, indipendentemente da quanto ci si
+ * è mossi nel frattempo).
+ *
+ * Cursore: "zoom-in" a riposo, "grab" da zoomato-non-in-trascinamento,
+ * "grabbing" durante il trascinamento — comunica l'affordance corretta
+ * in ogni stato senza bisogno di testo aggiuntivo.
+ *
+ * Nessun gesto di pinch-to-zoom multi-touch (solo click/tap + drag a
+ * singolo puntatore): il caso d'uso primario resta il docente con
+ * mouse/trackpad che proietta su una LIM, non un utente touch-first —
+ * introdurlo ora sarebbe complessità senza un bisogno reale (YAGNI).
+ * Nessun tasto freccia per il pan: ArrowLeft/ArrowRight sono già
+ * riservati alla navigazione prev/next tra gli item (vedi sotto) — lo
+ * stesso compromesso esiste in app reali come Google Foto.
+ *
+ * Il pan si azzera SEMPRE insieme allo zoom quando si passa a un item
+ * diverso o quando si esce dallo zoom (evita disorientamento: ogni
+ * nuovo item, o un nuovo ingresso in zoom, riparte dalla vista naturale
+ * centrata).
  *
  * NAVIGAZIONE — bottoni prev/next (disabilitati ai due estremi, nessun
  * wraparound: un visualizzatore reale si ferma a inizio/fine) + tasti
@@ -146,6 +179,18 @@ function hasImage(item) {
   return Boolean(item && item.image && item.image.src);
 }
 
+const ZOOM_SCALE = 1.8;
+// Sotto questa soglia (in px) un rilascio del puntatore è considerato
+// un click (alterna lo zoom), non un trascinamento (pan) — senza questa
+// soglia il minimo tremolio della mano durante un tentativo di click
+// verrebbe interpretato come un pan, perdendo il click.
+const DRAG_THRESHOLD = 6;
+
+function clampPan(value, max) {
+  if (max <= 0) return 0;
+  return Math.min(max, Math.max(-max, value));
+}
+
 export function create(props = {}) {
   let items = [...(Array.isArray(props.items) ? props.items : [])];
   const previouslyFocused = document.activeElement;
@@ -154,7 +199,11 @@ export function create(props = {}) {
   const state = {
     index: Math.min(Math.max(props.startIndex || 0, 0), Math.max(items.length - 1, 0)),
     zoomed: false,
+    pan: { x: 0, y: 0 },
   };
+  let panBounds = { x: 0, y: 0 };
+  let drag = null; // stato del trascinamento IN CORSO (null se nessun drag attivo)
+  let suppressNextClick = false; // true se il pointerup precedente proveniva da un drag reale
 
   // --- struttura statica (identica per ogni item) --------------------
   const closeButton = createButton({ variant: "icon", ariaLabel: "Chiudi", icon: buildCloseIcon() });
@@ -222,19 +271,26 @@ export function create(props = {}) {
 
   // --- rendering dell'item corrente ------------------------------------
   let zoomButton = null; // ricreato ad ogni renderStage() insieme all'immagine
+  let currentImage = null; // stessa vita di zoomButton: il nodo <img> effettivamente trascinato/scalato
 
   function renderStage() {
     while (stage.firstChild) stage.removeChild(stage.firstChild);
     zoomButton = null;
+    currentImage = null;
 
     const item = items[state.index];
     if (!item) return;
 
     if (hasImage(item)) {
+      // draggable:"false" + user-drag:none (media-viewer.css) evitano il
+      // drag-and-drop nativo del browser (che sposterebbe l'immagine
+      // fuori dalla pagina, non dentro lo stage) — il nostro drag è
+      // interamente gestito via Pointer Events, sotto.
       const img = createElement("img", {
         classNames: "sl-media-viewer__image",
-        attrs: { src: item.image.src, alt: item.image.alt || "" },
+        attrs: { src: item.image.src, alt: item.image.alt || "", draggable: "false" },
       });
+      currentImage = img;
 
       const loader = createLoader({ size: "md" });
       loader.element.classList.add("sl-media-viewer__loader");
@@ -250,7 +306,16 @@ export function create(props = {}) {
         },
         [img]
       );
-      zoomButton.addEventListener("click", toggleZoom);
+      zoomButton.addEventListener("click", handleZoomTriggerClick);
+      // Pointer Events (non mouse+touch separati): un solo set di
+      // listener copre mouse, touch e pen — stesso principio "un solo
+      // meccanismo per più input" già scelto altrove nel progetto
+      // quando possibile (qui semplifica molto rispetto a duplicare
+      // mousedown/touchstart).
+      img.addEventListener("pointerdown", handlePointerDown);
+      img.addEventListener("pointermove", handlePointerMove);
+      img.addEventListener("pointerup", handlePointerUp);
+      img.addEventListener("pointercancel", handlePointerUp);
       stage.appendChild(zoomButton);
     } else {
       stage.appendChild(
@@ -259,6 +324,7 @@ export function create(props = {}) {
     }
 
     stage.classList.toggle("sl-media-viewer__stage--zoomed", state.zoomed);
+    applyImageTransform();
   }
 
   function renderFooter() {
@@ -290,18 +356,117 @@ export function create(props = {}) {
     status.textContent = `${kind} ${state.index + 1} di ${items.length}`;
   }
 
+  // Applica lo stato corrente (zoomed + pan) come transform inline
+  // sull'immagine — sia il click-toggle sia il drag passano SEMPRE da
+  // qui, unica fonte di verità per il transform visivo. La transizione
+  // CSS su "transform" (già definita in media-viewer.css) anima
+  // automaticamente i cambi innescati dal click; durante un drag reale
+  // viene invece disattivata qui sotto (handlePointerDown) perché il
+  // pan deve seguire il puntatore senza ritardo percepibile.
+  function applyImageTransform() {
+    if (!currentImage) return;
+    currentImage.style.transform = state.zoomed
+      ? `translate(${state.pan.x}px, ${state.pan.y}px) scale(${ZOOM_SCALE})`
+      : "";
+  }
+
+  // Calcolato SOLO nel momento in cui lo zoom si attiva (la scala è
+  // ancora 1×, quindi getBoundingClientRect() restituisce la dimensione
+  // "naturale" già vincolata da max-width/max-height/object-fit) — non
+  // durante il drag, dove leggere di nuovo il rect darebbe un valore già
+  // scalato e sbagliato per il calcolo del limite.
+  function computePanBounds() {
+    if (!currentImage) return { x: 0, y: 0 };
+    const rect = currentImage.getBoundingClientRect();
+    const stageRect = stage.getBoundingClientRect();
+    return {
+      x: Math.max(0, (rect.width * ZOOM_SCALE - stageRect.width) / 2),
+      y: Math.max(0, (rect.height * ZOOM_SCALE - stageRect.height) / 2),
+    };
+  }
+
   function toggleZoom() {
     state.zoomed = !state.zoomed;
+    state.pan = { x: 0, y: 0 }; // ogni ingresso/uscita dallo zoom riparte centrato
+    panBounds = state.zoomed ? computePanBounds() : { x: 0, y: 0 };
+    applyImageTransform();
     stage.classList.toggle("sl-media-viewer__stage--zoomed", state.zoomed);
     if (zoomButton) {
+      zoomButton.classList.toggle("sl-media-viewer__zoom-trigger--zoomed", state.zoomed);
       zoomButton.setAttribute("aria-label", state.zoomed ? "Riduci immagine" : "Ingrandisci immagine");
     }
+  }
+
+  // Un click "vero" (nessun trascinamento oltre la soglia) alterna lo
+  // zoom, esattamente come prima dell'introduzione del pan. Un click che
+  // SEGUE un drag reale viene ignorato: il browser dispatcha comunque un
+  // evento "click" dopo il pointerup indipendentemente da quanto ci si
+  // è mossi nel frattempo, e senza questa guardia ogni pan chiuderebbe
+  // lo zoom appena rilasciato il puntatore.
+  function handleZoomTriggerClick() {
+    if (suppressNextClick) {
+      suppressNextClick = false;
+      return;
+    }
+    toggleZoom();
+  }
+
+  function handlePointerDown(event) {
+    // Il pan ha senso solo da zoomato; a riposo il click gestisce
+    // già l'ingresso in zoom (handleZoomTriggerClick).
+    if (!state.zoomed || !currentImage) return;
+    // Esclude i tasti secondari del mouse (destro/centrale): button è
+    // 0 per il tasto primario, -1/undefined per touch e pen.
+    if (typeof event.button === "number" && event.button !== 0) return;
+
+    drag = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      baseX: state.pan.x,
+      baseY: state.pan.y,
+      moved: false,
+    };
+    // Pointer capture: gli eventi successivi (move/up) raggiungono
+    // sempre questo stesso <img>, anche se il puntatore esce
+    // visivamente dall'area (ritagliata da overflow:hidden sullo
+    // stage) — il drag non si "perde" mai a metà.
+    currentImage.setPointerCapture(event.pointerId);
+    // Transizione disattivata SOLO per la durata del drag: il pan deve
+    // seguire il puntatore 1:1, senza il ritardo dell'easing usato per
+    // il click-toggle (ripristinata in handlePointerUp).
+    currentImage.style.transition = "none";
+    if (zoomButton) zoomButton.classList.add("sl-media-viewer__zoom-trigger--dragging");
+  }
+
+  function handlePointerMove(event) {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+      drag.moved = true;
+    }
+    state.pan = {
+      x: clampPan(drag.baseX + dx, panBounds.x),
+      y: clampPan(drag.baseY + dy, panBounds.y),
+    };
+    applyImageTransform();
+  }
+
+  function handlePointerUp(event) {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    if (currentImage) currentImage.style.transition = "";
+    if (zoomButton) zoomButton.classList.remove("sl-media-viewer__zoom-trigger--dragging");
+    suppressNextClick = drag.moved;
+    drag = null;
   }
 
   function goTo(nextIndex) {
     if (nextIndex < 0 || nextIndex >= items.length || nextIndex === state.index) return;
     state.index = nextIndex;
     state.zoomed = false; // ogni nuovo item riparte alla vista naturale
+    state.pan = { x: 0, y: 0 };
+    drag = null; // difensivo: interrompe un eventuale drag in corso sull'item precedente
     renderStage();
     renderFooter();
     renderNavState();
