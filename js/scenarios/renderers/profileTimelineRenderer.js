@@ -68,10 +68,13 @@
  * post, poi Feed.update()) — Timeline non mostra contatori, non
  * necessita di alcun aggiornamento quando cambia un "mi piace".
  *
- * "sl:story-open": nessun listener collegato, stesso trattamento già
- * riservato a molti altri eventi in questo progetto (sl:search,
- * sl:settings-click, ecc.) — la destinazione (un futuro Story Viewer)
- * non esiste ancora.
+ * MEDIAVIEWER SU AVATAR/COPERTINA/STORIE (nuovo, post Fase 10): "sl:story-
+ * open" (emesso da StoriesBar.js fin da Fase 6, senza consumer fino ad
+ * ora) e i due nuovi eventi "sl:profile-avatar-open"/"sl:profile-cover-
+ * open" (emessi da buildProfileHeader, sopra) aprono il MediaViewer
+ * tramite lo stesso mediaViewerLauncher già usato per "sl:post-open" —
+ * vedi il blocco dei listener più sotto in questo file per il dettaglio
+ * di come ciascuna galleria viene costruita.
  *
  * ERRORE DI FETCH SUI DATASET SECONDARI: un try/catch dedicato, distinto
  * da quello già presente nell'engine per scenario.json stesso — se
@@ -191,7 +194,30 @@ function buildProfileHeader(profile, postsCount, privacyToggleElement) {
   // sulla src non è strettamente necessario — applicato comunque per
   // usare sempre lo stesso punto di ingresso della utility condivisa.
   applyImageFadeIn(coverImage);
-  const cover = createElement("div", { classNames: "sl-profile-timeline__cover" }, [coverImage]);
+
+  // Copertina apribile nel MediaViewer (nuovo, post Fase 10) — stesso
+  // pattern già usato da PostCard per la propria immagine: un <button>
+  // avvolge l'<img>, emette un evento dedicato che bubble fino a
+  // "wrapper" in renderProfileTimeline(), dove si risolve in una galleria
+  // di un solo elemento. Due eventi DISTINTI per copertina e avatar (non
+  // uno generico "sl:profile-media-open"): sono due superfici visive
+  // indipendenti dell'header, stesso principio già seguito da PostCard/
+  // Timeline che condividono invece un solo "sl:post-open" perché lì è
+  // sempre lo stesso tipo di contenuto (un post).
+  const coverButton = createElement(
+    "button",
+    {
+      classNames: "sl-profile-timeline__cover-trigger",
+      attrs: { type: "button", "aria-label": "Apri la copertina del profilo" },
+    },
+    [coverImage]
+  );
+  function handleCoverOpen() {
+    coverButton.dispatchEvent(new CustomEvent("sl:profile-cover-open", { bubbles: true, detail: {} }));
+  }
+  coverButton.addEventListener("click", handleCoverOpen);
+
+  const cover = createElement("div", { classNames: "sl-profile-timeline__cover" }, [coverButton]);
 
   // ariaHidden: true — l'username subito sotto è già il nome accessibile
   // di questa identità (stesso principio già seguito da AppHeader/
@@ -202,8 +228,28 @@ function buildProfileHeader(profile, postsCount, privacyToggleElement) {
     size: "xl",
     ariaHidden: true,
   });
+
+  // Stesso pattern della copertina, applicato all'avatar. Il bottone
+  // avvolge l'Avatar già pronto (component esistente, zero modifiche):
+  // resta "dumb" e ignaro di essere ora cliccabile — è il chiamante,
+  // qui, a decidere se e come renderlo interattivo (stesso principio già
+  // seguito ovunque nel Design System: i componenti generici non
+  // decidono la propria interattività in un contesto specifico).
+  const avatarButton = createElement(
+    "button",
+    {
+      classNames: "sl-profile-timeline__avatar-trigger",
+      attrs: { type: "button", "aria-label": "Apri la foto del profilo" },
+    },
+    [avatar.element]
+  );
+  function handleAvatarOpen() {
+    avatarButton.dispatchEvent(new CustomEvent("sl:profile-avatar-open", { bubbles: true, detail: {} }));
+  }
+  avatarButton.addEventListener("click", handleAvatarOpen);
+
   const avatarWrap = createElement("div", { classNames: "sl-profile-timeline__avatar-wrap" }, [
-    avatar.element,
+    avatarButton,
   ]);
 
   // <h1>: il nome utente è il titolo effettivo di questa pagina — un
@@ -245,6 +291,8 @@ function buildProfileHeader(profile, postsCount, privacyToggleElement) {
   return {
     element,
     destroy() {
+      coverButton.removeEventListener("click", handleCoverOpen);
+      avatarButton.removeEventListener("click", handleAvatarOpen);
       avatar.destroy();
     },
   };
@@ -514,11 +562,59 @@ export async function renderProfileTimeline(container, scenario) {
   }
   wrapper.addEventListener("sl:post-open", handlePostOpen);
 
+  // Avatar e copertina (nuovo, post Fase 10): gallerie di UN SOLO
+  // elemento — aprire l'avatar non deve permettere di scorrere fino alla
+  // copertina o ai post, sono superfici indipendenti (stesso
+  // comportamento reale di Instagram/Facebook: toccare la foto profilo
+  // apre solo quella foto). Nessun "avatarSrc" nell'autore della galleria
+  // dell'AVATAR: mostrerebbe la stessa identica foto due volte (grande
+  // nello stage, in miniatura nel footer) — il footer userà il fallback
+  // a iniziali di Avatar, già esistente. La copertina invece riceve
+  // "avatarSrc" reale: è un'immagine diversa da quella mostrata, nessuna
+  // ridondanza.
+  function handleAvatarOpen() {
+    mediaViewerLauncher.open([
+      { id: "avatar", author: { name: profile.displayName }, image: { src: profile.avatar, alt: profile.displayName || "" } },
+    ]);
+  }
+  function handleCoverOpen() {
+    mediaViewerLauncher.open([
+      {
+        id: "cover",
+        author: { name: profile.displayName, avatarSrc: profile.avatar },
+        image: { src: profile.coverImage, alt: "" },
+      },
+    ]);
+  }
+  wrapper.addEventListener("sl:profile-avatar-open", handleAvatarOpen);
+  wrapper.addEventListener("sl:profile-cover-open", handleCoverOpen);
+
+  // Storie (nuovo, post Fase 10): "sl:story-open" è emesso da
+  // StoriesBar.js fin da Fase 6, ma senza consumer fino ad ora. A
+  // differenza di avatar/copertina, qui la galleria contiene TUTTE le
+  // storie (non solo quella cliccata): permette la navigazione prev/next
+  // tra le storie in evidenza, coerente con l'esperienza di un vero
+  // "reel". "content" usa la label della storia (es. "Viaggi") come
+  // didascalia — dato già esistente in stories.json, nessun nuovo campo.
+  function handleStoryOpen(event) {
+    const storyItems = stories.map((story) => ({
+      id: story.id,
+      author: { name: profile.displayName, avatarSrc: profile.avatar },
+      content: story.label,
+      image: { src: story.thumbnail, alt: story.label || "" },
+    }));
+    mediaViewerLauncher.openById(storyItems, event.detail.storyId);
+  }
+  wrapper.addEventListener("sl:story-open", handleStoryOpen);
+
   container.appendChild(wrapper);
 
   return function destroy() {
     feed.element.removeEventListener("sl:post-like", handlePostLike);
     wrapper.removeEventListener("sl:post-open", handlePostOpen);
+    wrapper.removeEventListener("sl:profile-avatar-open", handleAvatarOpen);
+    wrapper.removeEventListener("sl:profile-cover-open", handleCoverOpen);
+    wrapper.removeEventListener("sl:story-open", handleStoryOpen);
     feedTab.element.removeEventListener("sl:click", showFeed);
     archiveTab.element.removeEventListener("sl:click", showArchive);
     privacyToggle.element.removeEventListener("sl:click", handlePrivacyToggleClick);
