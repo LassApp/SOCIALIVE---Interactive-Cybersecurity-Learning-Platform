@@ -120,8 +120,17 @@
   cursor: zoom-in;
 }
 
-.sl-media-viewer__stage--zoomed .sl-media-viewer__zoom-trigger {
-  cursor: zoom-out;
+/* Da zoomato: "grab"/"grabbing" comunicano che l'immagine è ora
+   trascinabile, non più "riducibile al click" come suggeriva il
+   precedente cursore zoom-out — il click per uscire dallo zoom resta
+   comunque disponibile (vedi MediaViewer.js), solo l'affordance visiva
+   privilegia l'azione più probabile da zoomato: spostarsi nella foto. */
+.sl-media-viewer__zoom-trigger--zoomed {
+  cursor: grab;
+}
+
+.sl-media-viewer__zoom-trigger--dragging {
+  cursor: grabbing;
 }
 
 .sl-media-viewer__image {
@@ -130,10 +139,22 @@
   object-fit: contain;
   border-radius: var(--sl-radius-md);
   transition: transform var(--sl-duration-base) var(--sl-ease-standard);
-}
-
-.sl-media-viewer__stage--zoomed .sl-media-viewer__image {
-  transform: scale(1.8);
+  /* Pan/drag (nuovo): il transform (translate+scale) è applicato via
+     JS su questo stesso elemento — nessuna regola ".stage--zoomed" qui,
+     lo zoom "a riposo" (nessun pan) e quello durante il drag passano
+     entrambi dalla stessa proprietà inline (vedi applyImageTransform()
+     in MediaViewer.js), non da due meccanismi paralleli (CSS+JS) che
+     potrebbero disallinearsi.
+     touch-action:none evita che un trascinamento a dito venga
+     intercettato dal browser come gesto di scroll/zoom di pagina (qui
+     non serve: siamo dentro un overlay a schermo intero, fisso).
+     user-drag:none + user-select:none evitano rispettivamente il
+     drag-and-drop nativo dell'immagine (che la sposterebbe fuori dalla
+     pagina, non dentro lo stage) e la selezione testuale accidentale
+     durante il trascinamento. */
+  touch-action: none;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .sl-media-viewer__loader {
