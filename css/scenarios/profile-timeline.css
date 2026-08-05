@@ -158,6 +158,19 @@
   gap: var(--sl-space-6);
 }
 
+/* Bottone "Segui" dell'header pubblico (nuovo): stesso primary/
+   secondary di Button.js (già verificato, nessun nuovo colore) — solo
+   un padding più compatto rispetto al default (space-3/space-5), per
+   stare bene accanto a numeri e lucchetto invece che dominare la riga
+   come farebbe un bottone a piena grandezza. flex-shrink:0 evita che si
+   schiacci quando la riga è stretta (mobile): a quel punto è la riga
+   stessa a passare a più righe (flex-wrap qui sotto), non il bottone a
+   deformarsi. */
+.sl-button.sl-profile-timeline__follow-button {
+  flex-shrink: 0;
+  padding: var(--sl-space-2) var(--sl-space-4);
+}
+
 /* A riposo (profilo pubblico): stesso trattamento "secondario" già
    usato da altri bottoni ghost/icon del Design System. */
 .sl-button.sl-profile-timeline__privacy-toggle {
