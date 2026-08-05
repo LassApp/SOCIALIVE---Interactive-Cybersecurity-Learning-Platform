@@ -111,15 +111,34 @@
  *     privato reale le mostra comunque a chiunque — solo i contenuti
  *     sono riservati): storie e i due pannelli Post/Archivio vengono
  *     sostituiti da un pannello "Questo profilo è privato" con un
- *     bottone "Segui" — volutamente fittizio (nessun listener
- *     applicativo, stesso trattamento già riservato altrove nel
- *     progetto a interazioni non implementate, es. sl:search/
- *     sl:settings-click), presente solo per rinforzare il realismo.
+ *     bottone "Segui" — condivide lo stato "sto seguendo" con il
+ *     bottone gemello dell'header pubblico (vedi "BOTTONE SEGUI" più
+ *     sotto), non più un evento isolato e fittizio come nella prima
+ *     versione di questo intervento.
  * Vive in QUESTO renderer (non in un componente dedicato, non nello
  * scenario Oversharing) perché è un comportamento del TYPE
  * "profile-timeline", non del profilo "marti.travel" — un futuro
  * scenario con lo stesso type (es. "Privacy", Fase 1 §12) erediterebbe
  * gratuitamente questa stessa demo, senza alcuna modifica.
+ *
+ * BOTTONE "SEGUI" — dimostrazione pedagogica al pari del toggle privacy,
+ * richiesta esplicitamente PRIMA del conteggio "post" nella riga delle
+ * statistiche (non sopra o sotto l'intera riga). DUE bottoni DOM
+ * distinti (uno nell'header pubblico, uno nel pannello "profilo
+ * privato" — un nodo non può stare in due punti del DOM
+ * contemporaneamente) ma UN SOLO stato condiviso ("isFollowing"): non
+ * sono mai visibili insieme (publicContent/privateNotice si escludono a
+ * vicenda), quindi rappresentano concettualmente lo stesso bottone e
+ * restano sempre sincronizzati — stesso principio già seguito per il
+ * lucchetto/isPrivate. Click → variante primary→secondary + etichetta
+ * "Segui"→"Segui già" (mai il solo colore come segnale, §5.7
+ * architettura Fase 1) + `aria-pressed`. Mai persistito: come isPrivate,
+ * ogni apertura/refresh riparte da "non sto seguendo". Evento
+ * "sl:profile-follow-toggle" (detail: { following }) emesso ad ogni
+ * click — nessun listener applicativo reale lo ascolta oggi (stesso
+ * trattamento già riservato a sl:search/sl:settings-click), ma la forma
+ * è pronta per un futuro consumer, a differenza del precedente
+ * "sl:profile-follow-request" (evento a scatto singolo, senza stato).
  *
  * Firma richiesta dall'engine: (container, scenario) => Promise<destroy|undefined>.
  */
@@ -183,7 +202,7 @@ function buildStat(label, value) {
 // postsCount NON arriva da profile.json (decisione di Fase 6/Step 1: un
 // conteggio derivabile da un'altra fonte non va duplicato) — qui viene
 // calcolato da rawPosts.length, l'unica fonte di verità.
-function buildProfileHeader(profile, postsCount, privacyToggleElement) {
+function buildProfileHeader(profile, postsCount, privacyToggleElement, followButtonElement) {
   const coverImage = createElement("img", {
     classNames: "sl-profile-timeline__cover-image",
     attrs: { src: profile.coverImage || "", alt: "" },
@@ -273,8 +292,16 @@ function buildProfileHeader(profile, postsCount, privacyToggleElement) {
   // Riga che affianca le statistiche al lucchetto — richiesta esplicita:
   // il toggle deve stare "accanto a" post/follower/seguiti, non altrove
   // nella pagina (es. nell'header dell'app, dove non avrebbe relazione
-  // visiva col profilo che descrive).
+  // visiva col profilo che descrive). Il bottone "Segui" (nuovo) è
+  // posizionato PRIMA di "stats" — richiesta esplicita: "prima del
+  // numero di post" — non sopra o sotto l'intera riga.
+  // "followButtonElement" arriva già pronto da renderProfileTimeline
+  // (stesso pattern già usato per privacyToggleElement): la logica di
+  // toggle vive lì, condivisa con il bottone gemello nel pannello
+  // "profilo privato" (mai due sorgenti di verità per lo stesso "sto
+  // seguendo o no" — vedi rationale completo in renderProfileTimeline).
   const statsRow = createElement("div", { classNames: "sl-profile-timeline__stats-row" }, [
+    followButtonElement,
     stats,
     privacyToggleElement,
   ]);
@@ -323,12 +350,13 @@ function toFeedPost(rawPost, author) {
 // scenario con lo stesso type mostrerebbe il PROPRIO nome utente senza
 // alcuna modifica a questa funzione.
 //
-// Bottone "Segui" volutamente inerte: emette solo un evento
-// "sl:profile-follow-request" senza alcun listener applicativo — stesso
-// trattamento già riservato altrove nel progetto a interazioni non
-// implementate (es. sl:search, sl:settings-click). Presente solo per
-// realismo: un vero profilo privato mostra sempre un invito a seguire.
-function buildPrivateNotice(profile) {
+// "followButtonElement" arriva già pronto da renderProfileTimeline —
+// stesso identico bottone concettuale (stato condiviso) del "Segui"
+// nell'header pubblico, vedi rationale completo lì: i due non sono mai
+// visibili insieme (pubblico/privato si escludono a vicenda), quindi
+// devono riflettere sempre lo stesso "sto seguendo o no", non due stati
+// indipendenti che potrebbero disallinearsi.
+function buildPrivateNotice(profile, followButtonElement) {
   const icon = createElement(
     "div",
     { classNames: "sl-profile-timeline__private-icon", attrs: { "aria-hidden": "true" } },
@@ -345,13 +373,10 @@ function buildPrivateNotice(profile) {
     text: `Segui ${profile.displayName || "questo profilo"} per vedere le sue foto, i suoi video e le sue storie.`,
   });
 
-  const followButton = createButton({ variant: "primary", label: "Segui" });
-  followButton.element.classList.add("sl-profile-timeline__private-follow");
-
   const element = createElement(
     "div",
     { classNames: "sl-profile-timeline__private-notice" },
-    [icon, title, description, followButton.element]
+    [icon, title, description, followButtonElement]
   );
   // Nascosto di default (attributo nativo, non una classe CSS): il
   // profilo è pubblico al primo mount — stesso principio già seguito da
@@ -359,17 +384,14 @@ function buildPrivateNotice(profile) {
   // stesso file per il pannello Archivio.
   element.hidden = true;
 
-  function handleFollowClick() {
-    element.dispatchEvent(new CustomEvent("sl:profile-follow-request", { bubbles: true, detail: {} }));
-  }
-  followButton.element.addEventListener("sl:click", handleFollowClick);
-
   return {
     element,
-    destroy() {
-      followButton.element.removeEventListener("sl:click", handleFollowClick);
-      followButton.destroy();
-    },
+    // Nessun listener proprio da rimuovere qui: il bottone "Segui" è di
+    // proprietà di renderProfileTimeline (che lo crea e lo distrugge),
+    // questa funzione si limita a posizionarlo — stesso principio di
+    // ownership già seguito per privacyToggleElement in
+    // buildProfileHeader.
+    destroy() {},
   };
 }
 
@@ -417,7 +439,61 @@ export async function renderProfileTimeline(container, scenario) {
   });
   privacyToggle.element.classList.add("sl-profile-timeline__privacy-toggle");
 
-  const header = buildProfileHeader(profile, rawPosts.length, privacyToggle.element);
+  // BOTTONE "SEGUI" — dimostrazione pedagogica al pari del toggle
+  // privacy: DUE bottoni DOM distinti (uno nella riga statistiche
+  // dell'header pubblico, uno nel pannello "profilo privato"), perché
+  // un nodo non può stare in due punti del DOM contemporaneamente — ma
+  // UN SOLO stato condiviso ("isFollowing", sotto): non sono mai
+  // visibili insieme (publicContent/privateNotice si escludono a
+  // vicenda in base a isPrivate), quindi rappresentano concettualmente
+  // lo stesso bottone e devono restare sempre sincronizzati, esattamente
+  // come il lucchetto dell'header è sincronizzato con lo stato
+  // isPrivate. Mai persistito (storage.js non viene toccato): come
+  // isPrivate, ogni apertura/refresh dello scenario riparte da "non sto
+  // seguendo" — il docente deve poter ripetere la demo più volte in
+  // classi diverse, sempre dallo stesso stato iniziale. Variante
+  // primary→secondary ed etichetta "Segui"→"Segui già" al click: stesso
+  // pattern reale di Instagram/X per comunicare lo stato senza affidarsi
+  // al solo colore (§5.7 architettura Fase 1) — il testo stesso cambia.
+  let isFollowing = false;
+
+  const headerFollowButton = createButton({ variant: "primary", label: "Segui", pressed: false });
+  headerFollowButton.element.classList.add("sl-profile-timeline__follow-button");
+
+  const privateFollowButton = createButton({ variant: "primary", label: "Segui", pressed: false });
+  privateFollowButton.element.classList.add("sl-profile-timeline__private-follow");
+
+  function setFollowing(nextIsFollowing) {
+    isFollowing = nextIsFollowing;
+    const nextProps = {
+      label: isFollowing ? "Segui già" : "Segui",
+      variant: isFollowing ? "secondary" : "primary",
+      pressed: isFollowing,
+    };
+    headerFollowButton.update(nextProps);
+    privateFollowButton.update(nextProps);
+  }
+
+  // Un solo handler per entrambi i bottoni (stesso stato condiviso): non
+  // importa quale dei due sia stato premuto, l'effetto è identico.
+  // Evento "sl:profile-follow-toggle" (nuovo — sostituisce il precedente
+  // "sl:profile-follow-request", volutamente inerte): ora che esiste un
+  // vero stato visivo da comunicare, un evento con detail.following
+  // descrive meglio cosa è successo di un evento "richiesta" a scatto
+  // singolo — nessun listener applicativo reale lo ascolta oggi (stesso
+  // trattamento già riservato a sl:search/sl:settings-click), ma la
+  // forma è pronta per un futuro consumer.
+  function handleFollowToggle() {
+    const next = !isFollowing;
+    setFollowing(next);
+    wrapper.dispatchEvent(
+      new CustomEvent("sl:profile-follow-toggle", { bubbles: true, detail: { following: next } })
+    );
+  }
+  headerFollowButton.element.addEventListener("sl:click", handleFollowToggle);
+  privateFollowButton.element.addEventListener("sl:click", handleFollowToggle);
+
+  const header = buildProfileHeader(profile, rawPosts.length, privacyToggle.element, headerFollowButton.element);
   const storiesBar = createStoriesBar({ stories });
 
   // hasMore:false — il dataset di uno scenario è un insieme fisso e già
@@ -492,7 +568,7 @@ export async function renderProfileTimeline(container, scenario) {
     panels,
   ]);
 
-  const privateNotice = buildPrivateNotice(profile);
+  const privateNotice = buildPrivateNotice(profile, privateFollowButton.element);
 
   // Annuncio invisibile DEDICATO al cambio pubblico/privato — separato
   // da "viewStatus" (Post/Archivio, sopra): sono due stati indipendenti,
@@ -618,6 +694,8 @@ export async function renderProfileTimeline(container, scenario) {
     feedTab.element.removeEventListener("sl:click", showFeed);
     archiveTab.element.removeEventListener("sl:click", showArchive);
     privacyToggle.element.removeEventListener("sl:click", handlePrivacyToggleClick);
+    headerFollowButton.element.removeEventListener("sl:click", handleFollowToggle);
+    privateFollowButton.element.removeEventListener("sl:click", handleFollowToggle);
     header.destroy();
     storiesBar.destroy();
     feed.destroy();
@@ -625,6 +703,8 @@ export async function renderProfileTimeline(container, scenario) {
     feedTab.destroy();
     archiveTab.destroy();
     privacyToggle.destroy();
+    headerFollowButton.destroy();
+    privateFollowButton.destroy();
     privateNotice.destroy();
     // MediaViewer vive fuori da "wrapper" (montato direttamente su
     // <body>, come Modal): se questo controller viene smontato mentre il
