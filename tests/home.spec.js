@@ -21,6 +21,16 @@
  * documentata più volte nel progetto (handover che descrive un lavoro
  * non rispecchiato nel codice). Corretto in Fase 10, durante la verifica
  * pre-handover.
+ *
+ * ESTESO (post Fase 10, intervento "MediaViewer generico") con la
+ * copertura dell'apertura del post di Mario Bianchi nel MediaViewer:
+ * "sl:post-open" era già emesso da PostCard fin da Fase 2, ma senza
+ * alcun consumer sulla Home — il click sull'immagine del post non
+ * produceva alcun effetto visibile. Ora homePageController.js apre
+ * MediaViewer tramite js/utils/mediaViewerLauncher.js, lo stesso helper
+ * condiviso già usato da profileTimelineRenderer.js — questo blocco di
+ * test chiude il gap di copertura, verificato in precedenza solo con
+ * uno script ad-hoc non persistito.
  */
 const assert = require("node:assert/strict");
 const path = require("node:path");
@@ -133,7 +143,40 @@ async function run() {
     await context.close();
   }
 
-  // --- Skip link (Fase 9, WCAG 2.4.1) ---------------------------------
+  // --- MediaViewer sul feed della Home (nuovo, post Fase 10) ----------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await loginAsDocente(page, server.url);
+    await page.waitForSelector(".sl-home-page__modules-grid");
+
+    await suite.test("click sull'immagine del post di Mario Bianchi -> MediaViewer si apre", async () => {
+      await page.click(".sl-post-card >> nth=0 >> .sl-post-card__media");
+      await page.waitForSelector(".sl-media-viewer-overlay");
+      const author = await page.locator(".sl-media-viewer__author-name").textContent();
+      assert.equal(author.trim(), "Mario Bianchi");
+      const position = await page.locator(".sl-media-viewer__position").textContent();
+      assert.equal(position.trim(), "1 di 3");
+    });
+
+    await suite.test("navigazione successiva: post di Giulia Conti, senza immagine -> testo centrato", async () => {
+      await page.click(".sl-media-viewer__nav--next");
+      const author = await page.locator(".sl-media-viewer__author-name").textContent();
+      assert.equal(author.trim(), "Giulia Conti");
+      assert.equal(await page.locator(".sl-media-viewer__text-content").count(), 1);
+    });
+
+    await suite.test("chiusura con Escape -> Home intatta, nessun residuo", async () => {
+      await page.keyboard.press("Escape");
+      await page.waitForSelector(".sl-media-viewer-overlay", { state: "detached" });
+      assert.equal(await page.evaluate(() => window.location.hash), "#/home");
+      assert.equal(await page.locator(".sl-post-card").count(), 3);
+    });
+
+    await context.close();
+  }
+
+
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
