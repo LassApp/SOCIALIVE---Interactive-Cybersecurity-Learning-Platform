@@ -20,6 +20,17 @@
  *
  * L'ultimo test del file chiude l'intervento #9 dell'audit di Fase 9
  * ("percorrere l'intero flusso da tastiera Home→Scenario→MediaViewer").
+ *
+ * ESTESO ULTERIORMENTE (post Fase 10, intervento "MediaViewer generico e
+ * migliorie realismo profilo") con: apertura di avatar/copertina/storie
+ * nel MediaViewer (in precedenza solo i post erano apribili); pan/drag
+ * durante lo zoom (in precedenza solo click-to-toggle, nessun modo di
+ * spostarsi dentro la foto ingrandita); bottone "Segui" prima del
+ * conteggio post, con toggle visivo condiviso fra header pubblico e
+ * pannello privato. Prima di questa estensione, ciascuna delle tre
+ * funzionalità era stata verificata solo con script Playwright ad-hoc
+ * non persistiti — vedi il documento di handover dedicato per il
+ * dettaglio completo dell'intervento.
  */
 const assert = require("node:assert/strict");
 const path = require("node:path");
@@ -228,6 +239,110 @@ async function run() {
     await context.close();
   }
 
+  // --- Bottone "Segui" (nuovo, post Fase 10) ----------------------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await gotoScenario(page, server.url);
+
+    const headerFollow = () => page.locator(".sl-profile-timeline__follow-button");
+    const privateFollow = () => page.locator(".sl-profile-timeline__private-follow");
+
+    await suite.test("Segui: presente PRIMA del conteggio post nella riga statistiche", async () => {
+      const order = await page
+        .locator(".sl-profile-timeline__stats-row")
+        .evaluate((row) => Array.from(row.children).map((c) => c.className));
+      assert.ok(order[0].includes("follow-button"), `il bottone Segui non è il primo figlio: ${order.join(" | ")}`);
+    });
+
+    await suite.test("Segui: stato iniziale 'Segui', aria-pressed=false", async () => {
+      assert.equal((await headerFollow().textContent()).trim(), "Segui");
+      assert.equal(await headerFollow().getAttribute("aria-pressed"), "false");
+    });
+
+    await suite.test("Segui: click -> 'Segui già', aria-pressed=true, evento sl:profile-follow-toggle", async () => {
+      const detail = await page.evaluate(
+        () =>
+          new Promise((resolve) => {
+            document
+              .querySelector(".sl-profile-timeline")
+              .addEventListener("sl:profile-follow-toggle", (e) => resolve(e.detail), { once: true });
+            document.querySelector(".sl-profile-timeline__follow-button").click();
+          })
+      );
+      assert.deepEqual(detail, { following: true });
+      assert.equal((await headerFollow().textContent()).trim(), "Segui già");
+      assert.equal(await headerFollow().getAttribute("aria-pressed"), "true");
+    });
+
+    await suite.test("Segui: passando a profilo privato, il bottone del pannello riflette lo stesso stato", async () => {
+      await page.click(".sl-profile-timeline__privacy-toggle");
+      await page.waitForSelector(".sl-profile-timeline__private-notice:not([hidden])");
+      assert.equal((await privateFollow().textContent()).trim(), "Segui già");
+    });
+
+    await suite.test("Segui: click nel pannello privato -> torna 'Segui', si riflette anche sull'header", async () => {
+      await privateFollow().click();
+      await page.click(".sl-profile-timeline__privacy-toggle"); // torna pubblico
+      await page.waitForSelector(".sl-profile-timeline__public-content:not([hidden])");
+      assert.equal((await headerFollow().textContent()).trim(), "Segui");
+      assert.equal(await headerFollow().getAttribute("aria-pressed"), "false");
+    });
+
+    await context.close();
+  }
+
+  // --- MediaViewer: avatar, copertina, storie (nuovo, post Fase 10) -----
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await gotoScenario(page, server.url);
+
+    await suite.test("click sull'avatar -> MediaViewer con 1 solo item, nessuna navigazione", async () => {
+      await page.click(".sl-profile-timeline__avatar-trigger");
+      await page.waitForSelector(".sl-media-viewer-overlay");
+      const position = await page.locator(".sl-media-viewer__position").textContent();
+      assert.equal(position.trim(), "1 di 1");
+      assert.equal(await page.locator(".sl-media-viewer__nav--prev").isDisabled(), true);
+      assert.equal(await page.locator(".sl-media-viewer__nav--next").isDisabled(), true);
+      await page.keyboard.press("Escape");
+      await page.waitForSelector(".sl-media-viewer-overlay", { state: "detached" });
+    });
+
+    await suite.test("click sulla copertina -> MediaViewer con 1 item, autore = marti.travel", async () => {
+      await page.click(".sl-profile-timeline__cover-trigger");
+      await page.waitForSelector(".sl-media-viewer-overlay");
+      const author = await page.locator(".sl-media-viewer__author-name").textContent();
+      assert.equal(author.trim(), "marti.travel");
+      await page.keyboard.press("Escape");
+      await page.waitForSelector(".sl-media-viewer-overlay", { state: "detached" });
+    });
+
+    await suite.test("click su una storia -> MediaViewer con 5 item, didascalia = etichetta della storia", async () => {
+      await page.click(".sl-stories-bar__item >> nth=2"); // "Food", terza storia
+      await page.waitForSelector(".sl-media-viewer-overlay");
+      const position = await page.locator(".sl-media-viewer__position").textContent();
+      assert.equal(position.trim(), "3 di 5");
+      const caption = await page.locator(".sl-media-viewer__caption").textContent();
+      assert.equal(caption.trim(), "Food");
+    });
+
+    await suite.test("navigazione tra storie con freccia destra, poi chiusura", async () => {
+      await page.click(".sl-media-viewer__nav--next");
+      const position = await page.locator(".sl-media-viewer__position").textContent();
+      assert.equal(position.trim(), "4 di 5");
+      await page.keyboard.press("Escape");
+      await page.waitForSelector(".sl-media-viewer-overlay", { state: "detached" });
+    });
+
+    await suite.test("dopo le nuove interazioni: profilo ancora integro (12 post, nessun residuo)", async () => {
+      assert.equal(await page.locator(".sl-feed .sl-post-card").count(), 12);
+      assert.equal(await page.locator(".sl-media-viewer-overlay").count(), 0);
+    });
+
+    await context.close();
+  }
+
   // --- MediaViewer -------------------------------------------------------
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -261,6 +376,43 @@ async function run() {
         el.classList.contains("sl-media-viewer__stage--zoomed")
       );
       assert.ok(zoomed);
+    });
+
+    await suite.test("pan/drag: cursore 'grab' da zoomato", async () => {
+      const cursor = await page
+        .locator(".sl-media-viewer__zoom-trigger")
+        .evaluate((el) => getComputedStyle(el).cursor);
+      assert.equal(cursor, "grab");
+    });
+
+    await suite.test("pan/drag: trascinare da zoomato sposta l'immagine (transform aggiornato)", async () => {
+      const box = await page.locator(".sl-media-viewer__zoom-trigger").boundingBox();
+      const cx = box.x + box.width / 2;
+      const cy = box.y + box.height / 2;
+      await page.mouse.move(cx, cy);
+      await page.mouse.down();
+      await page.mouse.move(cx - 60, cy - 40, { steps: 10 });
+      const transform = await page.locator(".sl-media-viewer__image").evaluate((el) => el.style.transform);
+      assert.ok(
+        transform.includes("scale(1.8)") && !transform.includes("translate(0px, 0px)"),
+        `il pan non risulta applicato al transform: "${transform}"`
+      );
+      await page.mouse.up();
+    });
+
+    await suite.test("pan/drag: dopo il rilascio lo zoom resta attivo (click sintetico post-drag ignorato)", async () => {
+      const zoomed = await page.locator(".sl-media-viewer__stage").evaluate((el) =>
+        el.classList.contains("sl-media-viewer__stage--zoomed")
+      );
+      assert.ok(zoomed, "lo zoom si è chiuso per errore dopo un trascinamento reale");
+    });
+
+    await suite.test("pan/drag: un click (senza drag) da zoomato esce dallo zoom e azzera il pan", async () => {
+      const box = await page.locator(".sl-media-viewer__zoom-trigger").boundingBox();
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await page.waitForTimeout(250);
+      const transform = await page.locator(".sl-media-viewer__image").evaluate((el) => el.style.transform);
+      assert.equal(transform, "", "l'immagine dovrebbe tornare senza transform inline dopo l'uscita dallo zoom");
     });
 
     await suite.test("chiusura con Escape: overlay rimosso, sl:media-viewer-close ricevuto", async () => {
