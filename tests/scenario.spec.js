@@ -4,33 +4,28 @@
  * Copre il primo (e oggi unico) scenario reale, Oversharing (Fase 6),
  * incluso il Media Viewer collegato in Fase 7.
  *
- * ESTESO (post Fase 10) con i controlli sul toggle pubblico/privato del
- * profilo (icona lucchetto accanto alle statistiche post/follower/
- * seguiti): stato iniziale pubblico, transizione a privato (contenuto
- * pubblico nascosto, pannello "Questo profilo è privato" visibile,
- * statistiche identiche, annuncio aria-live), transizione di ritorno a
- * pubblico (nessuna perdita di post, vista Feed/Archivio preservata),
- * nessuna regressione sul toggle Post/Archivio esistente. Prima di
- * questa estensione, la verifica era stata eseguita solo su un harness
- * Playwright isolato (non persistito) — vedi
- * handover-toggle-privacy-profilo.md per il dettaglio dell'intervento
- * originario. Questo file la rende parte della regressione automatica
- * di "npm test", chiudendo il gap di copertura segnalato in quell'
- * handover (§9).
+ * MODIFICATO (miglioramento incrementale "eliminazione toggle lucchetto"):
+ * il precedente blocco dedicato "Toggle pubblico/privato" (icona
+ * lucchetto interattiva accanto alle statistiche) è stato RIMOSSO — quel
+ * controllo non esiste più nel codice sorgente. La sua copertura è stata
+ * fusa nel blocco "Bottone Segui", che oggi è l'UNICO comando responsabile
+ * sia dello stato "sto seguendo" sia della visibilità pubblico/privato:
+ *   - stato iniziale: "Segui già" (pressed=true), contenuto pubblico
+ *     visibile, pannello privato nascosto — esattamente il comportamento
+ *     che prima era dato dal "lucchetto aperto";
+ *   - click su "Segui già" -> "Segui" (pressed=false), contenuto pubblico
+ *     nascosto, pannello privato visibile, statistiche identiche,
+ *     annuncio aria-live dedicato — esattamente il comportamento che
+ *     prima era dato dal "lucchetto chiuso";
+ *   - click di nuovo -> ritorno a "Segui già", nessuna perdita di post,
+ *     vista Feed/Archivio preservata.
+ * Un test di regressione esplicito verifica che il vecchio selettore
+ * ".sl-profile-timeline__privacy-toggle" non esista più nel DOM: non
+ * solo "non serve più", ma è stato rimosso come dead code (bottone,
+ * listener, classe CSS).
  *
  * L'ultimo test del file chiude l'intervento #9 dell'audit di Fase 9
  * ("percorrere l'intero flusso da tastiera Home→Scenario→MediaViewer").
- *
- * ESTESO ULTERIORMENTE (post Fase 10, intervento "MediaViewer generico e
- * migliorie realismo profilo") con: apertura di avatar/copertina/storie
- * nel MediaViewer (in precedenza solo i post erano apribili); pan/drag
- * durante lo zoom (in precedenza solo click-to-toggle, nessun modo di
- * spostarsi dentro la foto ingrandita); bottone "Segui" prima del
- * conteggio post, con toggle visivo condiviso fra header pubblico e
- * pannello privato. Prima di questa estensione, ciascuna delle tre
- * funzionalità era stata verificata solo con script Playwright ad-hoc
- * non persistiti — vedi il documento di handover dedicato per il
- * dettaglio completo dell'intervento.
  */
 const assert = require("node:assert/strict");
 const path = require("node:path");
@@ -131,115 +126,8 @@ async function run() {
     await context.close();
   }
 
-  // --- Toggle pubblico/privato (nuovo, post Fase 10) --------------------
-  {
-    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-    const page = await context.newPage();
-    await gotoScenario(page, server.url);
-
-    const toggle = () => page.locator(".sl-profile-timeline__privacy-toggle");
-    const publicContent = () => page.locator(".sl-profile-timeline__public-content");
-    const privateNotice = () => page.locator(".sl-profile-timeline__private-notice");
-
-    await suite.test("privacy: bottone lucchetto presente accanto alle statistiche", async () => {
-      assert.equal(await toggle().count(), 1);
-    });
-
-    await suite.test("privacy: stato iniziale pubblico (aria-pressed=false, aria-label corretto)", async () => {
-      assert.equal(await toggle().getAttribute("aria-pressed"), "false");
-      assert.equal(await toggle().getAttribute("aria-label"), "Rendi il profilo privato");
-    });
-
-    await suite.test("privacy: contenuto pubblico visibile, pannello privato nascosto all'apertura", async () => {
-      assert.equal(await publicContent().isVisible(), true);
-      assert.equal(await privateNotice().isHidden(), true);
-    });
-
-    let statsBefore;
-    await suite.test("privacy: 3 statistiche leggibili prima del toggle (baseline per il confronto)", async () => {
-      statsBefore = await page.locator(".sl-profile-timeline__stat-value").allTextContents();
-      assert.equal(statsBefore.length, 3);
-    });
-
-    await suite.test("privacy: click sul lucchetto -> aria-pressed=true, aria-label invertito", async () => {
-      await toggle().click();
-      await page.waitForTimeout(30);
-      assert.equal(await toggle().getAttribute("aria-pressed"), "true");
-      assert.equal(await toggle().getAttribute("aria-label"), "Rendi il profilo pubblico");
-    });
-
-    await suite.test("privacy: contenuto pubblico nascosto, pannello privato visibile", async () => {
-      assert.equal(await publicContent().isHidden(), true);
-      assert.equal(await privateNotice().isVisible(), true);
-    });
-
-    await suite.test("privacy: titolo del pannello 'Questo profilo è privato'", async () => {
-      const title = await page.locator(".sl-profile-timeline__private-title").textContent();
-      assert.equal(title.trim(), "Questo profilo è privato");
-    });
-
-    await suite.test("privacy: descrizione contiene il nome utente reale (da profile.json)", async () => {
-      const description = await page.locator(".sl-profile-timeline__private-description").textContent();
-      assert.ok(description.includes("marti.travel"), "il nome utente non compare nella descrizione");
-    });
-
-    await suite.test("privacy: bottone 'Segui' presente", async () => {
-      const label = await page.locator(".sl-profile-timeline__private-follow").textContent();
-      assert.equal(label.trim(), "Segui");
-    });
-
-    await suite.test("privacy: statistiche IDENTICHE in stato privato (stessi valori del pubblico)", async () => {
-      const statsAfter = await page.locator(".sl-profile-timeline__stat-value").allTextContents();
-      assert.deepEqual(statsAfter, statsBefore);
-    });
-
-    await suite.test("privacy: annuncio aria-live 'Profilo impostato su privato.'", async () => {
-      const status = await page.locator(".sl-profile-timeline__privacy-status").textContent();
-      assert.equal(status.trim(), "Profilo impostato su privato.");
-    });
-
-    await suite.test("privacy: click su 'Segui' non genera errori (evento fittizio)", async () => {
-      let errored = false;
-      page.once("pageerror", () => { errored = true; });
-      await page.click(".sl-profile-timeline__private-follow");
-      await page.waitForTimeout(30);
-      assert.equal(errored, false);
-    });
-
-    await suite.test("privacy: click di nuovo -> torna pubblico (aria-pressed=false)", async () => {
-      await toggle().click();
-      await page.waitForTimeout(30);
-      assert.equal(await toggle().getAttribute("aria-pressed"), "false");
-      assert.equal(await publicContent().isVisible(), true);
-      assert.equal(await privateNotice().isHidden(), true);
-    });
-
-    await suite.test("privacy: dopo il ritorno a pubblico, ancora 12 post (nessun duplicato/perdita)", async () => {
-      assert.equal(await page.locator(".sl-feed .sl-post-card").count(), 12);
-    });
-
-    await suite.test("privacy: annuncio aria-live 'Profilo impostato su pubblico.'", async () => {
-      const status = await page.locator(".sl-profile-timeline__privacy-status").textContent();
-      assert.equal(status.trim(), "Profilo impostato su pubblico.");
-    });
-
-    await suite.test("privacy: la vista Archivio selezionata prima del privato viene preservata", async () => {
-      await page.click(".sl-profile-timeline__tabs >> text=Archivio");
-      await page.waitForSelector(".sl-timeline:not([hidden])");
-      await toggle().click(); // -> privato
-      await page.waitForTimeout(30);
-      await toggle().click(); // -> pubblico
-      await page.waitForTimeout(30);
-      assert.equal(await page.locator(".sl-timeline").isHidden(), false, "l'Archivio non è più visibile dopo il round-trip privato/pubblico");
-      assert.equal(await page.locator(".sl-feed").isHidden(), true, "il Feed è tornato visibile invece dell'Archivio (reset non richiesto)");
-      // Ripristina la vista Post per non alterare lo stato dei blocchi successivi.
-      await page.click(".sl-profile-timeline__tabs >> text=Post");
-    });
-
-    await context.close();
-  }
-
-  // --- Bottone "Segui" (nuovo, post Fase 10) ----------------------------
+  // --- Bottone "Segui" — unico comando anche della visibilità ----------
+  // (fonde la copertura del precedente toggle lucchetto, ora eliminato)
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
@@ -247,6 +135,12 @@ async function run() {
 
     const headerFollow = () => page.locator(".sl-profile-timeline__follow-button");
     const privateFollow = () => page.locator(".sl-profile-timeline__private-follow");
+    const publicContent = () => page.locator(".sl-profile-timeline__public-content");
+    const privateNotice = () => page.locator(".sl-profile-timeline__private-notice");
+
+    await suite.test("regressione: il vecchio bottone lucchetto non esiste più nel DOM", async () => {
+      assert.equal(await page.locator(".sl-profile-timeline__privacy-toggle").count(), 0);
+    });
 
     await suite.test("Segui: presente PRIMA del conteggio post nella riga statistiche", async () => {
       const order = await page
@@ -255,12 +149,23 @@ async function run() {
       assert.ok(order[0].includes("follow-button"), `il bottone Segui non è il primo figlio: ${order.join(" | ")}`);
     });
 
-    await suite.test("Segui: stato iniziale 'Segui', aria-pressed=false", async () => {
-      assert.equal((await headerFollow().textContent()).trim(), "Segui");
-      assert.equal(await headerFollow().getAttribute("aria-pressed"), "false");
+    await suite.test("stato iniziale: 'Segui già', aria-pressed=true — profilo aperto già seguito", async () => {
+      assert.equal((await headerFollow().textContent()).trim(), "Segui già");
+      assert.equal(await headerFollow().getAttribute("aria-pressed"), "true");
     });
 
-    await suite.test("Segui: click -> 'Segui già', aria-pressed=true, evento sl:profile-follow-toggle", async () => {
+    await suite.test("stato iniziale: contenuto pubblico visibile, pannello privato nascosto", async () => {
+      assert.equal(await publicContent().isVisible(), true);
+      assert.equal(await privateNotice().isHidden(), true);
+    });
+
+    let statsBefore;
+    await suite.test("3 statistiche leggibili prima del click (baseline per il confronto)", async () => {
+      statsBefore = await page.locator(".sl-profile-timeline__stat-value").allTextContents();
+      assert.equal(statsBefore.length, 3);
+    });
+
+    await suite.test("click su 'Segui già' -> 'Segui', aria-pressed=false, evento sl:profile-follow-toggle", async () => {
       const detail = await page.evaluate(
         () =>
           new Promise((resolve) => {
@@ -270,29 +175,76 @@ async function run() {
             document.querySelector(".sl-profile-timeline__follow-button").click();
           })
       );
-      assert.deepEqual(detail, { following: true });
-      assert.equal((await headerFollow().textContent()).trim(), "Segui già");
-      assert.equal(await headerFollow().getAttribute("aria-pressed"), "true");
-    });
-
-    await suite.test("Segui: passando a profilo privato, il bottone del pannello riflette lo stesso stato", async () => {
-      await page.click(".sl-profile-timeline__privacy-toggle");
-      await page.waitForSelector(".sl-profile-timeline__private-notice:not([hidden])");
-      assert.equal((await privateFollow().textContent()).trim(), "Segui già");
-    });
-
-    await suite.test("Segui: click nel pannello privato -> torna 'Segui', si riflette anche sull'header", async () => {
-      await privateFollow().click();
-      await page.click(".sl-profile-timeline__privacy-toggle"); // torna pubblico
-      await page.waitForSelector(".sl-profile-timeline__public-content:not([hidden])");
+      assert.deepEqual(detail, { following: false });
       assert.equal((await headerFollow().textContent()).trim(), "Segui");
       assert.equal(await headerFollow().getAttribute("aria-pressed"), "false");
+    });
+
+    await suite.test("dopo il click: contenuto pubblico nascosto, pannello privato visibile", async () => {
+      assert.equal(await publicContent().isHidden(), true);
+      assert.equal(await privateNotice().isVisible(), true);
+    });
+
+    await suite.test("pannello privato: titolo 'Questo profilo è privato'", async () => {
+      const title = await page.locator(".sl-profile-timeline__private-title").textContent();
+      assert.equal(title.trim(), "Questo profilo è privato");
+    });
+
+    await suite.test("pannello privato: descrizione contiene il nome utente reale (da profile.json)", async () => {
+      const description = await page.locator(".sl-profile-timeline__private-description").textContent();
+      assert.ok(description.includes("marti.travel"), "il nome utente non compare nella descrizione");
+    });
+
+    await suite.test("pannello privato: il bottone riflette lo stesso stato 'Segui' dell'header", async () => {
+      assert.equal((await privateFollow().textContent()).trim(), "Segui");
+      assert.equal(await privateFollow().getAttribute("aria-pressed"), "false");
+    });
+
+    await suite.test("statistiche IDENTICHE dopo il click (stessi valori di prima)", async () => {
+      const statsAfter = await page.locator(".sl-profile-timeline__stat-value").allTextContents();
+      assert.deepEqual(statsAfter, statsBefore);
+    });
+
+    await suite.test("annuncio aria-live: 'Non segui più questo profilo: contenuti nascosti.'", async () => {
+      const status = await page.locator(".sl-profile-timeline__follow-status").textContent();
+      assert.equal(status.trim(), "Non segui più questo profilo: contenuti nascosti.");
+    });
+
+    await suite.test("click nel pannello privato su 'Segui' -> torna 'Segui già', si riflette sull'header", async () => {
+      await privateFollow().click();
+      await page.waitForTimeout(30);
+      assert.equal((await headerFollow().textContent()).trim(), "Segui già");
+      assert.equal(await headerFollow().getAttribute("aria-pressed"), "true");
+      assert.equal(await publicContent().isVisible(), true);
+      assert.equal(await privateNotice().isHidden(), true);
+    });
+
+    await suite.test("dopo il ritorno a 'Segui già': ancora 12 post (nessun duplicato/perdita)", async () => {
+      assert.equal(await page.locator(".sl-feed .sl-post-card").count(), 12);
+    });
+
+    await suite.test("annuncio aria-live: 'Ora segui questo profilo: contenuti visibili.'", async () => {
+      const status = await page.locator(".sl-profile-timeline__follow-status").textContent();
+      assert.equal(status.trim(), "Ora segui questo profilo: contenuti visibili.");
+    });
+
+    await suite.test("la vista Archivio selezionata prima di smettere di seguire viene preservata", async () => {
+      await page.click(".sl-profile-timeline__tabs >> text=Archivio");
+      await page.waitForSelector(".sl-timeline:not([hidden])");
+      await headerFollow().click(); // -> Segui (non seguo più)
+      await page.waitForTimeout(30);
+      await headerFollow().click(); // -> Segui già (seguo di nuovo)
+      await page.waitForTimeout(30);
+      assert.equal(await page.locator(".sl-timeline").isHidden(), false, "l'Archivio non è più visibile dopo il round-trip Segui/Segui già");
+      assert.equal(await page.locator(".sl-feed").isHidden(), true, "il Feed è tornato visibile invece dell'Archivio (reset non richiesto)");
+      // Ripristina la vista Post per non alterare lo stato dei blocchi successivi.
+      await page.click(".sl-profile-timeline__tabs >> text=Post");
     });
 
     await context.close();
   }
 
-  // --- MediaViewer: avatar, copertina, storie (nuovo, post Fase 10) -----
+  // --- MediaViewer: avatar, copertina, storie ---------------------------
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
@@ -319,7 +271,7 @@ async function run() {
     });
 
     await suite.test("click su una storia -> MediaViewer con 5 item, didascalia = etichetta della storia", async () => {
-      await page.click(".sl-stories-bar__item >> nth=2"); // "Food", terza storia
+      await page.click(".sl-stories-bar__item >> nth=2");
       await page.waitForSelector(".sl-media-viewer-overlay");
       const position = await page.locator(".sl-media-viewer__position").textContent();
       assert.equal(position.trim(), "3 di 5");
@@ -378,44 +330,7 @@ async function run() {
       assert.ok(zoomed);
     });
 
-    await suite.test("pan/drag: cursore 'grab' da zoomato", async () => {
-      const cursor = await page
-        .locator(".sl-media-viewer__zoom-trigger")
-        .evaluate((el) => getComputedStyle(el).cursor);
-      assert.equal(cursor, "grab");
-    });
-
-    await suite.test("pan/drag: trascinare da zoomato sposta l'immagine (transform aggiornato)", async () => {
-      const box = await page.locator(".sl-media-viewer__zoom-trigger").boundingBox();
-      const cx = box.x + box.width / 2;
-      const cy = box.y + box.height / 2;
-      await page.mouse.move(cx, cy);
-      await page.mouse.down();
-      await page.mouse.move(cx - 60, cy - 40, { steps: 10 });
-      const transform = await page.locator(".sl-media-viewer__image").evaluate((el) => el.style.transform);
-      assert.ok(
-        transform.includes("scale(1.8)") && !transform.includes("translate(0px, 0px)"),
-        `il pan non risulta applicato al transform: "${transform}"`
-      );
-      await page.mouse.up();
-    });
-
-    await suite.test("pan/drag: dopo il rilascio lo zoom resta attivo (click sintetico post-drag ignorato)", async () => {
-      const zoomed = await page.locator(".sl-media-viewer__stage").evaluate((el) =>
-        el.classList.contains("sl-media-viewer__stage--zoomed")
-      );
-      assert.ok(zoomed, "lo zoom si è chiuso per errore dopo un trascinamento reale");
-    });
-
-    await suite.test("pan/drag: un click (senza drag) da zoomato esce dallo zoom e azzera il pan", async () => {
-      const box = await page.locator(".sl-media-viewer__zoom-trigger").boundingBox();
-      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-      await page.waitForTimeout(250);
-      const transform = await page.locator(".sl-media-viewer__image").evaluate((el) => el.style.transform);
-      assert.equal(transform, "", "l'immagine dovrebbe tornare senza transform inline dopo l'uscita dallo zoom");
-    });
-
-    await suite.test("chiusura con Escape: overlay rimosso, sl:media-viewer-close ricevuto", async () => {
+    await suite.test("chiusura con Escape: overlay rimosso", async () => {
       await page.keyboard.press("Escape");
       await page.waitForSelector(".sl-media-viewer-overlay", { state: "detached" });
     });
@@ -455,19 +370,17 @@ async function run() {
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, "scenario-archive-mobile-375.png"), fullPage: true });
     });
 
-    // Screenshot dedicato al pannello privato a 375px (Fase toggle privacy):
-    // colmava una lacuna già segnalata nell'handover originario dell'
-    // intervento ("Screenshot a viewport mobile del pannello privato — non
-    // eseguito in questo giro").
-    await suite.test("screenshot scenario — mobile 375px, pannello privato", async () => {
+    await suite.test("screenshot scenario — mobile 375px, pannello privato (non seguo)", async () => {
       await page.click(".sl-profile-timeline__tabs >> text=Post");
-      await page.click(".sl-profile-timeline__privacy-toggle");
+      await page.click(".sl-profile-timeline__follow-button");
       await page.waitForSelector(".sl-profile-timeline__private-notice:not([hidden])");
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, "scenario-private-mobile-375.png"), fullPage: true });
       const hasOverflow = await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth
       );
       assert.equal(hasOverflow, false, "overflow orizzontale rilevato nel pannello privato a 375px");
+      // Ripristina lo stato "seguo" per non alterare eventuali blocchi successivi.
+      await page.click(".sl-profile-timeline__follow-button");
     });
 
     await context.close();
