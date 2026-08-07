@@ -39,17 +39,26 @@
  * sovrascrive il "pill" di default di Button: un indicatore ad angoli
  * vivi si sposa meglio con una sottolineatura dritta.
  *
- * Toggle pubblico/privato (nuovo): il bottone lucchetto (variante
- * "icon" di Button, già circolare/dimensionata di suo — nessun override
- * di forma necessario qui) siede accanto alle statistiche dentro
- * .sl-profile-timeline__stats-row, non più .sl-profile-timeline__stats
- * da sola — il margin-top che prima apparteneva a .stats è stato
- * spostato sul nuovo contenitore per preservare la stessa spaziatura
- * visiva rispetto alla bio (nessuna regressione). Colore del lucchetto:
- * text-secondary a riposo (stesso trattamento già riservato ai bottoni
- * ghost/icon "secondari" del progetto), primary-text quando premuto
- * (stato "privato" attivo) — nessuna nuova verifica di contrasto,
- * entrambi i token sono già verificati come testo/icona su bg-surface.
+ * RIMOSSO — toggle "lucchetto" pubblico/privato (miglioramento
+ * incrementale, post Fase 10): esisteva un secondo bottone icona
+ * dedicato (.sl-profile-timeline__privacy-toggle) che duplicava, con un
+ * secondo controllo, la stessa decisione che il bottone "Segui" governa
+ * già da solo — su richiesta esplicita, il lucchetto è stato eliminato:
+ * il solo bottone "Segui"/"Segui già" comanda ora la visibilità
+ * pubblico/privato (vedi rationale completo in
+ * profileTimelineRenderer.js, funzione setFollowing()). Le due regole
+ * dedicate al lucchetto (a riposo e "[aria-pressed=true]") sono state
+ * rimosse come dead code, non solo commentate: nessun elemento del DOM
+ * le referenzia più.
+ *
+ * Bottone "Segui" (nell'header pubblico e nel pannello privato):
+ * riusa le varianti primary/secondary di Button.js (già verificate,
+ * nessun nuovo colore) — solo un padding più compatto rispetto al
+ * default (space-2/space-4) per l'istanza dell'header, per stare bene
+ * accanto alle statistiche invece di dominare la riga come farebbe un
+ * bottone a piena grandezza. flex-shrink:0 evita che si schiacci quando
+ * la riga è stretta (mobile): a quel punto è la riga stessa a passare a
+ * più righe (flex-wrap), non il bottone a deformarsi.
  *
  * Pannello "profilo privato" (.sl-profile-timeline__private-notice):
  * stessa ricetta visiva già usata da .sl-scenario-page__placeholder
@@ -80,10 +89,10 @@
   background-color: var(--sl-color-bg-elevated);
 }
 
-/* Copertina/avatar apribili nel MediaViewer (nuovo, post Fase 10):
-   stesso trattamento hover/focus già usato per le immagini cliccabili
-   del progetto (.sl-post-card__media in post-card.css, i riquadri di
-   Timeline) — filter:brightness(0.94), nessun nuovo colore introdotto.
+/* Copertina/avatar apribili nel MediaViewer: stesso trattamento hover/
+   focus già usato per le immagini cliccabili del progetto
+   (.sl-post-card__media in post-card.css, i riquadri di Timeline) —
+   filter:brightness(0.94), nessun nuovo colore introdotto.
    .cover-trigger riempie l'intero .cover (stesso ruolo di
    .sl-post-card__media rispetto al proprio contenitore); .avatar-trigger
    resta inline-flex per non alterare la dimensione intrinseca
@@ -158,30 +167,14 @@
   gap: var(--sl-space-6);
 }
 
-/* Bottone "Segui" dell'header pubblico (nuovo): stesso primary/
-   secondary di Button.js (già verificato, nessun nuovo colore) — solo
-   un padding più compatto rispetto al default (space-3/space-5), per
-   stare bene accanto a numeri e lucchetto invece che dominare la riga
-   come farebbe un bottone a piena grandezza. flex-shrink:0 evita che si
-   schiacci quando la riga è stretta (mobile): a quel punto è la riga
-   stessa a passare a più righe (flex-wrap qui sotto), non il bottone a
-   deformarsi. */
+/* Bottone "Segui" dell'header pubblico: padding più compatto rispetto
+   al default (space-3/space-5) di Button, per stare bene accanto a
+   numeri e — prima di questo intervento — al lucchetto; il layout
+   resta corretto anche ora che il lucchetto non esiste più, un
+   ridimensionamento non era necessario. */
 .sl-button.sl-profile-timeline__follow-button {
   flex-shrink: 0;
   padding: var(--sl-space-2) var(--sl-space-4);
-}
-
-/* A riposo (profilo pubblico): stesso trattamento "secondario" già
-   usato da altri bottoni ghost/icon del Design System. */
-.sl-button.sl-profile-timeline__privacy-toggle {
-  color: var(--sl-color-text-secondary);
-}
-
-/* Premuto (profilo privato): primary-text, già verificato come colore
-   di TESTO/icona su bg-surface in entrambi i temi (6.13:1 Light /
-   5.21:1 Dark) — nessun nuovo accostamento. */
-.sl-button.sl-profile-timeline__privacy-toggle[aria-pressed="true"] {
-  color: var(--sl-color-primary-text);
 }
 
 .sl-profile-timeline__stat {
