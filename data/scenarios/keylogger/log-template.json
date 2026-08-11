@@ -1,0 +1,44 @@
+{
+  "fileNamePattern": "system_log_{yyyyMMdd}_{HHmmss}.txt",
+  "lineCount": { "min": 90, "max": 120 },
+  "captureBlock": { "positionRatio": { "min": 0.55, "max": 0.75 } },
+  "lineDelayMs": { "min": 50, "max": 4000 },
+  "levels": ["INFO", "DEBUG", "WARN", "SYS", "PROC", "NET"],
+  "modules": [
+    "svc.session", "net.dispatcher", "cache.manager", "auth.relay", "ui.renderer",
+    "task.scheduler", "disk.io", "sys.monitor", "proc.watchdog", "kernel.bridge",
+    "sync.worker", "queue.consumer", "telemetry.agent", "update.checker", "shell.host"
+  ],
+  "messageTemplates": [
+    "{module}: avviato (build {buildId})",
+    "{module}: heartbeat ricevuto dopo {ms} ms",
+    "{module}: cache sincronizzata, {count} voci aggiornate",
+    "{module}: thread pool con {count} worker attivi, {count2} in coda",
+    "{module}: nessuna anomalia rilevata nell'ultimo ciclo di controllo",
+    "{module}: handle rilasciato dopo {ms} ms di inattività",
+    "{module}: buffer di rete svuotato, {count} pacchetti elaborati",
+    "{module}: timeout raggiunto, nuovo tentativo pianificato",
+    "{module}: ciclo di watchdog completato in {ms} ms",
+    "{module}: configurazione ricaricata da disco"
+  ],
+  "leadInMessage": "Richiesta di autenticazione ricevuta dal client locale",
+  "captureLine": "auth.relay :: form payload catturato per l'endpoint /login -> username=\"{username}\" password=\"{password}\"",
+  "disclaimer": [
+    "----------------------------------------------------------------------",
+    "NOTA — SocialAlive (SOCIALIVE, piattaforma di Cybersecurity Awareness)",
+    "----------------------------------------------------------------------",
+    "Questo file è stato generato a scopo didattico. Nessun tasto digitato",
+    "realmente sulla tastiera è stato intercettato e nessun dato è mai",
+    "uscito dal browser: username e password comparsi sopra sono quelli",
+    "inseriti volontariamente in questa demo, generati e scaricati",
+    "interamente in locale. Tutte le altre righe di questo file sono",
+    "rumore di log generato casualmente: non hanno alcun significato reale",
+    "e non provengono da alcun sistema realmente esistente.",
+    "",
+    "Se hai trovato la riga con \"username=\" cercando la chiocciola delle",
+    "email, hai appena riprodotto esattamente il gesto che renderebbe",
+    "leggibile un vero furto di credenziali: bastano un editor di testo",
+    "e trenta secondi di attenzione.",
+    "----------------------------------------------------------------------"
+  ]
+}

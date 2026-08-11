@@ -1,0 +1,29 @@
+/**
+ * fake-login-capture.css
+ * -----------------------------------------------------------------------
+ * Stile del renderer "fake-login-capture" (scenario Keylogger). Il login
+ * vero e proprio è già interamente stilato da login-form.css (riusato
+ * as-is, zero duplicazione) — questo file possiede SOLO il layout di
+ * pagina (larghezza massima, centraggio orizzontale) e il messaggio
+ * neutro post-submit, MAI l'aspetto del form stesso. Il centraggio
+ * VERTICALE nella viewport è già fornito da
+ * .sl-scenario-page__immersive (scenario-page.css) — questo file non lo
+ * duplica.
+ *
+ * Nessun nuovo colore introdotto: text-secondary è già verificato
+ * ovunque su bg-canvas/bg-surface (stesso token usato da decine di altri
+ * componenti) — nessuna verifica WCAG aggiuntiva necessaria.
+ */
+
+.sl-fake-login-capture {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  justify-content: center;
+}
+
+.sl-fake-login-capture__completed {
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-md);
+  text-align: center;
+}

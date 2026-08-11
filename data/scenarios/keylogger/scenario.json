@@ -1,0 +1,10 @@
+{
+  "id": "keylogger",
+  "type": "fake-login-capture",
+  "title": "Keylogger",
+  "description": "Un login fittizio mostra quanto sia banale per un keylogger intercettare credenziali digitate, e quanto sia altrettanto banale ritrovarle in un file di log.",
+  "chrome": "none",
+  "dataRefs": {
+    "logTemplate": "data/scenarios/keylogger/log-template.json"
+  }
+}

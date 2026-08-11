@@ -1,0 +1,39 @@
+/**
+ * module-scenarios-page.css
+ * -----------------------------------------------------------------------
+ * Layout della rotta #/modules/:moduleId. Stessa struttura minima già
+ * vista in home-page.css/scenario-page.css: solo l'organizzazione del
+ * contenuto dentro .sl-page-container__main, non lo scheletro esterno
+ * (di competenza di PageContainer).
+ *
+ * DUPLICAZIONE NOTA (debito tecnico dichiarato, non accidentale):
+ * .sl-module-scenarios-page__grid è identica a
+ * .sl-home-page__modules-grid (home-page.css). Non unificata in questo
+ * step per restare a un cambio minimo e isolato — rinominare quella
+ * classe avrebbe richiesto toccare anche i selettori di
+ * tests/home.spec.js nello stesso step in cui si introduce la
+ * navigazione ai nuovi scenari, aumentando il raggio della modifica.
+ * Candidata a estrazione in un file condiviso (es.
+ * css/components/module-grid.css) al prossimo intervento su uno dei due
+ * file — annotato anche nell'handover di questo intervento.
+ */
+
+.sl-module-scenarios-page__content {
+  max-width: 640px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-6);
+}
+
+.sl-module-scenarios-page__title {
+  font-size: var(--sl-font-size-xl);
+  font-weight: var(--sl-font-weight-bold);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-module-scenarios-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--sl-space-4);
+}

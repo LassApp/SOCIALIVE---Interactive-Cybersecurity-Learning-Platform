@@ -54,9 +54,11 @@
   <link rel="stylesheet" href="css/components/timeline.css" />
   <link rel="stylesheet" href="css/components/media-viewer.css" />
   <link rel="stylesheet" href="css/scenarios/profile-timeline.css" />
+  <link rel="stylesheet" href="css/scenarios/fake-login-capture.css" />
   <link rel="stylesheet" href="css/layouts/login-page.css" />
   <link rel="stylesheet" href="css/layouts/home-page.css" />
   <link rel="stylesheet" href="css/layouts/scenario-page.css" />
+  <link rel="stylesheet" href="css/layouts/module-scenarios-page.css" />
 </head>
 <body>
   <main id="app-root"></main>
@@ -67,15 +69,22 @@
     import { createLoginPageController } from "./js/pages/loginPageController.js";
     import { createHomePageController } from "./js/pages/homePageController.js";
     import { createScenarioPageController } from "./js/pages/scenarioPageController.js";
+    import { createModuleScenariosPageController } from "./js/pages/moduleScenariosPageController.js";
     import { registerRenderer } from "./js/scenarios/scenarioEngine.js";
     import { renderProfileTimeline } from "./js/scenarios/renderers/profileTimelineRenderer.js";
+    import { renderFakeLoginCapture } from "./js/scenarios/renderers/fakeLoginCaptureRenderer.js";
 
     initTheme();
 
     registerRenderer("profile-timeline", renderProfileTimeline);
+    registerRenderer("fake-login-capture", renderFakeLoginCapture);
 
     registerRoute("#/login", createLoginPageController, { protected: false, title: "Accedi" });
     registerRoute("#/home", createHomePageController, { protected: true, title: "Home" });
+    registerRoute("#/modules/:moduleId", createModuleScenariosPageController, {
+      protected: true,
+      title: "Scenari",
+    });
     registerRoute("#/scenario/:scenarioId", createScenarioPageController, {
       protected: true,
       title: "Scenario",

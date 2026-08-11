@@ -133,9 +133,19 @@ export function createHomePageController(container) {
 
   function handleModuleOpen(event) {
     const moduleRecord = loadedModules.find((m) => m.id === event.detail.moduleId);
-    const scenarioId = moduleRecord && moduleRecord.scenarioId;
-    if (!scenarioId) return;
-    navigate(`#/scenario/${scenarioId}`);
+    if (!moduleRecord) return;
+
+    // Un modulo con più scenari (oggi: solo Cybersecurity, Oversharing +
+    // Keylogger) porta a un selettore dedicato (#/modules/:moduleId),
+    // stesso principio già seguito da ModuleCard per i moduli di primo
+    // livello: mai saltare direttamente a un contenuto se esiste più di
+    // un'opzione reale. Il precedente campo singolare "scenarioId" è
+    // stato sostituito per intero da "scenarios" (array) in questo
+    // stesso intervento, insieme al JSON — nessun modulo residuo usa
+    // ancora il vecchio campo, quindi nessun fallback da mantenere qui.
+    if (Array.isArray(moduleRecord.scenarios) && moduleRecord.scenarios.length > 0) {
+      navigate(`#/modules/${moduleRecord.id}`);
+    }
   }
 
   function handlePostLike(event) {

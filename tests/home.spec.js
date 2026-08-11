@@ -275,8 +275,15 @@ async function run() {
     await loginAsDocente(page, server.url);
     await page.waitForSelector(".sl-home-page__modules-grid");
 
-    await suite.test("navigazione Home -> Cybersecurity -> Home: nessun componente duplicato", async () => {
+    await suite.test("navigazione Home -> selettore Cybersecurity -> Oversharing -> Home: nessun componente duplicato", async () => {
+      // Cybersecurity ospita ora 2 scenari (Oversharing, Keylogger): il
+      // click porta al selettore #/modules/cybersecurity, non più
+      // direttamente allo scenario — comportamento cambiato
+      // deliberatamente con l'introduzione del secondo scenario reale.
       await page.click(".sl-home-page__modules-grid .sl-module-card >> nth=4");
+      await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
+      await page.waitForSelector(".sl-module-scenarios-page__grid");
+      await page.click(".sl-module-scenarios-page__grid .sl-module-card >> nth=0");
       await page.waitForFunction(() => window.location.hash === "#/scenario/oversharing");
       await page.waitForSelector(".sl-profile-timeline");
       await page.click(".sl-sidebar__link[href='#/home']");

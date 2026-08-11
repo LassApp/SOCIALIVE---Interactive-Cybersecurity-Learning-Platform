@@ -392,7 +392,7 @@ async function run() {
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
 
-    await suite.test("flusso da tastiera: Sidebar -> Moduli -> Cybersecurity (Invio)", async () => {
+    await suite.test("flusso da tastiera: Sidebar -> Moduli -> Cybersecurity (Invio) -> selettore", async () => {
       let focused = null;
       for (let i = 0; i < 15; i += 1) {
         await page.keyboard.press("Tab");
@@ -400,6 +400,23 @@ async function run() {
         if (focused === "Apri modulo Cybersecurity") break;
       }
       assert.equal(focused, "Apri modulo Cybersecurity", "il focus non ha raggiunto la card Cybersecurity entro 15 Tab");
+
+      await page.keyboard.press("Enter");
+      // Cybersecurity ospita ora 2 scenari (Oversharing, Keylogger): il
+      // click/Invio porta al selettore #/modules/cybersecurity, non più
+      // direttamente allo scenario.
+      await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
+      await page.waitForSelector(".sl-module-scenarios-page__grid");
+    });
+
+    await suite.test("flusso da tastiera: dal selettore raggiunge Oversharing (Invio)", async () => {
+      let focused = null;
+      for (let i = 0; i < 15; i += 1) {
+        await page.keyboard.press("Tab");
+        focused = await page.evaluate(() => document.activeElement.getAttribute("aria-label"));
+        if (focused === "Apri modulo Oversharing") break;
+      }
+      assert.equal(focused, "Apri modulo Oversharing", "il focus non ha raggiunto la card Oversharing entro 15 Tab");
 
       await page.keyboard.press("Enter");
       await page.waitForFunction(() => window.location.hash === "#/scenario/oversharing");

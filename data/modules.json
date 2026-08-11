@@ -4,7 +4,15 @@
     { "id": "nissan-gtr", "title": "Nissan GT-R R34/R35", "available": false },
     { "id": "beatbox", "title": "Beatbox", "available": false },
     { "id": "fotografia", "title": "Fotografia", "available": false },
-    { "id": "cybersecurity", "title": "Cybersecurity", "available": true, "scenarioId": "oversharing" },
+    {
+      "id": "cybersecurity",
+      "title": "Cybersecurity",
+      "available": true,
+      "scenarios": [
+        { "id": "oversharing", "title": "Oversharing", "available": true },
+        { "id": "keylogger", "title": "Keylogger", "available": true }
+      ]
+    },
     { "id": "ricette", "title": "Ricette", "available": false }
   ]
 }
