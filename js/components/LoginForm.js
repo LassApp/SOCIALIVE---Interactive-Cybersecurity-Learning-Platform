@@ -73,6 +73,12 @@
  *     authService — "Credenziali non valide")
  *   - isSubmitting {boolean} default: false — disabilita i campi e il
  *     bottone, mostra lo stato di caricamento
+ *   - emailValidation {'strict'|'loose'} default: 'strict' — aggiunta per
+ *     lo scenario Keylogger (fakeLoginCaptureRenderer.js): 'loose' valida
+ *     solo la presenza di "@" (nessun dominio richiesto), per un login
+ *     fittizio con credenziali di fantasia. 'strict' (default, invariato)
+ *     resta l'unico comportamento usato dal login reale
+ *     (loginPageController.js, che non passa questa prop).
  *
  * Eventi emessi (su element, bubbling):
  *   - sl:login-submit           detail: { email, password } (solo se il
@@ -88,9 +94,19 @@ import { create as createLoader } from "./Loader.js";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function validateEmail(value) {
+// "loose" (aggiunto per lo scenario Keylogger, fakeLoginCaptureRenderer.js):
+// un login FITTIZIO a scopo didattico richiede solo la presenza di "@" —
+// non un dominio realmente formattato — perché il docente digita
+// credenziali di fantasia decise al momento in aula, non un indirizzo
+// verificabile. "strict" (default, invariato) resta l'unico comportamento
+// usato da loginPageController.js, che non passa questa prop: zero
+// impatto sul login reale.
+function validateEmail(value, mode) {
   const trimmed = (value || "").trim();
   if (!trimmed) return "L'email è obbligatoria.";
+  if (mode === "loose") {
+    return trimmed.includes("@") ? null : 'Inserisci un\'email valida (deve contenere "@").';
+  }
   if (!EMAIL_PATTERN.test(trimmed)) return "Inserisci un indirizzo email valido.";
   return null;
 }
@@ -183,7 +199,7 @@ export function create(props = {}) {
   function handleEmailInput(event) {
     state.email = event.detail.value;
     if (state.hasAttemptedSubmit && state.emailError) {
-      state.emailError = validateEmail(state.email);
+      state.emailError = validateEmail(state.email, props.emailValidation);
       emailInput.update({ error: state.emailError || undefined });
     }
   }
@@ -198,7 +214,7 @@ export function create(props = {}) {
 
   function handleEmailBlur() {
     if (!state.hasAttemptedSubmit) return;
-    state.emailError = validateEmail(state.email);
+    state.emailError = validateEmail(state.email, props.emailValidation);
     emailInput.update({ error: state.emailError || undefined });
   }
 
@@ -216,7 +232,7 @@ export function create(props = {}) {
     event.preventDefault();
     state.hasAttemptedSubmit = true;
 
-    state.emailError = validateEmail(state.email);
+    state.emailError = validateEmail(state.email, props.emailValidation);
     state.passwordError = validatePassword(state.password);
     emailInput.update({ error: state.emailError || undefined });
     passwordInput.update({ error: state.passwordError || undefined });
