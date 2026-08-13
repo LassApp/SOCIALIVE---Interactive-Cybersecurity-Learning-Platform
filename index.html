@@ -63,8 +63,22 @@
 <body>
   <main id="app-root"></main>
 
+  <!--
+    Client Supabase vendorizzato (Fase Auth Supabase, nuovo): SCRIPT
+    CLASSICO, senza type="module" e SENZA defer/async, posizionato PRIMA
+    del modulo di bootstrap sotto — esegue in modo sincrono nel punto in
+    cui il parser lo incontra, mentre un <script type="module"> esegue
+    sempre dopo la fine del parsing del documento (per specifica). Al
+    momento in cui il modulo sotto viene valutato, "window.supabase" è
+    quindi già garantito presente — vedi il commento di testa a
+    js/vendor/supabase-js.umd.js per il rationale completo (perché
+    vendorizzato e non caricato da CDN, perché UMD e non il build ESM).
+  -->
+  <script src="js/vendor/supabase-js.umd.js"></script>
+
   <script type="module">
     import { initTheme } from "./js/services/themeService.js";
+    import { initSession } from "./js/services/authService.js";
     import { init as initRouter, registerRoute } from "./js/core/router.js";
     import { createLoginPageController } from "./js/pages/loginPageController.js";
     import { createHomePageController } from "./js/pages/homePageController.js";
@@ -89,6 +103,15 @@
       protected: true,
       title: "Scenario",
     });
+
+    // Unico punto asincrono introdotto dalla migrazione a Supabase Auth
+    // (vedi rationale completo in authService.js): DEVE risolvere PRIMA
+    // di initRouter(), altrimenti la primissima resolve() del router
+    // (innescata subito dopo, per l'hash iniziale) osserverebbe una
+    // cache di sessione ancora vuota e redirigerebbe erroneamente a
+    // #/login anche per un docente già autenticato. "await" di livello
+    // top qui è nativamente supportato dagli script type="module".
+    await initSession();
 
     initRouter(document.getElementById("app-root"));
   </script>
