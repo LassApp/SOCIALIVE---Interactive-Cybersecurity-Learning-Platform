@@ -4,33 +4,17 @@
  * Copre la Home reale così com'è oggi nel codice sorgente DOPO la
  * riscrittura di Fase 10: homePageController.js legge realmente
  * data/modules.json e data/home/feed.json tramite localJsonRepository.js
- * (pattern asincrono identico a scenarioPageController.js), non più la
- * versione con dati demo hardcoded di Fase 5 — verificato con grep sul
- * file reale prima di aggiornare questo commento, non per assunzione
- * (stessa disciplina già raccomandata più volte nei prompt di
- * continuità del progetto: "verificare sempre coi file reali, non per
- * assunzione"). Include anche le rifiniture di Fase 9/10 sulla Home:
- * skip-link (WCAG 2.4.1), <h1> nascosto, fade-in dell'immagine del post,
- * micro-transizione di ProfileMenu.
+ * (pattern asincrono identico a scenarioPageController.js). Include
+ * anche le rifiniture di Fase 9/10 sulla Home: skip-link (WCAG 2.4.1),
+ * <h1> nascosto, fade-in dell'immagine del post, micro-transizione di
+ * ProfileMenu.
  *
- * NOTA STORICA: fino a questa correzione, questo stesso file conteneva
- * un docstring non aggiornato che descriveva ancora lo stato pre-Fase-10
- * (dati hardcoded), mentre il corpo dei test sottostanti verificava già
- * il comportamento post-riscrittura — un disallineamento tra commento e
- * codice nello stesso file, della stessa classe di errore già
- * documentata più volte nel progetto (handover che descrive un lavoro
- * non rispecchiato nel codice). Corretto in Fase 10, durante la verifica
- * pre-handover.
+ * chromium.launch({ headless: false }): stessa deviazione documentata
+ * per esteso in login.spec.js (necessaria contro un timeout osservato
+ * in headless verso Supabase Auth, usato qui tramite loginAsDocente()).
  *
  * ESTESO (post Fase 10, intervento "MediaViewer generico") con la
- * copertura dell'apertura del post di Mario Bianchi nel MediaViewer:
- * "sl:post-open" era già emesso da PostCard fin da Fase 2, ma senza
- * alcun consumer sulla Home — il click sull'immagine del post non
- * produceva alcun effetto visibile. Ora homePageController.js apre
- * MediaViewer tramite js/utils/mediaViewerLauncher.js, lo stesso helper
- * condiviso già usato da profileTimelineRenderer.js — questo blocco di
- * test chiude il gap di copertura, verificato in precedenza solo con
- * uno script ad-hoc non persistito.
+ * copertura dell'apertura del post di Mario Bianchi nel MediaViewer.
  */
 const assert = require("node:assert/strict");
 const path = require("node:path");
@@ -48,7 +32,7 @@ const MODULE_ORDER = ["yoga", "nissan-gtr", "beatbox", "fotografia", "cybersecur
 async function run() {
   const suite = createSuite("home.spec.js");
   const server = await startServer(APP_ROOT);
-  const browser = await chromium.launch({ headless: false, slowMo: 300 });
+  const browser = await chromium.launch({ headless: false });
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
   // --- Composizione e contenuto ---------------------------------------
@@ -245,8 +229,6 @@ async function run() {
       await page.evaluate(() => document.documentElement.setAttribute("data-theme", "light"));
     });
 
-    // Range 768-1024px (Fase 9, intervento #8 — mai chiuso con screenshot
-    // reali in nessuna fase precedente, segnalato ricorrente da 5 fasi).
     for (const width of [768, 900, 1024]) {
       await suite.test(`screenshot Home — breakpoint ${width}px, nessun overflow orizzontale`, async () => {
         await page.setViewportSize({ width, height: 900 });
@@ -276,10 +258,6 @@ async function run() {
     await page.waitForSelector(".sl-home-page__modules-grid");
 
     await suite.test("navigazione Home -> selettore Cybersecurity -> Oversharing -> Home: nessun componente duplicato", async () => {
-      // Cybersecurity ospita ora 2 scenari (Oversharing, Keylogger): il
-      // click porta al selettore #/modules/cybersecurity, non più
-      // direttamente allo scenario — comportamento cambiato
-      // deliberatamente con l'introduzione del secondo scenario reale.
       await page.click(".sl-home-page__modules-grid .sl-module-card >> nth=4");
       await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
       await page.waitForSelector(".sl-module-scenarios-page__grid");

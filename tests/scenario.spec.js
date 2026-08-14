@@ -4,25 +4,16 @@
  * Copre il primo (e oggi unico) scenario reale, Oversharing (Fase 6),
  * incluso il Media Viewer collegato in Fase 7.
  *
+ * chromium.launch({ headless: false }): stessa deviazione documentata
+ * per esteso in login.spec.js (necessaria contro un timeout osservato
+ * in headless verso Supabase Auth, usato qui tramite loginAsDocente()).
+ *
  * MODIFICATO (miglioramento incrementale "eliminazione toggle lucchetto"):
  * il precedente blocco dedicato "Toggle pubblico/privato" (icona
  * lucchetto interattiva accanto alle statistiche) è stato RIMOSSO — quel
  * controllo non esiste più nel codice sorgente. La sua copertura è stata
  * fusa nel blocco "Bottone Segui", che oggi è l'UNICO comando responsabile
- * sia dello stato "sto seguendo" sia della visibilità pubblico/privato:
- *   - stato iniziale: "Segui già" (pressed=true), contenuto pubblico
- *     visibile, pannello privato nascosto — esattamente il comportamento
- *     che prima era dato dal "lucchetto aperto";
- *   - click su "Segui già" -> "Segui" (pressed=false), contenuto pubblico
- *     nascosto, pannello privato visibile, statistiche identiche,
- *     annuncio aria-live dedicato — esattamente il comportamento che
- *     prima era dato dal "lucchetto chiuso";
- *   - click di nuovo -> ritorno a "Segui già", nessuna perdita di post,
- *     vista Feed/Archivio preservata.
- * Un test di regressione esplicito verifica che il vecchio selettore
- * ".sl-profile-timeline__privacy-toggle" non esista più nel DOM: non
- * solo "non serve più", ma è stato rimosso come dead code (bottone,
- * listener, classe CSS).
+ * sia dello stato "sto seguendo" sia della visibilità pubblico/privato.
  *
  * L'ultimo test del file chiude l'intervento #9 dell'audit di Fase 9
  * ("percorrere l'intero flusso da tastiera Home→Scenario→MediaViewer").
@@ -47,7 +38,7 @@ async function gotoScenario(page, baseUrl) {
 async function run() {
   const suite = createSuite("scenario.spec.js");
   const server = await startServer(APP_ROOT);
-  const browser = await chromium.launch({ headless: false, slowMo: 300 });
+  const browser = await chromium.launch({ headless: false });
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
   // --- Profilo, storie, feed -------------------------------------------
@@ -127,7 +118,6 @@ async function run() {
   }
 
   // --- Bottone "Segui" — unico comando anche della visibilità ----------
-  // (fonde la copertura del precedente toggle lucchetto, ora eliminato)
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
@@ -231,13 +221,12 @@ async function run() {
     await suite.test("la vista Archivio selezionata prima di smettere di seguire viene preservata", async () => {
       await page.click(".sl-profile-timeline__tabs >> text=Archivio");
       await page.waitForSelector(".sl-timeline:not([hidden])");
-      await headerFollow().click(); // -> Segui (non seguo più)
+      await headerFollow().click();
       await page.waitForTimeout(30);
-      await headerFollow().click(); // -> Segui già (seguo di nuovo)
+      await headerFollow().click();
       await page.waitForTimeout(30);
       assert.equal(await page.locator(".sl-timeline").isHidden(), false, "l'Archivio non è più visibile dopo il round-trip Segui/Segui già");
       assert.equal(await page.locator(".sl-feed").isHidden(), true, "il Feed è tornato visibile invece dell'Archivio (reset non richiesto)");
-      // Ripristina la vista Post per non alterare lo stato dei blocchi successivi.
       await page.click(".sl-profile-timeline__tabs >> text=Post");
     });
 
@@ -379,7 +368,6 @@ async function run() {
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth
       );
       assert.equal(hasOverflow, false, "overflow orizzontale rilevato nel pannello privato a 375px");
-      // Ripristina lo stato "seguo" per non alterare eventuali blocchi successivi.
       await page.click(".sl-profile-timeline__follow-button");
     });
 
@@ -402,9 +390,6 @@ async function run() {
       assert.equal(focused, "Apri modulo Cybersecurity", "il focus non ha raggiunto la card Cybersecurity entro 15 Tab");
 
       await page.keyboard.press("Enter");
-      // Cybersecurity ospita ora 2 scenari (Oversharing, Keylogger): il
-      // click/Invio porta al selettore #/modules/cybersecurity, non più
-      // direttamente allo scenario.
       await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
       await page.waitForSelector(".sl-module-scenarios-page__grid");
     });
