@@ -22,7 +22,7 @@ const SCREENSHOT_DIR = path.join(__dirname, "screenshots");
 async function run() {
   const suite = createSuite("login.spec.js");
   const server = await startServer(APP_ROOT);
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ headless: false, slowMo: 300 });
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
   // --- Bootstrap e guardie di sessione -------------------------------

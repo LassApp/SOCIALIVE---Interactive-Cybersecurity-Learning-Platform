@@ -47,7 +47,7 @@ async function gotoScenario(page, baseUrl) {
 async function run() {
   const suite = createSuite("scenario.spec.js");
   const server = await startServer(APP_ROOT);
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ headless: false, slowMo: 300 });
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
   // --- Profilo, storie, feed -------------------------------------------

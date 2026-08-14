@@ -48,7 +48,7 @@ const MODULE_ORDER = ["yoga", "nissan-gtr", "beatbox", "fotografia", "cybersecur
 async function run() {
   const suite = createSuite("home.spec.js");
   const server = await startServer(APP_ROOT);
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ headless: false, slowMo: 300 });
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
   // --- Composizione e contenuto ---------------------------------------
