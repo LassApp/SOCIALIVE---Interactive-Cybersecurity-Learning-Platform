@@ -1,0 +1,12 @@
+{
+  "id": "phishing",
+  "type": "phishing-simulation",
+  "title": "Phishing",
+  "description": "Un'email apparentemente urgente da una banca porta a un sito fittizio che raccoglie credenziali e dati di pagamento: uno scenario per imparare a riconoscere i segnali d'allarme prima di consegnare qualunque dato.",
+  "chrome": "none",
+  "dataRefs": {
+    "inbox": "data/scenarios/phishing/inbox.json",
+    "bankSite": "data/scenarios/phishing/bank-site.json",
+    "reveal": "data/scenarios/phishing/reveal.json"
+  }
+}

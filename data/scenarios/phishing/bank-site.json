@@ -1,0 +1,14 @@
+{
+  "bankName": "Banca Centrale Sicura",
+  "fakeUrl": "banca-centrale-sicura-verifica.com/area-clienti",
+  "loginStep": {
+    "title": "Accedi al tuo conto",
+    "description": "Inserisci le tue credenziali per continuare in sicurezza.",
+    "submitLabel": "Accedi"
+  },
+  "cardStep": {
+    "title": "Conferma il metodo di pagamento",
+    "description": "Il pagamento ricorrente non è andato a buon fine. Aggiorna i dati della tua carta per evitare la sospensione del servizio.",
+    "submitLabel": "Conferma pagamento"
+  }
+}

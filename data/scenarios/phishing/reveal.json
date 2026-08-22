@@ -1,0 +1,27 @@
+{
+  "title": "Hai appena subito un phishing simulato",
+  "intro": "Nessun dato è stato realmente inviato: quello che hai inserito è rimasto sempre e solo in questo browser. Ma se questa fosse stata un'email reale, a quest'ora un truffatore avrebbe già le tue credenziali e i dati della tua carta.",
+  "redFlags": [
+    {
+      "title": "Mittente sospetto",
+      "description": "L'indirizzo del mittente non corrisponde al dominio ufficiale di una banca: è lungo, insolito, e contiene parole come \"verifica\" pensate per sembrare rassicuranti."
+    },
+    {
+      "title": "Tono di urgenza",
+      "description": "La richiesta di agire \"entro 24 ore\" è una tecnica classica: meno tempo per riflettere, più probabilità di agire d'istinto."
+    },
+    {
+      "title": "Saluto generico",
+      "description": "\"Gentile cliente\" invece del tuo nome: una banca reale, che ti conosce già, si rivolgerebbe a te per nome."
+    },
+    {
+      "title": "Indirizzo del sito non ufficiale",
+      "description": "L'indirizzo mostrato in alto alla pagina non è il dominio reale della banca, ma un sito costruito apposta per sembrarci simile."
+    },
+    {
+      "title": "Richiesta di dati non necessaria",
+      "description": "Nessuna banca reale chiede di reinserire credenziali complete e dati della carta di pagamento per risolvere un problema di addebito."
+    }
+  ],
+  "closingText": "La prossima volta che ricevi un'email così: controlla il mittente, resisti all'urgenza, e verifica l'indirizzo del sito PRIMA di inserire qualunque dato."
+}

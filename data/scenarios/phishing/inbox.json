@@ -1,0 +1,55 @@
+{
+  "emails": [
+    {
+      "id": "email-005",
+      "sender": { "name": "ConnectWork", "address": "notifiche@connectwork.example" },
+      "subject": "Hai 3 nuove visualizzazioni del profilo",
+      "snippet": "Il tuo profilo sta attirando l'attenzione questa settimana...",
+      "body": "Ciao,\n\nquesta settimana il tuo profilo ha ricevuto 3 nuove visualizzazioni. Aggiorna la tua esperienza lavorativa per aumentare la tua visibilità.\n\nIl team di ConnectWork",
+      "timestamp": "10:24",
+      "unread": true,
+      "isTarget": false
+    },
+    {
+      "id": "email-004",
+      "sender": { "name": "Banca Centrale Sicura", "address": "assistenza@banca-centrale-sicura-verifica.com" },
+      "subject": "Azione richiesta: pagamento non riuscito",
+      "snippet": "Non siamo riusciti ad addebitare il pagamento ricorrente sul tuo conto...",
+      "body": "Gentile cliente,\n\nnon siamo riusciti ad addebitare il pagamento ricorrente collegato al tuo conto. Per evitare la sospensione dei servizi, verifica i tuoi dati entro le prossime 24 ore.\n\nSe non provvederai in tempo, l'accesso al tuo conto potrebbe essere temporaneamente limitato.\n\nCordiali saluti,\nIl team di Banca Centrale Sicura",
+      "timestamp": "09:47",
+      "unread": true,
+      "isTarget": true,
+      "ctaLabel": "Verifica il pagamento"
+    },
+    {
+      "id": "email-003",
+      "sender": { "name": "EnergiaPlus", "address": "bollette@energiaplus.example" },
+      "subject": "La tua bolletta di ottobre è disponibile",
+      "snippet": "Gentile cliente, la tua bolletta è pronta per la consultazione...",
+      "body": "Gentile cliente,\n\nla tua bolletta relativa al mese di ottobre è ora disponibile nella tua area riservata. L'importo verrà addebitato automaticamente il giorno 15 del mese.\n\nGrazie per aver scelto EnergiaPlus.",
+      "timestamp": "09:15",
+      "unread": true,
+      "isTarget": false
+    },
+    {
+      "id": "email-002",
+      "sender": { "name": "Chiara Moretti", "address": "chiara.moretti@scuola-digitale.it" },
+      "subject": "Riunione dipartimento spostata",
+      "snippet": "Ciao, la riunione di giovedì è stata spostata alle 15:00...",
+      "body": "Ciao,\n\nti scrivo per avvisarti che la riunione di dipartimento di giovedì è stata spostata alle 15:00, stessa sala. Fammi sapere se per te va bene.\n\nA presto,\nChiara",
+      "timestamp": "Ieri, 18:32",
+      "unread": false,
+      "isTarget": false
+    },
+    {
+      "id": "email-001",
+      "sender": { "name": "NewsFlash", "address": "newsletter@newsflash.example" },
+      "subject": "5 libri da leggere questo autunno",
+      "snippet": "La nostra selezione settimanale di letture consigliate...",
+      "body": "Ciao,\n\necco la nostra selezione settimanale di letture consigliate dalla redazione. Questa settimana ci concentriamo su romanzi brevi, perfetti per chi ha poco tempo libero.\n\nBuona lettura,\nLa redazione di NewsFlash",
+      "timestamp": "Ieri, 11:03",
+      "unread": false,
+      "isTarget": false
+    }
+  ]
+}

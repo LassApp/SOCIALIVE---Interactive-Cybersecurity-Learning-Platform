@@ -55,6 +55,7 @@
   <link rel="stylesheet" href="css/components/media-viewer.css" />
   <link rel="stylesheet" href="css/scenarios/profile-timeline.css" />
   <link rel="stylesheet" href="css/scenarios/fake-login-capture.css" />
+  <link rel="stylesheet" href="css/scenarios/phishing-simulation.css" />
   <link rel="stylesheet" href="css/layouts/login-page.css" />
   <link rel="stylesheet" href="css/layouts/home-page.css" />
   <link rel="stylesheet" href="css/layouts/scenario-page.css" />
@@ -63,22 +64,8 @@
 <body>
   <main id="app-root"></main>
 
-  <!--
-    Client Supabase vendorizzato (Fase Auth Supabase, nuovo): SCRIPT
-    CLASSICO, senza type="module" e SENZA defer/async, posizionato PRIMA
-    del modulo di bootstrap sotto — esegue in modo sincrono nel punto in
-    cui il parser lo incontra, mentre un <script type="module"> esegue
-    sempre dopo la fine del parsing del documento (per specifica). Al
-    momento in cui il modulo sotto viene valutato, "window.supabase" è
-    quindi già garantito presente — vedi il commento di testa a
-    js/vendor/supabase-js.umd.js per il rationale completo (perché
-    vendorizzato e non caricato da CDN, perché UMD e non il build ESM).
-  -->
-  <script src="js/vendor/supabase-js.umd.js"></script>
-
   <script type="module">
     import { initTheme } from "./js/services/themeService.js";
-    import { initSession } from "./js/services/authService.js";
     import { init as initRouter, registerRoute } from "./js/core/router.js";
     import { createLoginPageController } from "./js/pages/loginPageController.js";
     import { createHomePageController } from "./js/pages/homePageController.js";
@@ -87,11 +74,13 @@
     import { registerRenderer } from "./js/scenarios/scenarioEngine.js";
     import { renderProfileTimeline } from "./js/scenarios/renderers/profileTimelineRenderer.js";
     import { renderFakeLoginCapture } from "./js/scenarios/renderers/fakeLoginCaptureRenderer.js";
+    import { renderPhishingSimulation } from "./js/scenarios/renderers/phishingSimulationRenderer.js";
 
     initTheme();
 
     registerRenderer("profile-timeline", renderProfileTimeline);
     registerRenderer("fake-login-capture", renderFakeLoginCapture);
+    registerRenderer("phishing-simulation", renderPhishingSimulation);
 
     registerRoute("#/login", createLoginPageController, { protected: false, title: "Accedi" });
     registerRoute("#/home", createHomePageController, { protected: true, title: "Home" });
@@ -103,15 +92,6 @@
       protected: true,
       title: "Scenario",
     });
-
-    // Unico punto asincrono introdotto dalla migrazione a Supabase Auth
-    // (vedi rationale completo in authService.js): DEVE risolvere PRIMA
-    // di initRouter(), altrimenti la primissima resolve() del router
-    // (innescata subito dopo, per l'hash iniziale) osserverebbe una
-    // cache di sessione ancora vuota e redirigerebbe erroneamente a
-    // #/login anche per un docente già autenticato. "await" di livello
-    // top qui è nativamente supportato dagli script type="module".
-    await initSession();
 
     initRouter(document.getElementById("app-root"));
   </script>

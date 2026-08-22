@@ -10,7 +10,8 @@
       "available": true,
       "scenarios": [
         { "id": "oversharing", "title": "Oversharing", "available": true },
-        { "id": "keylogger", "title": "Keylogger", "available": true }
+        { "id": "keylogger", "title": "Keylogger", "available": true },
+        { "id": "phishing", "title": "Phishing", "available": true }
       ]
     },
     { "id": "ricette", "title": "Ricette", "available": false }

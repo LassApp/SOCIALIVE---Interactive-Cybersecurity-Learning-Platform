@@ -1,0 +1,364 @@
+/**
+ * phishing-simulation.css
+ * -----------------------------------------------------------------------
+ * Stile del renderer "phishing-simulation" (scenario Phishing, terzo type
+ * reale del progetto). Come già fake-login-capture.css per il Keylogger,
+ * questo file possiede SOLO l'aspetto del proprio contenuto: il
+ * centraggio verticale a piena viewport arriva da
+ * .sl-scenario-page__immersive (scenario-page.css, già esistente,
+ * nessuna modifica necessaria) — stesso principio "estendere, non
+ * duplicare" già seguito ovunque nel progetto.
+ *
+ * Il finto client di posta è trattato come una CARD centrata (max-width
+ * 640px, la stessa larghezza già usata da profile-timeline.css e da
+ * module-scenarios-page.css per contenuti a colonna singola) — non a
+ * piena pagina: un vero webmail visto su una LIM in aula si presenta più
+ * credibile come finestra applicativa che come sfondo totale, e riusa lo
+ * stesso linguaggio visivo "scheda su canvas" già stabilito da Keylogger
+ * per l'altro scenario immersivo.
+ *
+ * "overflow:hidden" sulla card + "overflow-y:auto" solo su
+ * .sl-phishing__view: gli angoli arrotondati del contenitore esterno non
+ * devono mai mostrarsi "tagliati" a scorrimento in corso — lo scroll
+ * resta un dettaglio interno della sola area contenuto, il topbar (con
+ * il brand) resta sempre fisso e visibile.
+ *
+ * Nessun nuovo accostamento colore: border-subtle/text-primary/
+ * text-secondary/bg-hover/primary-text sono già verificati ovunque nel
+ * progetto sugli stessi sfondi (bg-surface) — nessuna verifica WCAG
+ * aggiuntiva necessaria.
+ *
+ * Stato "non letta": SOLO un rinforzo visivo (peso tipografico), mai
+ * l'unico segnale — l'informazione equivalente è già comunicata via
+ * aria-label esplicito in JS (vedi phishingSimulationRenderer.js), stesso
+ * principio "mai il solo colore/stile" applicato ovunque nel Design
+ * System.
+ */
+
+.sl-phishing {
+  width: 100%;
+  max-width: 640px;
+  max-height: calc(100vh - var(--sl-space-8));
+  display: flex;
+  flex-direction: column;
+  background-color: var(--sl-color-bg-surface);
+  border-radius: var(--sl-radius-lg);
+  box-shadow: var(--sl-shadow-2);
+  overflow: hidden;
+}
+
+.sl-phishing__topbar {
+  flex-shrink: 0;
+  padding: var(--sl-space-4) var(--sl-space-5);
+  border-bottom: 1px solid var(--sl-color-border-subtle);
+}
+
+.sl-phishing__brand {
+  font-size: var(--sl-font-size-lg);
+  font-weight: var(--sl-font-weight-bold);
+  color: var(--sl-color-primary-text);
+}
+
+.sl-phishing__view {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sl-phishing__view-title {
+  padding: var(--sl-space-4) var(--sl-space-5) 0;
+  font-size: var(--sl-font-size-md);
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+}
+
+/* --- Inbox: lista email ---------------------------------------------- */
+
+.sl-phishing__email-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--sl-space-2);
+}
+
+.sl-phishing__email-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sl-space-3);
+  width: 100%;
+  padding: var(--sl-space-4) var(--sl-space-5);
+  text-align: left;
+  border-bottom: 1px solid var(--sl-color-border-subtle);
+  transition: background-color var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-phishing__email-row:hover,
+.sl-phishing__email-row:focus-visible {
+  background-color: var(--sl-color-bg-hover);
+}
+
+.sl-phishing__email-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-1);
+  min-width: 0;
+  flex: 1;
+}
+
+.sl-phishing__email-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sl-space-3);
+}
+
+.sl-phishing__email-sender {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-sm);
+}
+
+.sl-phishing__email-sender--unread {
+  font-weight: var(--sl-font-weight-bold);
+}
+
+.sl-phishing__email-timestamp {
+  flex-shrink: 0;
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-xs);
+}
+
+.sl-phishing__email-subject {
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sl-phishing__email-subject--unread {
+  font-weight: var(--sl-font-weight-semibold);
+}
+
+.sl-phishing__email-snippet {
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Dettaglio email --------------------------------------------------- */
+
+.sl-phishing__detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-4);
+  padding: var(--sl-space-5);
+}
+
+.sl-button.sl-phishing__back {
+  align-self: flex-start;
+}
+
+.sl-phishing__detail-subject {
+  font-size: var(--sl-font-size-lg);
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-phishing__detail-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sl-space-3);
+}
+
+.sl-phishing__detail-sender-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sl-phishing__detail-sender-name {
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-sm);
+}
+
+.sl-phishing__detail-sender-address {
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-xs);
+}
+
+.sl-phishing__detail-timestamp {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-xs);
+}
+
+.sl-phishing__detail-body {
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-md);
+  line-height: var(--sl-line-height-relaxed);
+  white-space: pre-line;
+}
+
+.sl-button.sl-phishing__cta {
+  align-self: flex-start;
+}
+
+/* --- Finto sito bancario (Accesso / Pagamento) ------------------------ */
+
+.sl-phishing__browser {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Barra indirizzo: l'unico elemento pensato esplicitamente per
+   insegnare "controlla l'URL prima di inserire qualunque dato" (vedi
+   reveal.json). Sfondo bg-elevated (già verificato altrove come "sfondo
+   di pannelli/superfici sollevate"), monospace per leggere chiaramente
+   ogni carattere del dominio — un font proporzionale renderebbe più
+   difficile notare l'anomalia. */
+.sl-phishing__browser-bar {
+  padding: var(--sl-space-2) var(--sl-space-5);
+  background-color: var(--sl-color-bg-elevated);
+  border-bottom: 1px solid var(--sl-color-border-subtle);
+}
+
+.sl-phishing__browser-url {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--sl-font-size-xs);
+  color: var(--sl-color-text-secondary);
+}
+
+.sl-phishing__bank {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-2);
+  padding: var(--sl-space-6) var(--sl-space-5);
+}
+
+.sl-phishing__bank-name {
+  font-size: var(--sl-font-size-xl);
+  font-weight: var(--sl-font-weight-bold);
+  color: var(--sl-color-primary-text);
+  margin-bottom: var(--sl-space-3);
+}
+
+.sl-phishing__bank-step-title {
+  font-size: var(--sl-font-size-lg);
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-phishing__bank-step-description {
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-sm);
+  margin-bottom: var(--sl-space-2);
+}
+
+.sl-phishing__bank-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-4);
+  margin-top: var(--sl-space-2);
+}
+
+/* Selettore a doppia classe per battere in specificità button.css senza
+   dipendere dall'ordine di caricamento — stesso principio già applicato
+   in login-form.css/post-card.css. */
+.sl-button.sl-phishing__bank-submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: var(--sl-space-2);
+}
+
+/* --- Rivelazione -------------------------------------------------------- */
+
+.sl-phishing__reveal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-4);
+  padding: var(--sl-space-6) var(--sl-space-5);
+}
+
+.sl-phishing__reveal-badge {
+  align-self: flex-start;
+}
+
+.sl-phishing__reveal-title {
+  font-size: var(--sl-font-size-xl);
+  font-weight: var(--sl-font-weight-bold);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-phishing__reveal-intro {
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-md);
+  line-height: var(--sl-line-height-relaxed);
+}
+
+.sl-phishing__reveal-flags {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-4);
+  /* reset.css azzera list-style/padding su ogni <ol>/<ul> del progetto:
+     la numerazione visiva arriva quindi da un contatore CSS dedicato
+     (sotto), non dai marcatori nativi della lista — stesso principio
+     già seguito da Timeline.js (<ol> per l'ordine semantico, non per la
+     resa visiva dei numeri). */
+  counter-reset: sl-reveal-flag;
+}
+
+.sl-phishing__reveal-flag {
+  position: relative;
+  padding-left: var(--sl-space-8);
+}
+
+/* Pallino numerato: stessa coppia info-bg-subtle/info-text già
+   verificata e usata da Badge per il tono "info" — nessun nuovo
+   accostamento colore, uso puramente decorativo/non testuale (soglia
+   3:1, non 4.5:1 — il numero è un rinforzo visivo, il testo del segnale
+   accanto porta già l'informazione completa). */
+.sl-phishing__reveal-flag::before {
+  counter-increment: sl-reveal-flag;
+  content: counter(sl-reveal-flag);
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--sl-radius-full);
+  background-color: var(--sl-color-info-bg-subtle);
+  color: var(--sl-color-info-text);
+  font-size: var(--sl-font-size-xs);
+  font-weight: var(--sl-font-weight-bold);
+}
+
+.sl-phishing__reveal-flag-title {
+  font-size: var(--sl-font-size-md);
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-phishing__reveal-flag-description {
+  margin-top: var(--sl-space-1);
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-sm);
+  line-height: var(--sl-line-height-relaxed);
+}
+
+.sl-phishing__reveal-closing {
+  padding-top: var(--sl-space-3);
+  border-top: 1px solid var(--sl-color-border-subtle);
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-sm);
+  font-weight: var(--sl-font-weight-medium);
+  line-height: var(--sl-line-height-relaxed);
+}
