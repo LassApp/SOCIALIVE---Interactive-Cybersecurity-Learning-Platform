@@ -36,10 +36,12 @@
  * ora che la vista di destinazione (il finto sito) esiste, il CTA è
  * cablato alla transizione reale.
  *
- * FETCH: inbox.json (createLocalJsonRepository, "emails" come
- * collectionKey) + bank-site.json/reveal.json (createLocalJsonResource,
- * risorse singole) — tutti e tre in un solo Promise.all, stesso pattern
- * già usato da profileTimelineRenderer.js per i propri tre dataset.
+ * FETCH: inbox.json + bank-site.json + reveal.json, tutti tramite
+ * createLocalJsonResource (risorse singole) in un solo Promise.all —
+ * stesso pattern già usato da profileTimelineRenderer.js per i propri
+ * tre dataset. inbox.json non è più una collezione piatta di email dalla
+ * Fase "cartelle" in poi: vedi "REVISIONE POST-PRODUZIONE" più sotto per
+ * il rationale completo del cambio di schema.
  *
  * MACCHINA A STATI — rebuild-on-transition, non show/hide di sottoalberi
  * paralleli: a differenza del toggle Feed/Archivio di
@@ -98,11 +100,77 @@
  * cambio di contenuto non accompagnato da una vera navigazione di pagina.
  *
  * Firma richiesta dall'engine: (container, scenario) => Promise<destroy|undefined>.
+ *
+ * ------------------------------------------------------------------------
+ * REVISIONE POST-PRODUZIONE (richieste del docente dopo il primo uso reale)
+ * ------------------------------------------------------------------------
+ *
+ * FULL-SCREEN SU TUTTE E 5 LE VISTE (decisione confermata dall'utente,
+ * non presunta): ".sl-phishing" non è più una card centrata (640px) ma
+ * riempie l'intera viewport (position:fixed, inset:0) — un client di
+ * posta/sito bancario reale, su una LIM, si presenta più credibile come
+ * finestra "di sistema" a schermo intero, non come un widget dentro una
+ * pagina più larga. La "chrome" propria di ciascuna vista (barra
+ * MailTime, barra indirizzo del finto sito) resta però edge-to-edge
+ * (span dell'intera larghezza), mentre il CONTENUTO sotto è racchiuso in
+ * una colonna centrata (max-width 640px, lo stesso valore già stabilito
+ * altrove nel Design System — profile-timeline.css,
+ * module-scenarios-page.css — non un nuovo numero arbitrario): un vero
+ * client di posta a schermo intero non stira comunque il testo dei
+ * messaggi per l'intera larghezza di un monitor. Per ottenere questo
+ * (topbar full-width, contenuto centrato) senza duplicare la "chrome" in
+ * ogni vista, Inbox e Dettaglio separano ora esplicitamente un
+ * "-content" interno dal wrapper esterno (vedi buildInboxView/
+ * buildEmailDetailView) — le due viste del finto sito bancario non ne
+ * hanno bisogno: la loro "chrome" (buildBrowserBar) era già un elemento
+ * fratello del contenuto, non un suo genitore, quindi il solo CSS
+ * (".sl-phishing__bank { max-width:640px; margin-inline:auto; }") basta,
+ * zero modifiche JS in quei due punti. La Rivelazione, priva di
+ * qualunque "chrome" per sua stessa natura pedagogica (vedi rationale
+ * originale sopra), riceve lo stesso trattamento CSS diretto.
+ *
+ * CARTELLE (nuovo — richiesta esplicita "architettura estendibile, anche
+ * solo Spam vuota"): inbox.json passa da un array piatto "emails" a
+ * "folders": [{ id, label, emails: [...] }] — uno switch tra due opzioni
+ * di schema equivalenti (l'alternativa era "emails" piatto + campo
+ * "folder" su ciascuna email + un array di metadati cartella separato).
+ * Scelto "folders" annidate perché il consumo qui è sempre "mostrami il
+ * contenuto di UNA cartella alla volta" (mai una vista cross-cartella o
+ * un'email in più cartelle): annidare evita un filtro implicito
+ * (emails.filter(e => e.folder === activeId)) per un'operazione che lo
+ * schema stesso già garantisce per costruzione. Conseguenza tecnica:
+ * inbox.json non è più una "collezione" nel senso di
+ * createLocalJsonRepository (un array con id da cercare), è un singolo
+ * oggetto radice — si usa quindi createLocalJsonResource, la stessa
+ * fabbrica già usata per bankSite/reveal (createLocalJsonRepository non
+ * serve più in questo file). UI minima richiesta esplicitamente (non
+ * solo schema dati): due tab ("Posta in arrivo"/"Spam"), STESSO pattern
+ * a bottone-toggle già stabilito da profileTimelineRenderer.js per
+ * Post/Archivio (Button ghost + pressed + indicatore a sottolineatura) —
+ * riuso di un pattern esistente, non una nuova invenzione. Una cartella
+ * vuota (Spam, oggi) mostra un semplice paragrafo "Nessuna email in
+ * questa cartella." invece di una lista vuota silenziosa. Cambiare
+ * cartella RICOSTRUISCE l'intera vista Inbox (stesso principio
+ * "rebuild-on-transition" già motivato in testa al file, non un nuovo
+ * meccanismo): activeFolderId è stato locale al mount, mai persistito
+ * (ogni apertura/refresh riparte da "Posta in arrivo", stesso principio
+ * già seguito per isFollowing/isPrivate in Oversharing).
+ *
+ * STATO "LETTA" AGGIORNATO ALL'APERTURA (bug segnalato dal docente,
+ * risolto come conseguenza diretta del refactor sopra): showEmailDetail
+ * ora muta "email.unread = false" PRIMA di montare il Dettaglio — non su
+ * una copia, sullo stesso oggetto referenziato dall'array "emails" della
+ * cartella attiva, quindi il successivo showInbox() (al click su
+ * "Indietro", o passando per una cartella e tornando) lo vede già
+ * aggiornato senza bisogno di alcuna sincronizzazione esplicita.
+ * Aggiorna insieme peso tipografico E aria-label (mai il solo stile —
+ * principio invariato, vedi rationale originale su buildEmailRow). Stato
+ * mai persistito, per lo stesso motivo di "activeFolderId" sopra.
  */
 
 import { createElement, clearChildren } from "../../utils/dom.js";
 import { buildFallbackMessage } from "../../utils/fallbackMessage.js";
-import { createLocalJsonRepository, createLocalJsonResource } from "../../repositories/localJsonRepository.js";
+import { createLocalJsonResource } from "../../repositories/localJsonRepository.js";
 import { create as createAvatar } from "../../components/Avatar.js";
 import { create as createButton } from "../../components/Button.js";
 import { create as createInput } from "../../components/Input.js";
@@ -199,23 +267,85 @@ function buildMailTopbar() {
   return createElement("div", { classNames: "sl-phishing__topbar" }, [brand]);
 }
 
-function buildInboxView(emails, onOpen) {
-  const topbar = buildMailTopbar();
-  const heading = createElement("h2", { classNames: "sl-phishing__view-title", text: "Posta in arrivo" });
+// Tab di cambio cartella — STESSO pattern a bottone-toggle già stabilito
+// da profileTimelineRenderer.js per Post/Archivio (Button ghost + pressed
+// + indicatore a sottolineatura via CSS, non un vero widget ARIA
+// "tablist" — stesso rationale già motivato lì: costruire la semantica
+// completa di tab per due sole cartelle statiche sarebbe un contratto di
+// interazione promesso e non implementato).
+function buildFolderTabs(folders, activeFolderId, onChange) {
+  const entries = folders.map((folder) => {
+    const isActive = folder.id === activeFolderId;
+    const button = createButton({ variant: "ghost", label: folder.label, pressed: isActive });
+    button.element.classList.add("sl-phishing__folder-tab");
+    function handleClick() {
+      if (folder.id !== activeFolderId) onChange(folder.id);
+    }
+    button.element.addEventListener("sl:click", handleClick);
+    return { button, handleClick };
+  });
 
-  const rows = emails.map((email) => buildEmailRow(email, onOpen));
-
-  const list = createElement(
-    "ul",
-    { classNames: "sl-phishing__email-list" },
-    rows.map((row) => row.element)
+  const element = createElement(
+    "div",
+    { classNames: "sl-phishing__folder-tabs" },
+    entries.map((entry) => entry.button.element)
   );
-
-  const element = createElement("div", { classNames: "sl-phishing__inbox" }, [topbar, heading, list]);
 
   return {
     element,
     destroy() {
+      entries.forEach(({ button, handleClick }) => {
+        button.element.removeEventListener("sl:click", handleClick);
+        button.destroy();
+      });
+    },
+  };
+}
+
+// FULL-SCREEN (nuovo, vedi rationale in testa al file): il topbar
+// "MailTime" resta un elemento FRATELLO del contenuto, non un suo
+// genitore — .sl-phishing__inbox-content (CSS) può quindi ricevere
+// max-width+margin-inline:auto senza costringere anche il topbar dentro
+// la stessa colonna stretta, ottenendo "chrome" edge-to-edge + contenuto
+// centrato con la sola aggiunta di un wrapper, zero altre modifiche
+// strutturali.
+//
+// <h2> visivamente nascosto (non più visibile come prima "Posta in
+// arrivo"): con le tab di cartella ora visibili, un titolo di sezione
+// visibile duplicherebbe l'informazione già comunicata dalla tab attiva
+// (label + aria-pressed) — resta comunque un vero <h2> nell'albero di
+// accessibilità (mai rimosso, solo nascosto alla vista), per chi naviga
+// per intestazioni con uno screen reader.
+function buildInboxView(folders, activeFolderId, onOpen, onFolderChange) {
+  const topbar = buildMailTopbar();
+  const activeFolder = folders.find((folder) => folder.id === activeFolderId) || folders[0];
+  const emails = activeFolder.emails || [];
+
+  const tabs = buildFolderTabs(folders, activeFolderId, onFolderChange);
+  const heading = createElement("h2", { classNames: "sl-visually-hidden", text: activeFolder.label });
+
+  const rows = emails.map((email) => buildEmailRow(email, onOpen));
+
+  // Cartella vuota (oggi: Spam) → un paragrafo esplicito, non una lista
+  // vuota silenziosa: comunica lo stato invece di lasciare un'area bianca
+  // ambigua (assenza di contenuto ≠ errore di caricamento).
+  const listOrEmpty =
+    rows.length > 0
+      ? createElement("ul", { classNames: "sl-phishing__email-list" }, rows.map((row) => row.element))
+      : createElement("p", { classNames: "sl-phishing__email-empty", text: "Nessuna email in questa cartella." });
+
+  const content = createElement("div", { classNames: "sl-phishing__inbox-content" }, [
+    tabs.element,
+    heading,
+    listOrEmpty,
+  ]);
+
+  const element = createElement("div", { classNames: "sl-phishing__inbox" }, [topbar, content]);
+
+  return {
+    element,
+    destroy() {
+      tabs.destroy();
       rows.forEach((row) => row.destroy());
     },
   };
@@ -261,7 +391,7 @@ function buildEmailDetailView(email, { onOpenSite, onBack }) {
   const subject = createElement("h2", { classNames: "sl-phishing__detail-subject", text: email.subject || "" });
   const body = createElement("p", { classNames: "sl-phishing__detail-body", text: email.body || "" });
 
-  const children = [topbar, backButton.element, subject, metaRow, body];
+  const contentChildren = [backButton.element, subject, metaRow, body];
 
   // CTA presente SOLO se il dato lo prevede (campo "ctaLabel" in
   // inbox.json, oggi solo sull'email target) — vedi rationale "STEP
@@ -271,10 +401,13 @@ function buildEmailDetailView(email, { onOpenSite, onBack }) {
     ctaButton = createButton({ variant: "primary", label: email.ctaLabel });
     ctaButton.element.classList.add("sl-phishing__cta");
     ctaButton.element.addEventListener("sl:click", onOpenSite);
-    children.push(ctaButton.element);
+    contentChildren.push(ctaButton.element);
   }
 
-  const element = createElement("div", { classNames: "sl-phishing__detail" }, children);
+  // FULL-SCREEN (nuovo): topbar FRATELLO del contenuto, non genitore —
+  // stesso principio già applicato in buildInboxView, vedi rationale lì.
+  const content = createElement("div", { classNames: "sl-phishing__detail-content" }, contentChildren);
+  const element = createElement("div", { classNames: "sl-phishing__detail" }, [topbar, content]);
 
   return {
     element,
@@ -559,22 +692,33 @@ export async function renderPhishingSimulation(container, scenario) {
     return undefined;
   }
 
-  let emails;
+  let inboxData;
   let bankSite;
   let reveal;
 
   try {
-    const inboxRepository = createLocalJsonRepository({ url: refs.inbox, collectionKey: "emails", idField: "id" });
+    const inboxResource = createLocalJsonResource({ url: refs.inbox });
     const bankSiteResource = createLocalJsonResource({ url: refs.bankSite });
     const revealResource = createLocalJsonResource({ url: refs.reveal });
 
-    [emails, bankSite, reveal] = await Promise.all([
-      inboxRepository.list(),
+    [inboxData, bankSite, reveal] = await Promise.all([
+      inboxResource.get(),
       bankSiteResource.get(),
       revealResource.get(),
     ]);
   } catch (error) {
     console.error(`[phishingSimulationRenderer] Impossibile caricare i dati per "${scenario.id}"`, error);
+    container.appendChild(buildFallbackMessage("Questo scenario non è disponibile al momento."));
+    return undefined;
+  }
+
+  // "folders" assente/vuoto è trattato come dato malformato, non come
+  // "nessuna email" (che è invece un caso legittimo per Spam) — stesso
+  // criterio già seguito da scenarioEngine.js per uno scenario.json privo
+  // del campo "type".
+  const folders = Array.isArray(inboxData?.folders) ? inboxData.folders : [];
+  if (folders.length === 0) {
+    console.error(`[phishingSimulationRenderer] "folders" assente o vuoto in inbox.json per "${scenario.id}".`);
     container.appendChild(buildFallbackMessage("Questo scenario non è disponibile al momento."));
     return undefined;
   }
@@ -592,6 +736,15 @@ export async function renderPhishingSimulation(container, scenario) {
 
   let currentView = null; // { element, destroy() } — vista attualmente montata in "viewport"
 
+  // Stato locale al mount, MAI persistito (stesso principio già seguito
+  // per isFollowing/isPrivate in Oversharing): ogni apertura/refresh
+  // dello scenario riparte sempre da "Posta in arrivo".
+  let activeFolderId = folders[0].id;
+
+  function getActiveFolder() {
+    return folders.find((folder) => folder.id === activeFolderId) || folders[0];
+  }
+
   function mountView(nextView) {
     if (currentView) currentView.destroy();
     clearChildren(viewport);
@@ -600,13 +753,25 @@ export async function renderPhishingSimulation(container, scenario) {
   }
 
   function showInbox() {
-    mountView(buildInboxView(emails, showEmailDetail));
-    status.textContent = `Posta in arrivo: ${emails.length} email`;
+    mountView(buildInboxView(folders, activeFolderId, showEmailDetail, switchFolder));
+    const activeFolder = getActiveFolder();
+    status.textContent = `${activeFolder.label}: ${activeFolder.emails.length} email`;
+  }
+
+  function switchFolder(folderId) {
+    activeFolderId = folderId;
+    showInbox();
   }
 
   function showEmailDetail(emailId) {
-    const email = emails.find((item) => item.id === emailId);
+    const email = (getActiveFolder().emails || []).find((item) => item.id === emailId);
     if (!email) return;
+    // Muta l'oggetto REALE referenziato dall'array "emails" della
+    // cartella attiva (mai una copia): il successivo showInbox() lo
+    // legge già aggiornato, senza sincronizzazione esplicita — stesso
+    // principio già seguito da handlePostLike in profileTimelineRenderer.js
+    // per il proprio aggiornamento ottimistico. Stato mai persistito.
+    email.unread = false;
     const onOpenSite = email.ctaLabel ? showBankLogin : undefined;
     mountView(buildEmailDetailView(email, { onOpenSite, onBack: showInbox }));
     status.textContent = `Email aperta: ${email.subject || ""}`;

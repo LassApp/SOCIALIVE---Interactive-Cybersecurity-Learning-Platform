@@ -47,14 +47,56 @@
  * "chrome" risolva — sia per la scelta dello scheletro sia per il
  * montaggio successivo del renderer via loadScenario().
  *
+ * USCITA DALLA MODALITÀ IMMERSIVA (nuovo — richiesta del docente dopo
+ * l'uso in produzione di Keylogger/Phishing): la modalità immersiva, per
+ * design, non mostra AppHeader/Sidebar — ma questo lasciava il docente
+ * SENZA ALCUNA via di uscita in-app dal flusso (solo back del browser o
+ * modifica manuale dell'hash). Un bottone icona "×" (stesso pattern
+ * grafico già usato da Modal/MediaViewer per la propria chiusura) viene
+ * quindi montato QUI, non nei singoli renderer: un concern trasversale a
+ * QUALUNQUE scenario chrome:"none", presente e futuro — un secondo
+ * renderer immersivo (oltre a Keylogger/Phishing) lo eredita
+ * automaticamente, zero modifiche a quel renderer (stesso principio DRY
+ * già seguito per .sl-scenario-page__immersive stesso). Nome accessibile
+ * onesto ("Torna alla Home", via aria-label): non compare come testo
+ * visibile (l'icona resta un semplice "×", discreta e non didattica),
+ * ma un docente che naviga con screen reader deve comunque sapere dove
+ * porta — non c'è motivo di offuscare il nome accessibile per il
+ * realismo, che riguarda solo la resa VISIVA per gli studenti in aula.
+ * Presente fin dal primo istante (non solo dopo una rivelazione, che
+ * Keylogger non ha nemmeno): la via di uscita deve esistere per tutta
+ * la durata della simulazione, non solo alla fine.
+ *
  * Interfaccia: (container, params) => destroy, coerente con router.js.
  */
 
 import { createElement } from "../utils/dom.js";
 import { create as createPageContainer } from "../components/PageContainer.js";
+import { create as createButton } from "../components/Button.js";
 import { createAppShell } from "./shared/appShell.js";
 import { loadScenario } from "../scenarios/scenarioEngine.js";
 import { createLocalJsonResource } from "../repositories/localJsonRepository.js";
+import { navigate } from "../core/router.js";
+import { svgNode } from "../utils/svg.js";
+
+// Icona "×" — stesso identico pattern già usato da Modal.js/MediaViewer.js
+// per la propria chiusura (nessuna dipendenza dall'icon sprite, ancora
+// assente, debito noto da Fase 2). Locale a questo file: un solo
+// consumer (il bottone di uscita sotto), non vale l'indirection di un
+// quarto import da svg.js per una singola forma non riusata altrove in
+// questo controller.
+function buildExitIcon() {
+  const svg = svgNode("svg", { viewBox: "0 0 24 24", fill: "none" });
+  svg.appendChild(
+    svgNode("path", {
+      d: "M6 6L18 18M18 6L6 18",
+      stroke: "currentColor",
+      "stroke-width": "2",
+      "stroke-linecap": "round",
+    })
+  );
+  return svg;
+}
 
 export function createScenarioPageController(container, params) {
   let destroyed = false;
@@ -62,6 +104,11 @@ export function createScenarioPageController(container, params) {
   let pageContainer = null;
   let mountPoint = null;
   let engineDestroy = null;
+  let exitButton = null;
+
+  function handleExitClick() {
+    navigate("#/home");
+  }
 
   const loadingPlaceholder = createElement("div", { attrs: { "aria-busy": "true" } });
   container.appendChild(loadingPlaceholder);
@@ -88,6 +135,15 @@ export function createScenarioPageController(container, params) {
       const isImmersive = Boolean(scenario && scenario.chrome === "none");
 
       if (isImmersive) {
+        exitButton = createButton({
+          variant: "icon",
+          ariaLabel: "Torna alla Home",
+          icon: buildExitIcon(),
+        });
+        exitButton.element.classList.add("sl-scenario-page__immersive-exit");
+        exitButton.element.addEventListener("sl:click", handleExitClick);
+        container.appendChild(exitButton.element);
+
         mountPoint = createElement("div", { classNames: "sl-scenario-page__immersive" });
         container.appendChild(mountPoint);
       } else {
@@ -116,6 +172,10 @@ export function createScenarioPageController(container, params) {
       if (engineDestroy) engineDestroy();
     });
     loadingPlaceholder.remove();
+    if (exitButton) {
+      exitButton.element.removeEventListener("sl:click", handleExitClick);
+      exitButton.destroy();
+    }
     if (pageContainer) {
       pageContainer.destroy();
       shell.destroy();

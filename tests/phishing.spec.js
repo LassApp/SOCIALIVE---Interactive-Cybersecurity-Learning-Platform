@@ -7,6 +7,15 @@
  * scenari sotto Cybersecurity), flusso completo a 5 viste, regressione
  * sui due scenari precedenti (Oversharing, Keylogger) per confermare che
  * l'aggiunta del terzo type non li abbia toccati.
+ *
+ * ESTESO (revisione post-produzione, richieste del docente dopo il primo
+ * uso reale): bottone di uscita in-app dalla modalità immersiva (condiviso
+ * con Keylogger, verificato qui perché Phishing è lo scenario con più
+ * viste in cui testarlo); layout full-screen su tutte e 5 le viste
+ * (prima: card centrata 640px); cartelle email (schema "folders" in
+ * inbox.json + tab "Posta in arrivo"/"Spam", quest'ultima vuota); stato
+ * "letta" aggiornato realmente all'apertura (bug segnalato dal docente:
+ * prima restava "non letta" anche dopo l'apertura).
  */
 const assert = require("node:assert/strict");
 const path = require("node:path");
@@ -116,7 +125,84 @@ async function run() {
     await context.close();
   }
 
-  // --- Regressione: Oversharing e Keylogger invariati ---------------------
+  // --- Revisione post-produzione: uscita, full-screen, cartelle, letta --
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await loginAsDocente(page, server.url);
+    await page.goto(`${server.url}/#/scenario/phishing`);
+    await page.waitForSelector(".sl-phishing");
+
+    await suite.test("bottone di uscita: presente, aria-label onesto, riporta a #/home", async () => {
+      const exitButton = page.locator(".sl-scenario-page__immersive-exit");
+      assert.equal(await exitButton.count(), 1);
+      assert.equal(await exitButton.getAttribute("aria-label"), "Torna alla Home");
+      await exitButton.click();
+      await page.waitForFunction(() => window.location.hash === "#/home");
+    });
+
+    await page.goto(`${server.url}/#/scenario/phishing`);
+    await page.waitForSelector(".sl-phishing");
+
+    await suite.test("full-screen: .sl-phishing riempie l'intera viewport (non più una card)", async () => {
+      const box = await page.locator(".sl-phishing").boundingBox();
+      const viewport = page.viewportSize();
+      assert.equal(box.width, viewport.width);
+      assert.equal(box.height, viewport.height);
+    });
+
+    await suite.test("cartelle: 2 tab, 'Posta in arrivo' attiva di default", async () => {
+      const tabs = page.locator(".sl-phishing__folder-tab");
+      assert.equal(await tabs.count(), 2);
+      assert.equal((await tabs.nth(0).textContent()).trim(), "Posta in arrivo");
+      assert.equal(await tabs.nth(0).getAttribute("aria-pressed"), "true");
+      assert.equal((await tabs.nth(1).textContent()).trim(), "Spam");
+      assert.equal(await tabs.nth(1).getAttribute("aria-pressed"), "false");
+    });
+
+    await suite.test("click su 'Spam': 0 email, stato vuoto esplicito, tab sincronizzate", async () => {
+      await page.click(".sl-phishing__folder-tab >> nth=1");
+      assert.equal(await page.locator(".sl-phishing__email-row").count(), 0);
+      const empty = await page.locator(".sl-phishing__email-empty").textContent();
+      assert.equal(empty.trim(), "Nessuna email in questa cartella.");
+      assert.equal(await page.locator(".sl-phishing__folder-tab >> nth=1").getAttribute("aria-pressed"), "true");
+      assert.equal(await page.locator(".sl-phishing__folder-tab >> nth=0").getAttribute("aria-pressed"), "false");
+    });
+
+    await suite.test("torna su 'Posta in arrivo': 5 email di nuovo visibili", async () => {
+      await page.click(".sl-phishing__folder-tab >> nth=0");
+      assert.equal(await page.locator(".sl-phishing__email-row").count(), 5);
+    });
+
+    await suite.test("stato letta: apertura di un'email non letta aggiorna aria-label E peso tipografico al ritorno", async () => {
+      // La prima riga (ConnectWork) è unread:true nei dati demo.
+      const firstRow = page.locator(".sl-phishing__email-row").nth(0);
+      const beforeLabel = await firstRow.getAttribute("aria-label");
+      assert.ok(beforeLabel.startsWith("Non letta."), "l'email non risulta 'non letta' prima dell'apertura");
+
+      await firstRow.click();
+      await page.waitForSelector(".sl-phishing__detail");
+      await page.click(".sl-phishing__back");
+      await page.waitForSelector(".sl-phishing__email-row");
+
+      const afterRow = page.locator(".sl-phishing__email-row").nth(0);
+      assert.ok(
+        !(await afterRow.getAttribute("aria-label")).startsWith("Non letta."),
+        "l'email risulta ancora 'non letta' dopo l'apertura — bug segnalato dal docente"
+      );
+      assert.equal(
+        await afterRow.locator(".sl-phishing__email-sender--unread").count(),
+        0,
+        "la classe --unread è ancora presente dopo l'apertura"
+      );
+    });
+
+    await suite.test("screenshot — Phishing full-screen, Inbox con tab cartelle", async () => {
+      await page.screenshot({ path: path.join(SCREENSHOT_DIR, "phishing-fullscreen-inbox.png"), fullPage: true });
+    });
+
+    await context.close();
+  }
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();

@@ -2,31 +2,47 @@
  * phishing-simulation.css
  * -----------------------------------------------------------------------
  * Stile del renderer "phishing-simulation" (scenario Phishing, terzo type
- * reale del progetto). Come già fake-login-capture.css per il Keylogger,
- * questo file possiede SOLO l'aspetto del proprio contenuto: il
- * centraggio verticale a piena viewport arriva da
- * .sl-scenario-page__immersive (scenario-page.css, già esistente,
- * nessuna modifica necessaria) — stesso principio "estendere, non
- * duplicare" già seguito ovunque nel progetto.
+ * reale del progetto).
  *
- * Il finto client di posta è trattato come una CARD centrata (max-width
- * 640px, la stessa larghezza già usata da profile-timeline.css e da
- * module-scenarios-page.css per contenuti a colonna singola) — non a
- * piena pagina: un vero webmail visto su una LIM in aula si presenta più
- * credibile come finestra applicativa che come sfondo totale, e riusa lo
- * stesso linguaggio visivo "scheda su canvas" già stabilito da Keylogger
- * per l'altro scenario immersivo.
+ * FULL-SCREEN SU TUTTE E 5 LE VISTE (decisione rivista dopo l'uso in
+ * produzione — sostituisce la precedente scelta "card centrata 640px"):
+ * .sl-phishing è oggi position:fixed + inset:0, non più vincolata al
+ * centraggio verticale fornito da .sl-scenario-page__immersive
+ * (scenario-page.css) — un elemento fixed ignora comunque il proprio
+ * antenato posizionato per il calcolo di "inset", quindi il genitore
+ * .sl-scenario-page__immersive resta semanticamente corretto (e invariato
+ * per Keylogger, che continua a usarlo per il proprio centraggio a card)
+ * pur non avendo più alcun effetto visivo su questo file.
  *
- * "overflow:hidden" sulla card + "overflow-y:auto" solo su
- * .sl-phishing__view: gli angoli arrotondati del contenitore esterno non
- * devono mai mostrarsi "tagliati" a scorrimento in corso — lo scroll
- * resta un dettaglio interno della sola area contenuto, il topbar (con
- * il brand) resta sempre fisso e visibile.
+ * "CHROME" EDGE-TO-EDGE, CONTENUTO CENTRATO: il topbar del client di
+ * posta (.sl-phishing__topbar) e la barra indirizzo del finto sito
+ * (.sl-phishing__browser-bar) spannano l'intera larghezza — un vero
+ * client/browser a schermo intero ha una barra applicativa che tocca i
+ * bordi. Il CONTENUTO sotto resta invece racchiuso in una colonna
+ * centrata (max-width 640px, la stessa larghezza già usata da
+ * profile-timeline.css/module-scenarios-page.css — non un nuovo numero
+ * arbitrario): un client di posta reale non stira comunque il testo dei
+ * messaggi per l'intera larghezza di un monitor. Per Inbox/Dettaglio
+ * questo richiede un wrapper "-content" dedicato, separato dal topbar
+ * (vedi .sl-phishing__inbox-content/.sl-phishing__detail-content sotto,
+ * e il rationale JS in phishingSimulationRenderer.js su perché il topbar
+ * è un FRATELLO del contenuto, non un suo genitore). Il finto sito
+ * bancario e la Rivelazione non hanno bisogno di un wrapper dedicato: la
+ * loro "chrome" (o l'assenza totale di chrome, per la Rivelazione) era
+ * già strutturata correttamente, basta max-width+margin-inline:auto
+ * sull'elemento di contenuto esistente (.sl-phishing__bank/
+ * .sl-phishing__reveal).
+ *
+ * CARTELLE (nuovo): .sl-phishing__folder-tabs riusa ESATTAMENTE lo stesso
+ * linguaggio visivo già stabilito da .sl-profile-timeline__tabs per il
+ * toggle Post/Archivio (Button ghost + indicatore a sottolineatura via
+ * border-bottom + [aria-pressed]) — stessi token, stessa soglia di
+ * contrasto già verificata lì, nessuna nuova verifica necessaria.
  *
  * Nessun nuovo accostamento colore: border-subtle/text-primary/
- * text-secondary/bg-hover/primary-text sono già verificati ovunque nel
- * progetto sugli stessi sfondi (bg-surface) — nessuna verifica WCAG
- * aggiuntiva necessaria.
+ * text-secondary/bg-hover/primary-text/primary-500 sono già verificati
+ * ovunque nel progetto sugli stessi sfondi (bg-surface) — nessuna
+ * verifica WCAG aggiuntiva necessaria in questo file.
  *
  * Stato "non letta": SOLO un rinforzo visivo (peso tipografico), mai
  * l'unico segnale — l'informazione equivalente è già comunicata via
@@ -36,15 +52,11 @@
  */
 
 .sl-phishing {
-  width: 100%;
-  max-width: 640px;
-  max-height: calc(100vh - var(--sl-space-8));
+  position: fixed;
+  inset: 0;
   display: flex;
   flex-direction: column;
   background-color: var(--sl-color-bg-surface);
-  border-radius: var(--sl-radius-lg);
-  box-shadow: var(--sl-shadow-2);
-  overflow: hidden;
 }
 
 .sl-phishing__topbar {
@@ -65,11 +77,53 @@
   overflow-y: auto;
 }
 
-.sl-phishing__view-title {
-  padding: var(--sl-space-4) var(--sl-space-5) 0;
-  font-size: var(--sl-font-size-md);
-  font-weight: var(--sl-font-weight-semibold);
+/* --- Inbox: cartelle, lista email -------------------------------------- */
+
+.sl-phishing__inbox,
+.sl-phishing__detail {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Colonna di contenuto centrata sotto il topbar full-width — vedi
+   rationale "CHROME EDGE-TO-EDGE" in testa al file. */
+.sl-phishing__inbox-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
+}
+
+/* Stesso pattern a bottone-toggle già stabilito da
+   .sl-profile-timeline__tabs/__tab (profile-timeline.css) per
+   Post/Archivio — vedi rationale in testa al file. Padding orizzontale
+   space-5: allinea le tab al padding già usato da .sl-phishing__email-row
+   subito sotto. */
+.sl-phishing__folder-tabs {
+  display: flex;
+  gap: var(--sl-space-2);
+  padding: var(--sl-space-2) var(--sl-space-5) 0;
+  border-bottom: 1px solid var(--sl-color-border-subtle);
+}
+
+.sl-button.sl-phishing__folder-tab {
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--sl-color-text-secondary);
+  padding-bottom: var(--sl-space-3);
+}
+
+.sl-button.sl-phishing__folder-tab[aria-pressed="true"] {
   color: var(--sl-color-text-primary);
+  border-bottom-color: var(--sl-color-primary-500);
+}
+
+.sl-phishing__email-empty {
+  padding: var(--sl-space-8) var(--sl-space-5);
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-sm);
+  text-align: center;
 }
 
 /* --- Inbox: lista email ---------------------------------------------- */
@@ -151,10 +205,13 @@
 
 /* --- Dettaglio email --------------------------------------------------- */
 
-.sl-phishing__detail {
+.sl-phishing__detail-content {
   display: flex;
   flex-direction: column;
   gap: var(--sl-space-4);
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
   padding: var(--sl-space-5);
 }
 
@@ -238,6 +295,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--sl-space-2);
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
   padding: var(--sl-space-6) var(--sl-space-5);
 }
 
@@ -282,6 +342,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--sl-space-4);
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
   padding: var(--sl-space-6) var(--sl-space-5);
 }
 

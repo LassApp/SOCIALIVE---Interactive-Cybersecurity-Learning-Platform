@@ -27,6 +27,43 @@
  * proprio adattamento generico di questa rotta, indipendente da
  * qualunque CSS specifico di renderer (che resta sempre di competenza
  * del renderer stesso — profile-timeline.css, fake-login-capture.css).
+ *
+ * .sl-scenario-page__immersive-exit (nuovo — bottone di uscita in-app
+ * dalla modalità immersiva, richiesto dal docente dopo l'uso in
+ * produzione di Keylogger/Phishing): vive qui, non nel CSS di un
+ * renderer, per lo stesso motivo di .sl-scenario-page__immersive —
+ * concern trasversale a QUALUNQUE scenario chrome:"none" (vedi
+ * rationale completo in scenarioPageController.js, che lo monta).
+ *
+ * position:fixed, ancorato alla viewport (non a .sl-scenario-page__
+ * immersive, che è solo un flex-center — un discendente position:fixed
+ * ignora comunque il proprio antenato posizionato per il calcolo di
+ * "inset", quindi il comportamento sarebbe identico anche annidato: si
+ * sceglie qui il livello più esterno per chiarezza di lettura, non per
+ * necessità tecnica). z-index 500: sopra qualunque contenuto di
+ * scenario (che oggi non introduce mai un proprio z-index esplicito),
+ * ma sotto ProfileMenu (900)/Modal-MediaViewer (1000) — nessuno dei tre
+ * convive comunque con la modalità immersiva oggi, ma il valore resta
+ * coerente con la scala già stabilita nel progetto.
+ *
+ * background-color: bg-elevated (non trasparente, a differenza del
+ * default della variante "icon" di Button): il bottone deve restare
+ * leggibile sopra QUALUNQUE sfondo che il renderer sottostante scelga
+ * di mostrare (bg-canvas dell'area immersiva, bg-surface della card di
+ * Keylogger/Phishing) — stessa combinazione text-primary/bg-elevated
+ * già verificata numericamente altrove (ProfileMenu, 17.05:1/12.45:1),
+ * nessuna nuova verifica di contrasto necessaria. Selettore a doppia
+ * classe (.sl-button.sl-scenario-page__immersive-exit), stesso
+ * principio "non affidarsi alla cascata" già applicato ovunque nel
+ * progetto per gli override mirati di button.css.
+ *
+ * Opacità ridotta (0.6) a riposo, piena su hover/focus: il bottone deve
+ * restare visibile fin dal primo istante (non solo dopo una
+ * rivelazione, che Keylogger non ha nemmeno) ma senza dominare la
+ * scena e compromettere il realismo della simulazione attiva — un
+ * compromesso "presente ma discreto", non "nascosto fino all'attivazione"
+ * (quest'ultimo comportamento, corretto per una skip-link tastiera-first,
+ * sarebbe qui inadatto: il docente lavora col mouse, non con Tab).
  */
 
 .sl-scenario-page__main {
@@ -41,4 +78,20 @@
   justify-content: center;
   padding: var(--sl-space-4);
   background-color: var(--sl-color-bg-canvas);
+}
+
+.sl-button.sl-scenario-page__immersive-exit {
+  position: fixed;
+  top: var(--sl-space-4);
+  left: var(--sl-space-4);
+  z-index: 500;
+  background-color: var(--sl-color-bg-elevated);
+  opacity: 0.6;
+  transition: opacity var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-button.sl-scenario-page__immersive-exit:hover,
+.sl-button.sl-scenario-page__immersive-exit:focus-visible {
+  background-color: var(--sl-color-bg-elevated);
+  opacity: 1;
 }
