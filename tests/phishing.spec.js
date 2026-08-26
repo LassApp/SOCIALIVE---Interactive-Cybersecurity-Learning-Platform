@@ -16,6 +16,15 @@
  * inbox.json + tab "Posta in arrivo"/"Spam", quest'ultima vuota); stato
  * "letta" aggiornato realmente all'apertura (bug segnalato dal docente:
  * prima restava "non letta" anche dopo l'apertura).
+ *
+ * ESTESO ULTERIORMENTE (seconda revisione post-produzione): bottone di
+ * uscita riposizionato a destra — test di regressione dedicato che
+ * verifica geometricamente l'assenza di sovrapposizione col titolo
+ * "MailTime" (bug reale trovato leggendo il CSS, non solo la posizione
+ * dichiarata); riquadro "Rispondi" inline su ogni email della cartella
+ * attiva (non solo quella target), stessa finzione end-to-end già
+ * verificata per i form del finto sito bancario (nessuna richiesta di
+ * rete, validazione minima, conferma neutra).
  */
 const assert = require("node:assert/strict");
 const path = require("node:path");
@@ -133,6 +142,15 @@ async function run() {
     await page.goto(`${server.url}/#/scenario/phishing`);
     await page.waitForSelector(".sl-phishing");
 
+    await suite.test("bottone di uscita: ancorato a destra, nessuna sovrapposizione col titolo 'MailTime' (bug segnalato dal docente)", async () => {
+      const exitBox = await page.locator(".sl-scenario-page__immersive-exit").boundingBox();
+      const brandBox = await page.locator(".sl-phishing__brand").boundingBox();
+      assert.ok(
+        exitBox.x > brandBox.x + brandBox.width,
+        "il bottone di uscita si sovrappone ancora al titolo MailTime"
+      );
+    });
+
     await suite.test("bottone di uscita: presente, aria-label onesto, riporta a #/home", async () => {
       const exitButton = page.locator(".sl-scenario-page__immersive-exit");
       assert.equal(await exitButton.count(), 1);
@@ -199,6 +217,76 @@ async function run() {
 
     await suite.test("screenshot — Phishing full-screen, Inbox con tab cartelle", async () => {
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, "phishing-fullscreen-inbox.png"), fullPage: true });
+    });
+
+    await context.close();
+  }
+
+  // --- "Rispondi" inline (revisione post-produzione #2) -------------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+
+    const externalRequests = [];
+    page.on("request", (req) => {
+      const url = new URL(req.url());
+      if (url.hostname !== "127.0.0.1") externalRequests.push(req.url());
+    });
+
+    await loginAsDocente(page, server.url);
+    await page.goto(`${server.url}/#/scenario/phishing`);
+    await page.waitForSelector(".sl-phishing");
+
+    await suite.test("'Rispondi' presente sull'email target, insieme al CTA (i due non si escludono)", async () => {
+      // La quarta riga (indice 3) è l'email target con ctaLabel, per
+      // costruzione dei dati di inbox.json.
+      await page.click(".sl-phishing__email-row >> nth=3");
+      await page.waitForSelector(".sl-phishing__detail");
+      assert.equal(await page.locator(".sl-phishing__cta").count(), 1);
+      assert.equal(await page.locator(".sl-phishing__reply-toggle").count(), 1);
+      await page.click(".sl-phishing__back");
+      await page.waitForSelector(".sl-phishing__email-row");
+    });
+
+    await suite.test("'Rispondi' presente anche su un'email di riempimento (senza CTA) — richiesta 'su tutte'", async () => {
+      await page.click(".sl-phishing__email-row >> nth=0");
+      await page.waitForSelector(".sl-phishing__detail");
+      assert.equal(await page.locator(".sl-phishing__cta").count(), 0);
+      assert.equal(await page.locator(".sl-phishing__reply-toggle").count(), 1);
+    });
+
+    await suite.test("click su 'Rispondi': il toggle sparisce, il riquadro appare, focus sulla textarea", async () => {
+      await page.click(".sl-phishing__reply-toggle");
+      await page.waitForSelector(".sl-phishing__reply-form");
+      assert.equal(await page.locator(".sl-phishing__reply-toggle").count(), 0);
+      const isFieldFocused = await page.evaluate(
+        () => document.activeElement.classList.contains("sl-phishing__reply-field")
+      );
+      assert.ok(isFieldFocused, "il focus non si sposta sulla textarea alla rivelazione del riquadro");
+    });
+
+    await suite.test("invio vuoto -> 'Campo obbligatorio.', nessun invio simulato", async () => {
+      await page.click(".sl-phishing__reply-form button[type='submit']");
+      const helperText = await page.locator(".sl-phishing__reply-form .sl-input__helper").textContent();
+      assert.equal(helperText.trim(), "Campo obbligatorio.");
+      assert.equal(await page.locator(".sl-phishing__reply-field").getAttribute("aria-invalid"), "true");
+    });
+
+    await suite.test("invio con testo -> stato 'Invio in corso…', poi conferma neutra e annuncio aria-live", async () => {
+      await page.fill(".sl-phishing__reply-field", "Grazie per l'informazione, controllo subito.");
+      await page.click(".sl-phishing__reply-form button[type='submit']");
+      assert.equal(
+        (await page.locator(".sl-phishing__reply-form button[type='submit']").textContent()).trim(),
+        "Invio in corso…"
+      );
+      await page.waitForSelector(".sl-phishing__reply-confirmation");
+      assert.equal((await page.locator(".sl-phishing__reply-confirmation").textContent()).trim(), "Risposta inviata.");
+      assert.equal(await page.locator(".sl-phishing__reply-form").count(), 0, "il form resta nel DOM dopo l'invio");
+      assert.equal(await page.locator(".sl-phishing__reply-status").textContent(), "Risposta inviata.");
+    });
+
+    await suite.test("VINCOLO ETICO: 'Rispondi' non genera alcuna richiesta verso un host esterno (nessun testo mai inviato in rete)", async () => {
+      assert.deepEqual(externalRequests, []);
     });
 
     await context.close();

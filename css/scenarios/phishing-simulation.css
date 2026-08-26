@@ -44,6 +44,13 @@
  * ovunque nel progetto sugli stessi sfondi (bg-surface) — nessuna
  * verifica WCAG aggiuntiva necessaria in questo file.
  *
+ * "RISPONDI" INLINE (nuovo — vedi rationale completo in
+ * phishingSimulationRenderer.js): il riquadro riusa .sl-input__field/
+ * __label/__helper (già verificati in input.css) sulla <textarea>
+ * grezza — le regole qui sotto aggiungono SOLO ciò che è specifico di
+ * questo scenario (layout del riquadro, dimensione della textarea),
+ * mai una riscrittura di bordo/focus/stato di errore già risolti altrove.
+ *
  * Stato "non letta": SOLO un rinforzo visivo (peso tipografico), mai
  * l'unico segnale — l'informazione equivalente è già comunicata via
  * aria-label esplicito in JS (vedi phishingSimulationRenderer.js), stesso
@@ -264,6 +271,51 @@
 
 .sl-button.sl-phishing__cta {
   align-self: flex-start;
+}
+
+/* --- "Rispondi" inline (nuovo) ----------------------------------------
+   .sl-phishing__reply-area eredita align-items:stretch dal genitore
+   (.sl-phishing__detail-content non lo sovrascrive): il riquadro di
+   risposta occupa così l'intera colonna, mentre il solo bottone
+   "Rispondi" opta fuori con align-self:flex-start — stesso identico
+   principio già applicato due righe sopra per __back/__cta. */
+.sl-phishing__reply-area {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-3);
+}
+
+.sl-button.sl-phishing__reply-toggle {
+  align-self: flex-start;
+}
+
+.sl-phishing__reply-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-2);
+}
+
+/* width:100% esplicito (non solo affidato allo stretch del flex
+   column): una <textarea> porta un "cols" intrinseco (di norma 20) che
+   in alcuni browser può prevalere sullo stretch del proprio contenitore
+   flex — stessa cautela già presa altrove nel progetto quando un
+   elemento nativo ha una dimensione intrinseca non desiderata. */
+.sl-phishing__reply-field {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+}
+
+.sl-button.sl-phishing__reply-submit {
+  align-self: flex-start;
+}
+
+/* Stesso trattamento neutro già usato da
+   .sl-fake-login-capture__completed (Keylogger) per lo stato "inviato" —
+   nessun nuovo colore, text-secondary già verificato ovunque. */
+.sl-phishing__reply-confirmation {
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-sm);
 }
 
 /* --- Finto sito bancario (Accesso / Pagamento) ------------------------ */

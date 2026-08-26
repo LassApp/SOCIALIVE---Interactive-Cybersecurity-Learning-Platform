@@ -166,6 +166,43 @@
  * Aggiorna insieme peso tipografico E aria-label (mai il solo stile —
  * principio invariato, vedi rationale originale su buildEmailRow). Stato
  * mai persistito, per lo stesso motivo di "activeFolderId" sopra.
+ *
+ * "RISPONDI" INLINE (nuovo — richiesta esplicita del docente per
+ * aumentare il realismo del finto client): buildEmailDetailView() mostra
+ * ora un bottone "Rispondi" su OGNI email della cartella attiva, non
+ * solo su quella target — decisione confermata dall'utente: l'obiettivo
+ * è "sembrare un vero client di posta" in generale, non rinforzare la
+ * sola email di phishing. Un click rivela un riquadro inline (textarea +
+ * bottone "Invia risposta") sotto il corpo del messaggio — SOSTITUISCE
+ * il bottone "Rispondi" stesso (mai i due visibili insieme), stesso
+ * principio "disclosure" già usato altrove nel progetto (es. il trigger
+ * profilo di AppHeader). Nessuna vista Compose separata: la vista
+ * Dettaglio è già ricostruita ad ogni transizione (rebuild-on-transition,
+ * vedi sopra) e non ha alcuno stato da preservare, quindi un sesto stato
+ * nella macchina a stati sarebbe complessità aggiunta senza un bisogno
+ * reale (YAGNI) — un riquadro inline ottiene lo stesso risultato
+ * percepito con una sola vista in più da mantenere, zero.
+ *
+ * FINZIONE END-TO-END, stesso livello già usato dai due form del finto
+ * sito bancario e dal download di Keylogger: nessun testo scritto viene
+ * mai persistito in alcun modo (né storage.js né altrove) — solo una
+ * finta latenza (FAKE_SUBMIT_DELAY_MS, stessa costante già in uso) e un
+ * messaggio neutro di conferma ("Risposta inviata."). Validazione
+ * minima e deliberata: solo "non vuoto" (validateRequired, la stessa
+ * funzione già riusata dai due form bancari), nessun controllo di
+ * lunghezza/formato — non è compito di SOCIALIVE giudicare la qualità
+ * di un testo libero.
+ *
+ * TEXTAREA SENZA UN NUOVO COMPONENTE DEDICATO: Input.js espone solo
+ * campi a riga singola (text/email/password/search) — introdurre un
+ * componente "Textarea" nel Design System con un solo consumer reale
+ * violerebbe lo stesso principio YAGNI già applicato ovunque nel
+ * progetto. Il campo (costruito localmente in questo file, vedi
+ * buildReplyBox) riusa però le classi CSS di Input già verificate
+ * (.sl-input__field/__label/__helper — bordo, focus, stato di errore,
+ * disabled) invece di duplicarle: stesso principio DRY già seguito da
+ * altri file del progetto quando riusano token/classi esistenti su
+ * elementi non costruiti da un componente dedicato.
  */
 
 import { createElement, clearChildren } from "../../utils/dom.js";
@@ -351,9 +388,97 @@ function buildInboxView(folders, activeFolderId, onOpen, onFolderChange) {
   };
 }
 
+// Riquadro di risposta inline — vedi rationale ""RISPONDI" INLINE" in
+// testa al file per le decisioni (finzione end-to-end, textarea senza
+// componente dedicato, validazione minima). Costruito una sola volta al
+// click su "Rispondi" (non già presente e nascosto nel DOM): un campo in
+// più raggiungibile con Tab prima che serva non è necessario finché
+// l'utente non ha davvero scelto di rispondere — stesso principio
+// "disclosure" già seguito da AppHeader/ProfileMenu.
+function buildReplyBox(onSent) {
+  const state = { text: "" };
+  const fieldId = `sl-phishing-reply-${Math.random().toString(36).slice(2, 8)}`;
+  const helperId = `${fieldId}-helper`;
+
+  const label = createElement("label", {
+    classNames: "sl-input__label",
+    attrs: { for: fieldId },
+    text: "La tua risposta",
+  });
+
+  // Textarea grezza (non Input.js, che espone solo campi a riga
+  // singola): riusa comunque .sl-input__field per bordo/focus/stato di
+  // errore già verificati, vedi rationale in testa al file.
+  const field = createElement("textarea", {
+    classNames: ["sl-input__field", "sl-phishing__reply-field"],
+    attrs: { id: fieldId, rows: "4" },
+  });
+
+  const helper = createElement("p", { classNames: "sl-input__helper", attrs: { id: helperId } });
+  helper.hidden = true;
+
+  function handleInput(event) {
+    state.text = event.target.value;
+  }
+  field.addEventListener("input", handleInput);
+
+  const spinner = createLoader({ size: "sm" });
+  const sendButton = createButton({ type: "submit", variant: "primary", label: "Invia risposta" });
+  sendButton.element.classList.add("sl-phishing__reply-submit");
+
+  // novalidate + validazione propria: stesso pattern già usato dai due
+  // form del finto sito bancario (buildBankLoginView/buildBankCardView),
+  // non una seconda tecnica da mantenere.
+  const form = createElement(
+    "form",
+    { classNames: "sl-phishing__reply-form", attrs: { novalidate: "true" } },
+    [label, field, helper, sendButton.element]
+  );
+
+  let isSubmitting = false;
+  let submitTimer = null;
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    if (isSubmitting) return;
+
+    const error = validateRequired(state.text);
+    helper.textContent = error || "";
+    helper.hidden = !error;
+    helper.classList.toggle("sl-input__helper--error", Boolean(error));
+    field.setAttribute("aria-invalid", String(Boolean(error)));
+    if (error) {
+      field.setAttribute("aria-describedby", helperId);
+      field.focus();
+      return;
+    }
+    field.removeAttribute("aria-describedby");
+
+    isSubmitting = true;
+    field.disabled = true;
+    sendButton.update({ disabled: true, label: "Invio in corso…", icon: spinner.element });
+    submitTimer = setTimeout(onSent, FAKE_SUBMIT_DELAY_MS);
+  }
+  form.addEventListener("submit", handleSubmit);
+
+  return {
+    element: form,
+    focus() {
+      field.focus();
+    },
+    destroy() {
+      if (submitTimer) clearTimeout(submitTimer);
+      field.removeEventListener("input", handleInput);
+      form.removeEventListener("submit", handleSubmit);
+      sendButton.destroy();
+    },
+  };
+}
+
 // Vista di dettaglio. "onOpenSite" è definita SOLO se l'email porta un
-// ctaLabel (solo l'email target, per costruzione dei dati) — le email di
-// riempimento restano di sola lettura, un bottone "Indietro" e nient'altro.
+// ctaLabel (solo l'email target, per costruzione dei dati) — ogni email,
+// target o di riempimento, ha comunque sempre un bottone "Rispondi"
+// (vedi rationale ""RISPONDI" INLINE" in testa al file).
 function buildEmailDetailView(email, { onOpenSite, onBack }) {
   const topbar = buildMailTopbar();
 
@@ -404,6 +529,53 @@ function buildEmailDetailView(email, { onOpenSite, onBack }) {
     contentChildren.push(ctaButton.element);
   }
 
+  // --- "Rispondi" (nuovo, inline, su ogni email) -----------------------
+  // Un solo bottone finché l'utente non lo attiva; al click si sostituisce
+  // con il riquadro di risposta (mai i due visibili insieme). Annuncio
+  // aria-live dedicato (distinto dallo "status" della macchina a stati,
+  // che comunica i CAMBI DI VISTA — qui il cambio avviene dentro la
+  // stessa vista, coerente con lo stesso principio già seguito da
+  // profileTimelineRenderer.js per "followStatus" vs "viewStatus").
+  const replyToggle = createButton({ variant: "secondary", label: "Rispondi" });
+  replyToggle.element.classList.add("sl-phishing__reply-toggle");
+
+  const replyArea = createElement("div", { classNames: "sl-phishing__reply-area" }, [replyToggle.element]);
+
+  const replyStatus = createElement("p", {
+    classNames: ["sl-visually-hidden", "sl-phishing__reply-status"],
+    attrs: { role: "status", "aria-live": "polite" },
+  });
+
+  let replyBox = null;
+
+  function handleReplySent() {
+    if (replyBox) {
+      replyBox.destroy();
+      replyBox.element.remove();
+      replyBox = null;
+    }
+    replyArea.appendChild(
+      createElement("p", { classNames: "sl-phishing__reply-confirmation", text: "Risposta inviata." })
+    );
+    replyStatus.textContent = "Risposta inviata.";
+    // Nessun listener applicativo reale lo ascolta oggi — stesso
+    // trattamento già riservato altrove nel progetto a interazioni non
+    // implementate (es. sl:search), pronto per un futuro consumer.
+    replyArea.dispatchEvent(
+      new CustomEvent("sl:phishing-reply-sent", { bubbles: true, detail: { emailId: email.id } })
+    );
+  }
+
+  function handleReplyToggleClick() {
+    replyToggle.element.remove();
+    replyBox = buildReplyBox(handleReplySent);
+    replyArea.appendChild(replyBox.element);
+    replyBox.focus();
+  }
+  replyToggle.element.addEventListener("sl:click", handleReplyToggleClick);
+
+  contentChildren.push(replyArea, replyStatus);
+
   // FULL-SCREEN (nuovo): topbar FRATELLO del contenuto, non genitore —
   // stesso principio già applicato in buildInboxView, vedi rationale lì.
   const content = createElement("div", { classNames: "sl-phishing__detail-content" }, contentChildren);
@@ -419,6 +591,9 @@ function buildEmailDetailView(email, { onOpenSite, onBack }) {
         ctaButton.element.removeEventListener("sl:click", onOpenSite);
         ctaButton.destroy();
       }
+      replyToggle.element.removeEventListener("sl:click", handleReplyToggleClick);
+      replyToggle.destroy();
+      if (replyBox) replyBox.destroy();
     },
   };
 }

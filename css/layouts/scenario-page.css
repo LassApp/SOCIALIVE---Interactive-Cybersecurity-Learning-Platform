@@ -64,6 +64,26 @@
  * compromesso "presente ma discreto", non "nascosto fino all'attivazione"
  * (quest'ultimo comportamento, corretto per una skip-link tastiera-first,
  * sarebbe qui inadatto: il docente lavora col mouse, non con Tab).
+ *
+ * BUG REALE TROVATO E CORRETTO (angolo top-LEFT → top-RIGHT): il bottone
+ * era stato originariamente ancorato a "left", esattamente lo stesso
+ * angolo in cui il topbar di Phishing colloca il proprio marchio
+ * ("MailTime", <h1> statico con padding space-4/space-5 — vedi
+ * .sl-phishing__topbar in phishing-simulation.css) — un elemento
+ * position:fixed viene dipinto sopra il contenuto in flusso normale
+ * dello stesso punto, quindi il bottone (opaco, z-index 500) copriva
+ * letteralmente le prime lettere del titolo. Segnalato dal docente dopo
+ * l'uso reale in aula, verificato leggendo il CSS di entrambi gli
+ * elementi (nessuno screenshot necessario: le coordinate coincidevano
+ * quasi esattamente). Spostato a "right": nessuna delle 5 viste di
+ * Phishing né la vista di Keylogger hanno alcun elemento ancorato in
+ * alto a destra (verificato leggendo tutte le regole position:fixed/
+ * absolute di entrambi gli scenari) — zero rischio di una collisione
+ * equivalente dall'altro lato. Coerente anche con la convenzione già
+ * stabilita nel Design System: il bottone × di chiusura di MediaViewer
+ * (media-viewer.css, .sl-media-viewer__close) è già "top/right" — un
+ * bottone di chiusura/uscita in alto a destra è ormai un pattern
+ * riconoscibile del progetto, non un'invenzione isolata di questo file.
  */
 
 .sl-scenario-page__main {
@@ -83,7 +103,7 @@
 .sl-button.sl-scenario-page__immersive-exit {
   position: fixed;
   top: var(--sl-space-4);
-  left: var(--sl-space-4);
+  right: var(--sl-space-4);
   z-index: 500;
   background-color: var(--sl-color-bg-elevated);
   opacity: 0.6;
