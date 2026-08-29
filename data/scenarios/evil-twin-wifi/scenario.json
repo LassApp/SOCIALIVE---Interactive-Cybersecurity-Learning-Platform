@@ -1,0 +1,12 @@
+{
+  "id": "evil-twin-wifi",
+  "type": "fake-captive-portal",
+  "title": "Evil Twin Wi-Fi",
+  "description": "Una rete Wi-Fi pubblica clonata mostra quanto sia facile ingannare chi cerca solo una connessione gratuita, e cosa può succedere alle credenziali inserite in un portale di accesso non verificato.",
+  "chrome": "none",
+  "dataRefs": {
+    "networks": "data/scenarios/evil-twin-wifi/networks.json",
+    "portal": "data/scenarios/evil-twin-wifi/portal-content.json",
+    "logTemplate": "data/scenarios/evil-twin-wifi/log-template.json"
+  }
+}

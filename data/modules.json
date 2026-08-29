@@ -11,7 +11,7 @@
       "scenarios": [
         { "id": "oversharing", "title": "Oversharing", "available": true },
         { "id": "keylogger", "title": "Keylogger", "available": true },
-        { "id": "phishing", "title": "Phishing", "available": true }
+        { "id": "evil-twin-wifi", "title": "Evil Twin Wi-Fi", "available": true }
       ]
     },
     { "id": "ricette", "title": "Ricette", "available": false }

@@ -1,0 +1,152 @@
+/**
+ * fake-captive-portal.css
+ * -----------------------------------------------------------------------
+ * Layout verticale già fornito da .sl-scenario-page__immersive
+ * (chrome:"none") — qui solo l'aspetto interno delle 4 viste.
+ * .sl-fake-captive-portal__panel riusa la stessa ricetta visiva già
+ * verificata per .sl-profile-timeline__private-notice (bg-surface +
+ * border-subtle + shadow-1 + radius-lg) — nessun nuovo accostamento
+ * colore introdotto.
+ */
+
+.sl-fake-captive-portal {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  justify-content: center;
+}
+
+.sl-fake-captive-portal__panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-4);
+  padding: var(--sl-space-8) var(--sl-space-6);
+  background-color: var(--sl-color-bg-surface);
+  border: 1px solid var(--sl-color-border-subtle);
+  border-radius: var(--sl-radius-lg);
+  box-shadow: var(--sl-shadow-1);
+}
+
+.sl-fake-captive-portal__title {
+  font-size: var(--sl-font-size-lg);
+  font-weight: var(--sl-font-weight-bold);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-fake-captive-portal__networks-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.sl-fake-captive-portal__network-item {
+  border-bottom: 1px solid var(--sl-color-border-subtle);
+}
+.sl-fake-captive-portal__network-item:last-child {
+  border-bottom: none;
+}
+
+.sl-fake-captive-portal__network-button {
+  display: flex;
+  align-items: center;
+  gap: var(--sl-space-3);
+  width: 100%;
+  padding: var(--sl-space-3) var(--sl-space-2);
+  color: var(--sl-color-text-primary);
+  transition: background-color var(--sl-duration-fast) var(--sl-ease-standard);
+}
+.sl-fake-captive-portal__network-button:hover {
+  background-color: var(--sl-color-bg-hover);
+}
+
+.sl-fake-captive-portal__network-item--secured {
+  display: flex;
+  align-items: center;
+  gap: var(--sl-space-3);
+  padding: var(--sl-space-3) var(--sl-space-2);
+  color: var(--sl-color-text-secondary);
+}
+
+.sl-fake-captive-portal__network-icon {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.sl-fake-captive-portal__network-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.sl-fake-captive-portal__network-ssid {
+  flex: 1;
+  text-align: left;
+  font-size: var(--sl-font-size-sm);
+  font-weight: var(--sl-font-weight-medium);
+}
+
+.sl-fake-captive-portal__network-lock {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.sl-fake-captive-portal__connecting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sl-space-4);
+  padding: var(--sl-space-8) 0;
+}
+
+.sl-fake-captive-portal__connecting-text {
+  font-size: var(--sl-font-size-sm);
+  color: var(--sl-color-text-secondary);
+}
+
+.sl-fake-captive-portal__portal-brand {
+  font-size: var(--sl-font-size-lg);
+  font-weight: var(--sl-font-weight-bold);
+  color: var(--sl-color-primary-text);
+}
+
+.sl-fake-captive-portal__portal-headline {
+  font-size: var(--sl-font-size-xl);
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-fake-captive-portal__portal-subheadline {
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-sm);
+}
+
+.sl-fake-captive-portal__social-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-2);
+}
+
+.sl-button.sl-fake-captive-portal__social-button {
+  width: 100%;
+  justify-content: center;
+}
+
+.sl-fake-captive-portal__divider {
+  text-align: center;
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-xs);
+}
+
+.sl-fake-captive-portal__terms {
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-xs);
+  line-height: var(--sl-line-height-relaxed);
+}
+
+.sl-fake-captive-portal__completed {
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-md);
+  text-align: center;
+}

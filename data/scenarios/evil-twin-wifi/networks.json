@@ -1,0 +1,30 @@
+{
+  "networks": [
+    {
+      "id": "net-001",
+      "ssid": "Aeroporto_WiFi_Ufficiale",
+      "signal": 3,
+      "secured": true
+    },
+    {
+      "id": "net-002",
+      "ssid": "Aeroporto_Free_WiFi",
+      "signal": 4,
+      "secured": false,
+      "isEvilTwin": true,
+      "insightNote": "Nome simile ma non identico alla rete ufficiale, nessuna sicurezza (WPA), segnale artificiosamente più forte: tre indizi tipici di un evil twin, mai segnalati in UI — emergono solo dalla narrazione del docente."
+    },
+    {
+      "id": "net-003",
+      "ssid": "Bar_Napoli_Guest",
+      "signal": 2,
+      "secured": true
+    },
+    {
+      "id": "net-004",
+      "ssid": "iPhone di Marco",
+      "signal": 1,
+      "secured": true
+    }
+  ]
+}

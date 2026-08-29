@@ -46,6 +46,14 @@
  * aggiungerne una sintetica (vedi rationale completo in
  * keyloggerLogGenerator.js).
  *
+ * DOWNLOAD DEL FILE — triggerTextDownload() condivisa (Evil Twin
+ * Wi-Fi, js/utils/textDownload.js): viveva come funzione locale in
+ * questo stesso file, estratta al secondo consumo reale
+ * (fakeCaptivePortalRenderer.js, scenario Evil Twin Wi-Fi) — stesso
+ * principio DRY già seguito per svg.js/fallbackMessage.js/
+ * imageFadeIn.js/mediaViewerLauncher.js. Comportamento identico,
+ * byte per byte, a prima: zero regressione attesa.
+ *
  * FINTA LATENZA DI SUBMIT (~800ms) — deviazione DICHIARATA dal principio
  * "niente latenza finta" stabilito per il Feed della Home (Fase 4 §4:
  * "un backend fittizio con latenza simulata sarebbe codice finto dentro
@@ -67,6 +75,7 @@
 
 import { createElement } from "../../utils/dom.js";
 import { buildFallbackMessage } from "../../utils/fallbackMessage.js";
+import { triggerTextDownload } from "../../utils/textDownload.js";
 import { createLocalJsonResource } from "../../repositories/localJsonRepository.js";
 import { create as createLoginForm } from "../../components/LoginForm.js";
 import { generateFakeLog } from "../../utils/keyloggerLogGenerator.js";
@@ -76,24 +85,6 @@ import { generateFakeLog } from "../../utils/keyloggerLogGenerator.js";
 // — vedi rationale "FINTA LATENZA DI SUBMIT" in testa al file per il
 // perché qui è una scelta deliberata, diversa dal caso Feed/Home.
 const FAKE_SUBMIT_DELAY_MS = 800;
-
-/**
- * Costruisce e scatena un download di testo puro via Blob — MAI una
- * richiesta di rete (vedi nota etica in testa al file). Il link non
- * resta mai visibile: montato e smontato nello stesso istante del
- * click sintetico.
- */
-function triggerTextDownload(fileName, content) {
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = createElement("a", { attrs: { href: url, download: fileName } });
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  // Il download è già stato avviato in modo sincrono dal click: revocare
-  // subito l'URL è sicuro e libera la memoria assegnata al Blob.
-  URL.revokeObjectURL(url);
-}
 
 export async function renderFakeLoginCapture(container, scenario) {
   const refs = scenario.dataRefs || {};

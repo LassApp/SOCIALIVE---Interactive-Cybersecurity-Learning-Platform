@@ -1,0 +1,10 @@
+{
+  "providerName": "FreeConnect",
+  "headline": "Accedi per continuare a navigare",
+  "subheadline": "Wi-Fi gratuito offerto in collaborazione con i nostri partner",
+  "termsText": "Accedendo accetti i Termini di servizio e l'Informativa sulla privacy della rete.",
+  "socialProviders": [
+    { "id": "social-connect", "label": "Accedi con SocialConnect" },
+    { "id": "mailid", "label": "Accedi con MailID" }
+  ]
+}

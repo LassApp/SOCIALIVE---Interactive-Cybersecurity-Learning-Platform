@@ -1,0 +1,38 @@
+{
+  "fileNamePattern": "portal_access_{yyyyMMdd}_{HHmmss}.txt",
+  "lineCount": { "min": 80, "max": 110 },
+  "captureBlock": { "positionRatio": { "min": 0.55, "max": 0.75 } },
+  "lineDelayMs": { "min": 50, "max": 3500 },
+  "levels": ["INFO", "DEBUG", "WARN", "SYS", "NET"],
+  "modules": [
+    "wifi.ap", "radius.auth", "dhcp.lease", "portal.gateway", "dns.resolver",
+    "captive.session", "net.bridge", "auth.relay", "traffic.monitor", "sys.watchdog"
+  ],
+  "messageTemplates": [
+    "{module}: client associato, MAC casuale rilevato",
+    "{module}: lease DHCP assegnato dopo {ms} ms",
+    "{module}: redirect verso captive portal, {count} richieste in coda",
+    "{module}: heartbeat ricevuto, {count2} sessioni attive",
+    "{module}: nessuna anomalia rilevata nell'ultimo ciclo",
+    "{module}: buffer di rete svuotato, {count} pacchetti elaborati",
+    "{module}: token di sessione rigenerato",
+    "{module}: ciclo di controllo completato in {ms} ms"
+  ],
+  "leadInMessage": "Richiesta di autenticazione ricevuta dal portale captive",
+  "captureLine": "auth.relay :: credenziali portale catturate -> username=\"{username}\" password=\"{password}\"",
+  "disclaimer": [
+    "----------------------------------------------------------------------",
+    "NOTA — SocialAlive (SOCIALIVE, piattaforma di Cybersecurity Awareness)",
+    "----------------------------------------------------------------------",
+    "Questo file è stato generato a scopo didattico. Nessuna rete Wi-Fi reale",
+    "è stata creata o clonata: username e password sopra sono quelli inseriti",
+    "volontariamente in questa demo, generati e scaricati interamente in",
+    "locale. Le altre righe sono rumore di log generato casualmente, senza",
+    "alcun significato reale.",
+    "",
+    "Una rete Wi-Fi pubblica gratuita non garantisce nulla su chi la gestisce",
+    "davvero: bastano un nome familiare e un segnale forte per convincere",
+    "qualcuno a connettersi e inserire le proprie credenziali.",
+    "----------------------------------------------------------------------"
+  ]
+}

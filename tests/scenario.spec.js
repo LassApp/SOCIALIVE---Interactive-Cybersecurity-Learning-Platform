@@ -1,22 +1,24 @@
 /**
  * scenario.spec.js
  * -----------------------------------------------------------------------
- * Copre il primo (e oggi unico) scenario reale, Oversharing (Fase 6),
- * incluso il Media Viewer collegato in Fase 7.
+ * Copre gli scenari reali del progetto: Oversharing (Fase 6, incluso il
+ * Media Viewer di Fase 7), Keylogger (fake-login-capture) ed Evil Twin
+ * Wi-Fi (fake-captive-portal, NUOVO — vedi blocco dedicato più sotto).
  *
- * chromium.launch({ headless: false }): stessa deviazione documentata
- * per esteso in login.spec.js (necessaria contro un timeout osservato
- * in headless verso Supabase Auth, usato qui tramite loginAsDocente()).
+ * MODIFICATO (Evil Twin Wi-Fi): aggiunto un blocco dedicato al terzo
+ * scenario reale, type "fake-captive-portal" — seconda vera prova (dopo
+ * il Keylogger) del pattern Registry di scenarioEngine.js con un type
+ * diverso da "profile-timeline". Aggiunto anche un controllo di
+ * regressione esplicito sul login reale ("strict"), dato che
+ * LoginForm.js ha ricevuto due nuove prop additive (showBrand/
+ * showForgotLink) proprio per servire il portale captive di questo
+ * scenario.
  *
- * MODIFICATO (miglioramento incrementale "eliminazione toggle lucchetto"):
- * il precedente blocco dedicato "Toggle pubblico/privato" (icona
- * lucchetto interattiva accanto alle statistiche) è stato RIMOSSO — quel
- * controllo non esiste più nel codice sorgente. La sua copertura è stata
- * fusa nel blocco "Bottone Segui", che oggi è l'UNICO comando responsabile
- * sia dello stato "sto seguendo" sia della visibilità pubblico/privato.
- *
- * L'ultimo test del file chiude l'intervento #9 dell'audit di Fase 9
- * ("percorrere l'intero flusso da tastiera Home→Scenario→MediaViewer").
+ * NOTA D'ONESTÀ DI PROCESSO: il blocco Evil Twin Wi-Fi è stato scritto
+ * in una sessione priva di accesso a un ambiente Playwright reale — non
+ * è mai stato eseguito. Va verificato per primo, con la stessa
+ * disciplina "mai fidarsi della narrazione" già consolidata nel
+ * progetto, prima di considerarlo parte della baseline "nota buona".
  */
 const assert = require("node:assert/strict");
 const path = require("node:path");
@@ -38,7 +40,7 @@ async function gotoScenario(page, baseUrl) {
 async function run() {
   const suite = createSuite("scenario.spec.js");
   const server = await startServer(APP_ROOT);
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch();
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
   // --- Profilo, storie, feed -------------------------------------------
@@ -118,6 +120,7 @@ async function run() {
   }
 
   // --- Bottone "Segui" — unico comando anche della visibilità ----------
+  // (fonde la copertura del precedente toggle lucchetto, ora eliminato)
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
@@ -221,12 +224,13 @@ async function run() {
     await suite.test("la vista Archivio selezionata prima di smettere di seguire viene preservata", async () => {
       await page.click(".sl-profile-timeline__tabs >> text=Archivio");
       await page.waitForSelector(".sl-timeline:not([hidden])");
-      await headerFollow().click();
+      await headerFollow().click(); // -> Segui (non seguo più)
       await page.waitForTimeout(30);
-      await headerFollow().click();
+      await headerFollow().click(); // -> Segui già (seguo di nuovo)
       await page.waitForTimeout(30);
       assert.equal(await page.locator(".sl-timeline").isHidden(), false, "l'Archivio non è più visibile dopo il round-trip Segui/Segui già");
       assert.equal(await page.locator(".sl-feed").isHidden(), true, "il Feed è tornato visibile invece dell'Archivio (reset non richiesto)");
+      // Ripristina la vista Post per non alterare lo stato dei blocchi successivi.
       await page.click(".sl-profile-timeline__tabs >> text=Post");
     });
 
@@ -368,7 +372,190 @@ async function run() {
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth
       );
       assert.equal(hasOverflow, false, "overflow orizzontale rilevato nel pannello privato a 375px");
+      // Ripristina lo stato "seguo" per non alterare eventuali blocchi successivi.
       await page.click(".sl-profile-timeline__follow-button");
+    });
+
+    await context.close();
+  }
+
+  // --- Evil Twin Wi-Fi (scenario "fake-captive-portal") -----------------
+  // NUOVO — vedi rationale completo in fakeCaptivePortalRenderer.js.
+  // acceptDownloads:true esplicito, stesso principio già seguito per il
+  // Keylogger: intercettare un download REALE (page.waitForEvent), non
+  // solo asserire che il click non lanci errori.
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
+    const page = await context.newPage();
+    await loginAsDocente(page, server.url);
+
+    await suite.test("selettore Cybersecurity mostra 3 scenari (Oversharing, Keylogger, Evil Twin Wi-Fi)", async () => {
+      await page.click(".sl-home-page__modules-grid .sl-module-card >> nth=4");
+      await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
+      await page.waitForSelector(".sl-module-scenarios-page__grid");
+      assert.equal(await page.locator(".sl-module-scenarios-page__grid .sl-module-card").count(), 3);
+    });
+
+    await suite.test("click su Evil Twin Wi-Fi -> #/scenario/evil-twin-wifi, chrome:none rispettato", async () => {
+      await page.click(".sl-module-scenarios-page__grid .sl-module-card >> nth=2");
+      await page.waitForFunction(() => window.location.hash === "#/scenario/evil-twin-wifi");
+      await page.waitForSelector(".sl-fake-captive-portal");
+      assert.equal(await page.locator(".sl-app-header").count(), 0);
+      assert.equal(await page.locator(".sl-sidebar").count(), 0);
+    });
+
+    await suite.test("elenco reti: 4 voci, 1 sola apribile (aperta), 3 protette non interattive", async () => {
+      assert.equal(await page.locator(".sl-fake-captive-portal__network-item").count(), 4);
+      assert.equal(await page.locator(".sl-fake-captive-portal__network-button").count(), 1);
+      assert.equal(await page.locator(".sl-fake-captive-portal__network-item--secured").count(), 3);
+    });
+
+    await suite.test("rete protetta non è un elemento interattivo (nessun <button>)", async () => {
+      const tagName = await page
+        .locator(".sl-fake-captive-portal__network-item--secured")
+        .first()
+        .locator(":scope > *")
+        .first()
+        .evaluate((el) => el.tagName);
+      assert.notEqual(tagName, "BUTTON");
+    });
+
+    await suite.test("click sulla rete aperta -> vista 'connessione in corso'", async () => {
+      await page.click(".sl-fake-captive-portal__network-button");
+      await page.waitForSelector(".sl-fake-captive-portal__connecting");
+    });
+
+    await suite.test("dopo la connessione: transizione automatica al portale captive", async () => {
+      await page.waitForSelector(".sl-fake-captive-portal__portal-headline", { timeout: 3000 });
+      const headline = await page.locator(".sl-fake-captive-portal__portal-headline").textContent();
+      assert.equal(headline.trim(), "Accedi per continuare a navigare");
+      assert.equal(await page.locator(".sl-fake-captive-portal__social-button").count(), 2);
+    });
+
+    await suite.test("il portale NON mostra brand/tagline di SocialAlive (showBrand:false)", async () => {
+      assert.equal(await page.locator(".sl-fake-captive-portal .sl-login-form__brand").isVisible(), false);
+    });
+
+    await suite.test("il portale NON mostra 'Password dimenticata?' (showForgotLink:false)", async () => {
+      assert.equal(await page.locator(".sl-fake-captive-portal .sl-login-form__forgot").isVisible(), false);
+    });
+
+    let downloadedContent = "";
+    await suite.test("submit con email 'loose' (senza dominio) -> download reale del file di log", async () => {
+      await page.fill(".sl-fake-captive-portal .sl-login-form__form input[type='email']", "ospite@wifi");
+      await page.fill(".sl-fake-captive-portal .sl-login-form__form input[type='password']", "prova123");
+      const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        page.click(".sl-fake-captive-portal .sl-login-form__submit"),
+      ]);
+      const filePath = await download.path();
+      downloadedContent = fs.readFileSync(filePath, "utf-8");
+      assert.ok(downloadedContent.length > 0, "il file scaricato è vuoto");
+    });
+
+    await suite.test("il file contiene fedelmente username/password digitati", async () => {
+      assert.ok(downloadedContent.includes('username="ospite@wifi"'), "username non trovato fedelmente nel file");
+      assert.ok(downloadedContent.includes('password="prova123"'), "password non trovata fedelmente nel file");
+    });
+
+    await suite.test("il file contiene una sola occorrenza di '@', sulla riga di cattura", async () => {
+      const atCount = (downloadedContent.match(/@/g) || []).length;
+      assert.equal(atCount, 1, `attese 1 occorrenza di "@", trovate ${atCount}`);
+    });
+
+    await suite.test("disclaimer finale presente, rivela la natura didattica", async () => {
+      assert.ok(downloadedContent.includes("SocialAlive"), "riferimento a SocialAlive non trovato nel disclaimer");
+      assert.ok(downloadedContent.includes("scopo didattico"), "testo del disclaimer non trovato");
+    });
+
+    await suite.test("dopo il download: nessuna rivelazione in-app, messaggio neutro 'Connesso a Internet.'", async () => {
+      const message = await page.locator(".sl-fake-captive-portal__completed").textContent();
+      assert.equal(message.trim(), "Connesso a Internet.");
+      const bodyText = (await page.evaluate(() => document.body.innerText)).toLowerCase();
+      ["evil twin", "clonata", "attacco"].forEach((term) => {
+        assert.ok(!bodyText.includes(term), `trovato il termine rivelatore "${term}" nel testo visibile`);
+      });
+    });
+
+    await suite.test("nessun redirect forzato dopo il download (hash invariato)", async () => {
+      assert.equal(await page.evaluate(() => window.location.hash), "#/scenario/evil-twin-wifi");
+    });
+
+    await context.close();
+  }
+
+  // --- Screenshot Evil Twin Wi-Fi ----------------------------------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await loginAsDocente(page, server.url);
+    await page.goto(`${server.url}/#/scenario/evil-twin-wifi`);
+    await page.waitForSelector(".sl-fake-captive-portal");
+
+    await suite.test("screenshot Evil Twin Wi-Fi — elenco reti, Light", async () => {
+      await page.screenshot({ path: path.join(SCREENSHOT_DIR, "evil-twin-networks-light.png") });
+    });
+
+    await suite.test("screenshot Evil Twin Wi-Fi — portale captive, mobile 375px", async () => {
+      await page.click(".sl-fake-captive-portal__network-button");
+      await page.waitForSelector(".sl-fake-captive-portal__portal-headline", { timeout: 3000 });
+      await page.setViewportSize({ width: 375, height: 800 });
+      await page.screenshot({ path: path.join(SCREENSHOT_DIR, "evil-twin-portal-mobile-375.png") });
+      const hasOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+      );
+      assert.equal(hasOverflow, false, "overflow orizzontale rilevato nel portale a 375px");
+    });
+
+    await context.close();
+  }
+
+  // --- Regressione: login reale ('strict') invariato dopo l'aggiunta ----
+  // di showBrand/showForgotLink e dell'estrazione di textDownload.js
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+
+    await suite.test("regressione: login reale rifiuta ancora un'email senza dominio valido (strict)", async () => {
+      await page.goto(`${server.url}/#/login`);
+      await page.waitForSelector(".sl-login-form");
+      await page.fill(".sl-login-form__form input[type='email']", "docente@scuola");
+      await page.fill(".sl-login-form__form input[type='password']", "password123");
+      await page.click(".sl-login-form__submit");
+      const helperText = await page
+        .locator(".sl-login-form__form input[type='email']")
+        .locator("xpath=..")
+        .locator(".sl-input__helper")
+        .textContent();
+      assert.equal(helperText.trim(), "Inserisci un indirizzo email valido.");
+    });
+
+    await suite.test("regressione: login reale mostra ancora brand/tagline SocialAlive (showBrand default true)", async () => {
+      assert.equal(await page.locator(".sl-login-form__brand").isVisible(), true);
+      assert.equal(await page.locator(".sl-login-form__forgot").isVisible(), true);
+    });
+
+    await context.close();
+  }
+
+  // --- Regressione: Keylogger invariato dopo l'estrazione di textDownload.js ---
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
+    const page = await context.newPage();
+    await loginAsDocente(page, server.url);
+
+    await suite.test("regressione: Keylogger genera ancora un download reale dopo l'estrazione di textDownload.js", async () => {
+      await page.goto(`${server.url}/#/scenario/keylogger`);
+      await page.waitForSelector(".sl-fake-login-capture");
+      await page.fill(".sl-fake-login-capture .sl-login-form__form input[type='email']", "prof@scuola");
+      await page.fill(".sl-fake-login-capture .sl-login-form__form input[type='password']", "test123");
+      const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        page.click(".sl-fake-login-capture .sl-login-form__submit"),
+      ]);
+      const filePath = await download.path();
+      const content = fs.readFileSync(filePath, "utf-8");
+      assert.ok(content.includes('username="prof@scuola"'), "il Keylogger non genera più un download fedele dopo il refactor");
     });
 
     await context.close();
@@ -379,6 +566,15 @@ async function run() {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
+    // FIX (scoperto eseguendo davvero la suite per la prima volta in questa
+    // sessione): homePageController.js popola la griglia moduli in modo
+    // asincrono (Promise.all su modules.json/feed.json) — senza attendere
+    // esplicitamente il suo rendering, il ciclo di Tab qui sotto può
+    // eseguirsi PRIMA che la card Cybersecurity esista nel DOM, producendo
+    // un fallimento a cascata su tutti i controlli successivi del blocco.
+    // Stesso principio di attesa già applicato altrove nel file (es. dopo
+    // ogni navigazione che monta contenuto asincrono).
+    await page.waitForSelector(".sl-home-page__modules-grid");
 
     await suite.test("flusso da tastiera: Sidebar -> Moduli -> Cybersecurity (Invio) -> selettore", async () => {
       let focused = null;
@@ -390,6 +586,9 @@ async function run() {
       assert.equal(focused, "Apri modulo Cybersecurity", "il focus non ha raggiunto la card Cybersecurity entro 15 Tab");
 
       await page.keyboard.press("Enter");
+      // Cybersecurity ospita ora 3 scenari (Oversharing, Keylogger, Evil
+      // Twin Wi-Fi): il click/Invio porta al selettore
+      // #/modules/cybersecurity, non più direttamente allo scenario.
       await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
       await page.waitForSelector(".sl-module-scenarios-page__grid");
     });

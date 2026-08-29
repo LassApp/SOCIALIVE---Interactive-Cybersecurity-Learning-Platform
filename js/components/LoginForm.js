@@ -65,6 +65,20 @@
  * + --sl-color-error-text, la stessa coppia "soft" già verificata e usata
  * da Badge/ProfileMenu — nessun nuovo accostamento colore).
  *
+ * "showBrand" / "showForgotLink" (additive, Evil Twin Wi-Fi — vedi
+ * fakeCaptivePortalRenderer.js): un consumer con un proprio brand (un
+ * portale Wi-Fi captive fittizio, con un "provider" diverso da
+ * SocialAlive) e senza un vero flusso di recupero password (tipico di un
+ * login guest) deve poter nascondere brand/tagline/"Password
+ * dimenticata?" senza che il chiamante debba fare un accesso diretto al
+ * DOM interno del componente (che romperebbe l'incapsulamento "a
+ * convenzione" già rispettato in tutto il Design System — stesso
+ * principio per cui PageContainer non fa mai querySelector sulla propria
+ * struttura). Default true in entrambi i casi: zero cambio di
+ * comportamento per il login reale (loginPageController.js) e per il
+ * Keylogger (fakeLoginCaptureRenderer.js), nessuno dei due passa queste
+ * prop.
+ *
  * Interfaccia: create(props) → { element, update(props), destroy() }
  *
  * Props:
@@ -79,6 +93,12 @@
  *     fittizio con credenziali di fantasia. 'strict' (default, invariato)
  *     resta l'unico comportamento usato dal login reale
  *     (loginPageController.js, che non passa questa prop).
+ *   - showBrand      {boolean} default: true — a false nasconde brand/tagline
+ *     "SocialAlive" (Evil Twin Wi-Fi: il portale ha un proprio branding,
+ *     costruito dal renderer che monta questo componente)
+ *   - showForgotLink {boolean} default: true — a false nasconde
+ *     "Password dimenticata?" (Evil Twin Wi-Fi: un portale Wi-Fi guest
+ *     non ha un vero account da recuperare)
  *
  * Eventi emessi (su element, bubbling):
  *   - sl:login-submit           detail: { email, password } (solo se il
@@ -161,6 +181,9 @@ export function create(props = {}) {
     attrs: { type: "button" },
     text: "Password dimenticata?",
   });
+  // Additivo (Evil Twin Wi-Fi): un portale Wi-Fi guest non ha un vero
+  // account da recuperare — vedi rationale in testa al file.
+  forgotLink.hidden = props.showForgotLink === false;
 
   const form = createElement(
     "form",
@@ -177,6 +200,12 @@ export function create(props = {}) {
     classNames: "sl-login-form__tagline",
     text: "Accedi alla tua area riservata",
   });
+  // Additivo (Evil Twin Wi-Fi): un portale captive fittizio ha un
+  // proprio branding, costruito dal renderer che monta questo
+  // componente (fakeCaptivePortalRenderer.js) — vedi rationale in testa
+  // al file.
+  brand.hidden = props.showBrand === false;
+  tagline.hidden = props.showBrand === false;
 
   const element = createElement("div", { classNames: "sl-login-form" }, [brand, tagline, card.element]);
 
