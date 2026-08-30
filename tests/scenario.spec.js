@@ -40,13 +40,29 @@ async function gotoScenario(page, baseUrl) {
 async function run() {
   const suite = createSuite("scenario.spec.js");
   const server = await startServer(APP_ROOT);
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ headless: false });        await suite.test("selettore Cybersecurity mostra 4 scenari (Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi)", async () => {
+      await page.click(".sl-home-page__modules-grid .sl-module-card >> nth=4");
+      await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
+      await page.waitForSelector(".sl-module-scenarios-page__grid");
+      assert.equal(await page.locator(".sl-module-scenarios-page__grid .sl-module-card").count(), 4);
+    });
+
+    await suite.test("click su Evil Twin Wi-Fi -> #/scenario/evil-twin-wifi, chrome:none rispettato", async () => {
+      await page.click(".sl-module-scenarios-page__grid .sl-module-card >> nth=3");
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
   // --- Profilo, storie, feed -------------------------------------------
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-    const page = await context.newPage();
+    const page = await context.newPage();    await suite.test("selettore Cybersecurity mostra 3 scenari (Oversharing, Keylogger, Evil Twin Wi-Fi)", async () => {
+      await page.click(".sl-home-page__modules-grid .sl-module-card >> nth=4");
+      await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
+      await page.waitForSelector(".sl-module-scenarios-page__grid");
+      assert.equal(await page.locator(".sl-module-scenarios-page__grid .sl-module-card").count(), 3);
+    });
+
+    await suite.test("click su Evil Twin Wi-Fi -> #/scenario/evil-twin-wifi, chrome:none rispettato", async () => {
+      await page.click(".sl-module-scenarios-page__grid .sl-module-card >> nth=2");
     await gotoScenario(page, server.url);
 
     await suite.test("nessuna voce Sidebar risulta attiva sulla pagina di scenario", async () => {
@@ -586,7 +602,7 @@ async function run() {
       assert.equal(focused, "Apri modulo Cybersecurity", "il focus non ha raggiunto la card Cybersecurity entro 15 Tab");
 
       await page.keyboard.press("Enter");
-      // Cybersecurity ospita ora 3 scenari (Oversharing, Keylogger, Evil
+      // Cybersecurity ospita ora 4 scenari (Oversharing, Keylogger, Evil
       // Twin Wi-Fi): il click/Invio porta al selettore
       // #/modules/cybersecurity, non più direttamente allo scenario.
       await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
