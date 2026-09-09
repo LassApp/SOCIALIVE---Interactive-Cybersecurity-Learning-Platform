@@ -1,43 +1,31 @@
 /**
  * login.spec.js
  * -----------------------------------------------------------------------
- * Copre il flusso di autenticazione — dalla migrazione a Supabase Auth,
- * un vero servizio esterno, non più un file JSON locale — e le rifiniture
- * di Fase 9 che lo toccano trasversalmente (document.title per rotta,
- * transizione di rotta, messaggio "Pagina non trovata" centralizzato).
- * Punto d'ingresso di tutto il resto della suite: home.spec.js e
- * scenario.spec.js riusano loginAsDocente() da helpers/auth.js per
- * partire da una sessione autenticata reale, non un bypass.
+ * Copre il flusso di autenticazione e le rifiniture di Fase 9 che lo
+ * toccano trasversalmente (document.title per rotta, transizione di
+ * rotta, messaggio "Pagina non trovata" centralizzato). Punto d'ingresso
+ * di tutto il resto della suite: home.spec.js e scenario.spec.js riusano
+ * loginAsDocente() da helpers/auth.js per partire da una sessione
+ * autenticata reale, non un bypass.
  *
- * chromium.launch({ headless: false }) — DEVIAZIONE DOCUMENTATA dalla
- * modalità headless di default, necessaria e non opzionale: verificato
- * empiricamente che, in questo ambiente, un Chromium headless non riesce
- * mai a completare la richiesta verso Supabase Auth (timeout di 30s
- * superato, nessun errore esplicito) mentre lo stesso identico flusso
- * funziona correttamente sia in un browser reale sia in Chromium headed
- * lanciato da Playwright. La causa profonda (con ipotesi più probabile:
- * risoluzione IPv6/proxy diversa tra le due modalità, o un
- * antivirus/EDR che tratta diversamente un processo headless) NON è
- * stata isolata ulteriormente — non bloccante per procedere, ma
- * segnalata esplicitamente come debito da approfondire (vedi handover).
- * "slowMo" NON è stato mantenuto: serviva solo per l'osservazione visiva
- * durante la diagnosi, nessun beneficio a regime.
- *
- * DUE ASSERZIONI CORRETTE in questo stesso intervento (non riscritture
- * cosmetiche: la vecchia versione testava un dettaglio implementativo
- * dell'architettura precedente, ormai inesistente):
- *   - "credenziali corrette": non cerca più la chiave localStorage
- *     "sl-session" (rimossa con la migrazione — la sessione vive ora in
- *     una chiave interna di Supabase, formato di una libreria terza, non
- *     nostro da testare) ma verifica che l'header mostri il nome reale
- *     arrivato da Supabase (aria-label del trigger profilo) — prova
- *     comportamentale che l'intera catena login→sessione→UI funzioni.
- *   - "logout da ProfileMenu": la versione precedente verificava la
- *     stessa chiave "sl-session" — che, non esistendo più, restituisce
- *     sempre null: un FALSO POSITIVO silenzioso (il test sarebbe
- *     risultato verde anche con un logout completamente rotto). Corretto
- *     con una verifica comportamentale reale: dopo il logout, una rotta
- *     protetta deve tornare a reindirizzare al login.
+ * RIPRISTINATO (revert da Supabase Auth a sessione locale):
+ *   - chromium.launch() torna alla modalità headless di default — la
+ *     deviazione { headless: false } era una necessità empiricamente
+ *     verificata SOLO contro il timeout osservato in Chromium headless
+ *     verso la rete di Supabase Auth (causa esterna, non del progetto):
+ *     rimossa la chiamata di rete, rimossa la causa. Da riverificare
+ *     localmente sull'ambiente Windows dell'utente (rischio basso, causa
+ *     nota eliminata) — se il problema si ripresentasse per un motivo
+ *     indipendente, reintrodurre la deviazione qui e negli altri due
+ *     file spec.
+ *   - "credenziali corrette"/"logout da ProfileMenu": tornano a
+ *     verificare direttamente la chiave localStorage "sl-session" (di
+ *     nostra proprietà, non un dettaglio implementativo di una libreria
+ *     terza come lo era il formato interno di sessione di Supabase) —
+ *     asserzione più precisa del solo comportamento osservabile via UI.
+ *   - Nessun timeout esteso: senza una vera chiamata di rete esterna, il
+ *     login/logout locale risolve alla stessa velocità di ogni altra
+ *     interazione UI già testata nel progetto.
  */
 const assert = require("node:assert/strict");
 const path = require("node:path");
@@ -53,7 +41,7 @@ const SCREENSHOT_DIR = path.join(__dirname, "screenshots");
 async function run() {
   const suite = createSuite("login.spec.js");
   const server = await startServer(APP_ROOT);
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch();
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
   // --- Bootstrap e guardie di sessione -------------------------------
@@ -73,10 +61,8 @@ async function run() {
     });
 
     await suite.test("#app-root ha la classe di transizione, non nascosta a riposo", async () => {
-      // Attesa POLLING (non un waitForTimeout fisso): più robusta a
-      // variazioni di timing — inclusa la latenza di rete reale che il
-      // bootstrap ora attraversa (initSession() verso Supabase) prima
-      // del primo mount, assente nell'architettura precedente.
+      // Attesa a polling (non un waitForTimeout fisso): più robusta a
+      // qualunque variazione di timing, indipendentemente dalla causa.
       await page.waitForFunction(
         () => {
           const el = document.getElementById("app-root");
@@ -145,7 +131,7 @@ async function run() {
     await context.close();
   }
 
-  // --- Credenziali errate / corrette (rete reale verso Supabase Auth) -
+  // --- Credenziali errate / corrette ----------------------------------
   {
     const context = await browser.newContext();
     const page = await context.newPage();
@@ -157,26 +143,20 @@ async function run() {
       await page.fill(".sl-login-form__form input[type='password']", "password-sbagliata");
       await page.click(".sl-login-form__submit");
       const banner = page.locator(".sl-login-form__error-banner");
-      await banner.waitFor({ state: "visible", timeout: 15000 });
+      await banner.waitFor({ state: "visible" });
       assert.equal((await banner.textContent()).trim(), "Credenziali non valide.");
       assert.equal(page.url().includes("#/login"), true);
     });
 
-    await suite.test("credenziali corrette -> naviga a #/home con l'utente reale da Supabase", async () => {
+    await suite.test("credenziali corrette -> naviga a #/home, sessione persistita", async () => {
       await page.fill(".sl-login-form__form input[type='email']", DEMO_EMAIL);
       await page.fill(".sl-login-form__form input[type='password']", DEMO_PASSWORD);
       await page.click(".sl-login-form__submit");
-      await page.waitForFunction(() => window.location.hash === "#/home", null, { timeout: 15000 });
-      await page.waitForSelector(".sl-app-header__profile-trigger");
-      // Verifica comportamentale: il nome mostrato deve essere quello
-      // REALE arrivato da Supabase (user_metadata.displayName), non un
-      // valore fisso — prova end-to-end dell'intera catena
-      // login -> buildAppUser() -> AppHeader, non solo del redirect.
-      const ariaLabel = await page.locator(".sl-app-header__profile-trigger").getAttribute("aria-label");
-      assert.ok(
-        ariaLabel && ariaLabel.includes("Prof. Erasmo Lassandro"),
-        `aria-label del trigger profilo inatteso: "${ariaLabel}"`
-      );
+      await page.waitForFunction(() => window.location.hash === "#/home");
+      const session = await page.evaluate(() => window.localStorage.getItem("sl-session"));
+      assert.ok(session, "sl-session non trovato in localStorage dopo il login");
+      const parsed = JSON.parse(session);
+      assert.equal(parsed.user.displayName, "Prof. Erasmo Lassandro");
     });
 
     await suite.test("reload con sessione valida -> resta su #/home", async () => {
@@ -190,18 +170,13 @@ async function run() {
       await page.waitForFunction(() => window.location.hash === "#/home");
     });
 
-    await suite.test("logout da ProfileMenu -> #/login, sessione effettivamente rimossa", async () => {
+    await suite.test("logout da ProfileMenu -> #/login, sessione rimossa", async () => {
       await page.click(".sl-app-header__profile-trigger");
       await page.waitForSelector(".sl-profile-menu");
       await page.click(".sl-profile-menu__item--danger");
       await page.waitForFunction(() => window.location.hash === "#/login");
-      // Verifica COMPORTAMENTALE, non l'esistenza di una chiave di
-      // storage specifica (vedi rationale in testa al file): la prova
-      // reale che il logout abbia funzionato è che una rotta protetta
-      // torni a reindirizzare al login, non che una chiave che non
-      // possediamo più sia assente.
-      await page.goto(`${server.url}/#/home`);
-      await page.waitForFunction(() => window.location.hash === "#/login");
+      const session = await page.evaluate(() => window.localStorage.getItem("sl-session"));
+      assert.equal(session, null);
     });
 
     await context.close();

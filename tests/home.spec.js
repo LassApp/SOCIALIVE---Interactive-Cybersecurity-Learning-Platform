@@ -9,9 +9,12 @@
  * <h1> nascosto, fade-in dell'immagine del post, micro-transizione di
  * ProfileMenu.
  *
- * chromium.launch({ headless: false }): stessa deviazione documentata
- * per esteso in login.spec.js (necessaria contro un timeout osservato
- * in headless verso Supabase Auth, usato qui tramite loginAsDocente()).
+ * RIPRISTINATO (revert da Supabase Auth a sessione locale): rimossa la
+ * deviazione { headless: false } — era necessaria solo contro un timeout
+ * osservato in Chromium headless verso la rete di Supabase Auth, usata
+ * qui tramite loginAsDocente(); nessuna chiamata di rete esterna resta
+ * nel flusso di login, quindi la causa non si applica più (vedi
+ * rationale completo in login.spec.js).
  *
  * ESTESO (post Fase 10, intervento "MediaViewer generico") con la
  * copertura dell'apertura del post di Mario Bianchi nel MediaViewer.
@@ -32,7 +35,7 @@ const MODULE_ORDER = ["yoga", "nissan-gtr", "beatbox", "fotografia", "cybersecur
 async function run() {
   const suite = createSuite("home.spec.js");
   const server = await startServer(APP_ROOT);
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch();
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
   // --- Composizione e contenuto ---------------------------------------
