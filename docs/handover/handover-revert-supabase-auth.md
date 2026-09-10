@@ -32,6 +32,13 @@ radice.
   `tests/node_modules/`, ma non i browser). Non è comunque un limite introdotto da questo
   intervento: **va rieseguita da te in locale**, e ora dovrebbe risultare più semplice di prima
   (nessuna rete esterna coinvolta — vedi §8).
+- **AGGIORNAMENTO (stessa sessione, dopo la consegna iniziale)**: la criticità 🔴 segnalata in
+  questo documento (`tests/scenario.spec.js` corrotto, blocca `npm test` per intero) è stata
+  **risolta**. Vedi §2 "Correzione aggiuntiva" e §9 per il dettaglio. È stato inoltre prodotto un
+  secondo documento, `come-riattivare-supabase.md`, con l'analisi della causa della sospensione e
+  un runbook completo per tornare a Supabase Auth in futuro — inclusi i file recuperati dalla
+  cronologia Git (adapter, configurazione, bundle vendorizzato), pronti all'uso nella cartella
+  `reactivate-supabase/` di questa stessa consegna.
 
 ---
 
@@ -78,10 +85,49 @@ radice.
   rimossi: nessuna latenza di rete esterna da assorbire.
 - **`tests/home.spec.js` (modificato)**: stessa rimozione di `headless: false`, nessun'altra
   modifica (non tocca direttamente la sessione).
-- **`tests/scenario.spec.js` — NON toccato**, vedi Criticità (§9): il file contiene oggi una
-  corruzione di sintassi preesistente e indipendente da questo intervento (blocca `node --check`/
-  `npm test` sull'intera suite). Segnalato per una decisione separata, non incluso in questa
-  consegna per non mescolare due interventi distinti.
+- **`tests/scenario.spec.js` — NON toccato inizialmente**, poi **corretto in questa stessa
+  sessione** (vedi sotto): il file conteneva una corruzione di sintassi preesistente e
+  indipendente da questo intervento.
+
+### Correzione aggiuntiva (stessa sessione): `tests/scenario.spec.js`
+
+Segnalata come criticità 🔴 nella prima consegna, poi risolta su richiesta esplicita:
+
+- **Causa esatta identificata**: un intervento precedente aveva incollato due versioni
+  conflittuali dello stesso test ("selettore Cybersecurity mostra N scenari...") l'una dentro
+  l'altra all'inizio di `run()` — una versione con 4 scenari (incl. Phishing), una con 3 (da prima
+  che Phishing fosse aggiunto). Il risultato: `node --check` falliva con `SyntaxError`, e
+  `run-all.js` non riusciva a eseguire un solo test dell'intera suite (il `require()` del file
+  lancia l'eccezione prima di qualunque `test()`).
+- **Verificato contro `data/modules.json` reale** (non per assunzione): 4 scenari confermati —
+  Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi, in quest'ordine.
+- **Fix applicato**: rimosso il blocco duplicato/corrotto in testa a `run()` (era comunque
+  ridondante con un test equivalente già esistente più sotto, nella sezione dedicata a "Evil Twin
+  Wi-Fi"); aggiornato l'unico blocco superstite al conteggio reale (4, non 3) e all'indice
+  corretto della card Evil Twin Wi-Fi nella griglia (`nth=3`, non più `nth=2`, dato che Phishing è
+  stato inserito prima di esso nell'array); corretto anche un commento minore più avanti nel file
+  che dichiarava "4 scenari" ma ne elencava solo 3 nomi (mancava Phishing).
+- **`chromium.launch({ headless: false })` → `chromium.launch()`**: stessa rimozione già applicata
+  a `login.spec.js`/`home.spec.js`, per coerenza.
+- **Gap onestamente dichiarato, non chiuso da questa correzione**: Phishing non ha ancora un
+  blocco di test dedicato in questo file (solo il conteggio totale lo verifica indirettamente) —
+  documentato esplicitamente nel docstring del file, non lasciato silenzioso.
+- **Verificato**: `node --check` ora pulito su `tests/scenario.spec.js` e su **tutto** il resto del
+  progetto (nessun altro file con errori di sintassi).
+
+### Nuovo: pacchetto di riattivazione Supabase
+
+Su richiesta esplicita, prodotto `come-riattivare-supabase.md` — spiega la causa radice della
+sospensione (Supabase valuta "attività" solo come query verso tabelle Postgres; SOCIALIVE usava
+Supabase solo per Auth, mai popolando alcuna tabella applicativa, quindi veniva letto come
+inattivo) e un runbook completo per tornare a Supabase Auth in futuro, se mai servisse davvero.
+Include la cartella `reactivate-supabase/` con i 4 file necessari **recuperati dalla cronologia
+Git del repository** (non ricostruiti a memoria): `supabaseAuthAdapter.js`, `env.js` (con
+URL/chiave reali del progetto), la versione Supabase di `authService.js`, e il bundle vendorizzato
+`supabase-js.umd.js` — quest'ultimo verificato **byte-per-byte identico** all'originale tramite
+confronto con `@supabase/supabase-js@2.112.3` scaricato fresco da npm (stessa versione, stesso
+md5). Include anche una proposta di keep-alive automatico via GitHub Actions, per evitare che la
+stessa sospensione si ripeta se Supabase tornasse in uso.
 
 ---
 
@@ -96,6 +142,12 @@ radice.
 | `tests/helpers/auth.js` | ♻️ **MODIFICATO** | Credenziali hardcoded, nessuna variabile d'ambiente |
 | `tests/login.spec.js` | ♻️ **MODIFICATO** | `headless` di default; asserzioni su `sl-session` |
 | `tests/home.spec.js` | ♻️ **MODIFICATO** | Solo rimozione `headless: false` |
+| `tests/scenario.spec.js` | ♻️ **MODIFICATO** | Corretta corruzione di sintassi + conteggio scenari 3→4 + `headless` di default |
+| `come-riattivare-supabase.md` | ⭐ **NUOVO** | Causa della sospensione + runbook di riattivazione |
+| `reactivate-supabase/js/adapters/supabaseAuthAdapter.js` | 📦 **ARCHIVIATO** (per uso futuro) | Recuperato dalla cronologia Git, non applicato al repository oggi |
+| `reactivate-supabase/js/config/env.js` | 📦 **ARCHIVIATO** (per uso futuro) | Idem |
+| `reactivate-supabase/js/services/authService.js` | 📦 **ARCHIVIATO** (per uso futuro) | Versione Supabase, idem |
+| `reactivate-supabase/js/vendor/supabase-js.umd.js` | 📦 **ARCHIVIATO** (per uso futuro) | Verificato byte-identico all'originale |
 | `js/adapters/supabaseAuthAdapter.js` | 🗑️ **DA ELIMINARE** | Non più referenziato da nulla |
 | `js/config/env.js` | 🗑️ **DA ELIMINARE** | Non più referenziato da nulla |
 | `js/vendor/supabase-js.umd.js` | 🗑️ **DA ELIMINARE** | Non più referenziato da nulla |
@@ -143,10 +195,11 @@ scaricabile proprio perché vanno rimossi, non sostituiti.
 
 ## 6. Prossima fase
 
-Nessuna fase numerata pendente. Prossimo passo naturale: **verificare `tests/scenario.spec.js`**
-(punto 3 di §5) — è oggi l'unico file del repository con un errore di sintassi reale, e blocca
-l'intera suite persistita. Consiglio di affrontarlo come intervento a sé, con lo stesso metodo
-("clona e verifica prima di scrivere") usato in questa sessione.
+Nessuna fase numerata pendente. La criticità che era la priorità naturale (`tests/scenario.spec.js`
+corrotto) è stata **risolta in questa stessa sessione** — vedi §2/§9. Prossimo passo naturale,
+non bloccante: **rieseguire `npm test` in locale** (Windows) per confermare l'intero revert
+end-to-end, incluso il fix appena applicato. Un gap dichiarato e a bassa priorità resta aperto:
+Phishing non ha ancora un blocco di test dedicato in `scenario.spec.js`.
 
 ---
 
@@ -177,10 +230,13 @@ JSON validati. Hash SHA-256 di "password123" ricalcolato e confermato identico a
 eseguita in questa sessione la suite Playwright end-to-end reale (niente Chromium scaricato in
 questa sandbox) — va rieseguita in locale.
 
-CRITICITÀ APERTA SEGNALATA: tests/scenario.spec.js contiene oggi un errore di sintassi reale
-(due versioni di un blocco di test concatenate per errore in un intervento precedente) che blocca
-run-all.js per intero. Non è stata toccata in questo intervento per tenerlo isolato — è la
-priorità naturale del prossimo intervento.
+CRITICITÀ SEGNALATA E GIÀ RISOLTA NELLA STESSA SESSIONE: tests/scenario.spec.js conteneva un
+errore di sintassi reale (due versioni di un blocco di test concatenate per errore in un
+intervento precedente) che bloccava run-all.js per intero — CORRETTO: conteggio scenari
+verificato contro data/modules.json (4 reali: Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi),
+blocco duplicato rimosso, indice della card Evil Twin Wi-Fi aggiornato. node --check ora pulito su
+tutto il progetto. Gap dichiarato e non bloccante: Phishing non ha ancora un blocco di test
+dedicato in questo file.
 
 RUOLO/REGOLE INVARIATE: agisci come Lead Software Architect, Senior Front-end/UI Engineer, UX
 Designer, Accessibility Specialist (WCAG) e Full Stack Architect. Motiva ogni decisione prima di
@@ -191,7 +247,9 @@ create(props)→{element,update,destroy}; eventi "sl:nome-evento"; componenti "d
 documentazione in italiano; verifica sempre con node --check + JSON validi + (quando possibile)
 Playwright reale; handover completo a 10 sezioni + file .md separato ad ogni intervento.
 
-Indica se vuoi procedere ora con tests/scenario.spec.js, o un'altra priorità.
+Indica se vuoi rieseguire subito `npm test` in locale per confermare il revert, oppure un'altra
+priorità (es. coprire Phishing in scenario.spec.js, o valutare il pacchetto di riattivazione
+Supabase in come-riattivare-supabase.md se le condizioni dovessero cambiare in futuro).
 ```
 
 ---
@@ -239,14 +297,15 @@ Indica se vuoi procedere ora con tests/scenario.spec.js, o un'altra priorità.
 
 ## 9. Criticità
 
-- **🔴 `tests/scenario.spec.js` contiene un errore di sintassi reale**, non introdotto da questo
-  intervento: due versioni di un blocco di test ("selettore Cybersecurity mostra N scenari...")
-  risultano concatenate senza una corretta chiusura di funzione/parentesi, a partire dalla riga
-  con `chromium.launch({ headless: false });` seguita immediatamente da altro codice sulla stessa
-  riga. `node --check` fallisce con `SyntaxError: missing ) after argument list`. Questo blocca
-  `run-all.js` per intero (il `require()` del file lancia l'eccezione prima ancora di eseguire
-  qualunque test). **Non è stato toccato in questa sessione** per non mescolare due interventi
-  distinti — segnalato qui come priorità immediata separata.
+- **✅ RISOLTO (stessa sessione, dopo la consegna iniziale): `tests/scenario.spec.js` conteneva un
+  errore di sintassi reale**, non introdotto da questo intervento: due versioni di un blocco di
+  test ("selettore Cybersecurity mostra N scenari...") risultavano concatenate senza una corretta
+  chiusura di funzione/parentesi. `node --check` falliva con `SyntaxError: missing ) after
+  argument list`, bloccando `run-all.js` per intero. **Corretto**: verificato il conteggio reale
+  degli scenari contro `data/modules.json` (4: Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi),
+  rimosso il blocco duplicato/corrotto (ridondante con un test equivalente già esistente più
+  sotto), aggiornato l'unico blocco superstite al conteggio e all'indice corretti. `node --check`
+  ora pulito su questo file e su tutto il resto del progetto.
 - **Suite Playwright non eseguita realmente in questa sessione**: nessun binario Chromium
   disponibile in questa sandbox (solo il pacchetto npm). Le verifiche eseguite si sono fermate a
   sintassi/JSON/hash — solide, ma non sostituiscono un'esecuzione reale in un browser.
@@ -269,8 +328,10 @@ Indica se vuoi procedere ora con tests/scenario.spec.js, o un'altra priorità.
   esterna con un rischio operativo concreto già materializzatosi), non ne aggiunge.
 
 ### Refactoring consigliati
-- 🔴 **`tests/scenario.spec.js`**: da ricostruire correttamente (vedi §9) — priorità immediata,
-  indipendente da questo intervento ma bloccante per l'intera suite.
+- ✅ **`tests/scenario.spec.js`**: la corruzione di sintassi è stata **risolta in questa stessa
+  sessione** (vedi §2/§9). Resta un gap dichiarato (non un bug): **Phishing non ha ancora un
+  blocco di test dedicato** in questo file — solo il conteggio totale lo verifica indirettamente.
+  Priorità naturale del prossimo intervento sulla suite di test, non bloccante.
 
 ### Ottimizzazioni future
 - 🟢 Nessuna identificata specificamente da questo intervento.
@@ -286,9 +347,10 @@ Indica se vuoi procedere ora con tests/scenario.spec.js, o un'altra priorità.
   compromesso accettabile e consapevole, non un rischio da correggere.
 
 ### Priorità
-- 🔴 Alta: **`tests/scenario.spec.js`** — blocca oggi l'intera suite di test.
+- ✅ Risolto: **`tests/scenario.spec.js`** — corruzione di sintassi corretta in questa sessione.
 - 🟡 Media: rieseguire `npm test` in locale per confermare il revert end-to-end.
-- 🟢 Bassa: tutto il resto.
+- 🟢 Bassa: coprire Phishing con un blocco di test dedicato in `scenario.spec.js` (gap dichiarato,
+  non un bug); tutto il resto.
 
 ### Obiettivo
 Questo intervento chiude un rischio operativo reale e già verificatosi (sospensione dell'accesso

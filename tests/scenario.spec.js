@@ -3,7 +3,7 @@
  * -----------------------------------------------------------------------
  * Copre gli scenari reali del progetto: Oversharing (Fase 6, incluso il
  * Media Viewer di Fase 7), Keylogger (fake-login-capture) ed Evil Twin
- * Wi-Fi (fake-captive-portal, NUOVO — vedi blocco dedicato più sotto).
+ * Wi-Fi (fake-captive-portal — vedi blocco dedicato più sotto).
  *
  * MODIFICATO (Evil Twin Wi-Fi): aggiunto un blocco dedicato al terzo
  * scenario reale, type "fake-captive-portal" — seconda vera prova (dopo
@@ -13,6 +13,34 @@
  * LoginForm.js ha ricevuto due nuove prop additive (showBrand/
  * showForgotLink) proprio per servire il portale captive di questo
  * scenario.
+ *
+ * CORRETTA CORRUZIONE DI SINTASSI (revert Supabase Auth, sessione
+ * successiva): un intervento precedente aveva incollato due versioni
+ * conflittuali dello stesso test ("selettore Cybersecurity mostra N
+ * scenari...", una con 4 scenari incl. Phishing, una con 3 senza) l'una
+ * dentro l'altra all'inizio di run() — bug bloccante, `node --check`
+ * falliva e `run-all.js` non arrivava mai a eseguire un solo test. Il
+ * blocco duplicato in testa (ridondante con quello già esistente più
+ * sotto, dentro la sezione "Evil Twin Wi-Fi") è stato rimosso; l'unica
+ * copia superstite del test è stata aggiornata al conteggio reale (4
+ * scenari, verificato contro data/modules.json: oversharing, keylogger,
+ * phishing, evil-twin-wifi, in quest'ordine) e all'indice corretto della
+ * card Evil Twin Wi-Fi (nth=3, non più nth=2, da quando Phishing è stato
+ * inserito prima di esso nell'array).
+ *
+ * GAP NOTO, NON CHIUSO DA QUESTA CORREZIONE: **Phishing non ha ancora un
+ * proprio blocco di test dedicato** in questo file (solo il conteggio
+ * "4 scenari" lo verifica indirettamente, nessun controllo sul contenuto
+ * del renderer phishingSimulationRenderer.js) — segnalato esplicitamente
+ * come attività futura, non introdotto silenziosamente qui per restare
+ * un intervento isolato e verificabile (la correzione della corruzione,
+ * non una nuova copertura).
+ *
+ * chromium.launch() senza { headless: false } (revert Supabase Auth):
+ * la deviazione era necessaria solo contro un timeout osservato in
+ * Chromium headless verso la rete di Supabase Auth (usata da
+ * loginAsDocente() tramite helpers/auth.js) — causa rimossa insieme
+ * alla chiamata di rete, vedi rationale completo in login.spec.js.
  *
  * NOTA D'ONESTÀ DI PROCESSO: il blocco Evil Twin Wi-Fi è stato scritto
  * in una sessione priva di accesso a un ambiente Playwright reale — non
@@ -40,29 +68,13 @@ async function gotoScenario(page, baseUrl) {
 async function run() {
   const suite = createSuite("scenario.spec.js");
   const server = await startServer(APP_ROOT);
-  const browser = await chromium.launch({ headless: false });        await suite.test("selettore Cybersecurity mostra 4 scenari (Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi)", async () => {
-      await page.click(".sl-home-page__modules-grid .sl-module-card >> nth=4");
-      await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
-      await page.waitForSelector(".sl-module-scenarios-page__grid");
-      assert.equal(await page.locator(".sl-module-scenarios-page__grid .sl-module-card").count(), 4);
-    });
-
-    await suite.test("click su Evil Twin Wi-Fi -> #/scenario/evil-twin-wifi, chrome:none rispettato", async () => {
-      await page.click(".sl-module-scenarios-page__grid .sl-module-card >> nth=3");
+  const browser = await chromium.launch();
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
   // --- Profilo, storie, feed -------------------------------------------
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-    const page = await context.newPage();    await suite.test("selettore Cybersecurity mostra 3 scenari (Oversharing, Keylogger, Evil Twin Wi-Fi)", async () => {
-      await page.click(".sl-home-page__modules-grid .sl-module-card >> nth=4");
-      await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
-      await page.waitForSelector(".sl-module-scenarios-page__grid");
-      assert.equal(await page.locator(".sl-module-scenarios-page__grid .sl-module-card").count(), 3);
-    });
-
-    await suite.test("click su Evil Twin Wi-Fi -> #/scenario/evil-twin-wifi, chrome:none rispettato", async () => {
-      await page.click(".sl-module-scenarios-page__grid .sl-module-card >> nth=2");
+    const page = await context.newPage();
     await gotoScenario(page, server.url);
 
     await suite.test("nessuna voce Sidebar risulta attiva sulla pagina di scenario", async () => {
@@ -405,15 +417,18 @@ async function run() {
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
 
-    await suite.test("selettore Cybersecurity mostra 3 scenari (Oversharing, Keylogger, Evil Twin Wi-Fi)", async () => {
+    await suite.test("selettore Cybersecurity mostra 4 scenari (Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi)", async () => {
       await page.click(".sl-home-page__modules-grid .sl-module-card >> nth=4");
       await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
       await page.waitForSelector(".sl-module-scenarios-page__grid");
-      assert.equal(await page.locator(".sl-module-scenarios-page__grid .sl-module-card").count(), 3);
+      assert.equal(await page.locator(".sl-module-scenarios-page__grid .sl-module-card").count(), 4);
     });
 
     await suite.test("click su Evil Twin Wi-Fi -> #/scenario/evil-twin-wifi, chrome:none rispettato", async () => {
-      await page.click(".sl-module-scenarios-page__grid .sl-module-card >> nth=2");
+      // Ordine reale in data/modules.json: oversharing(0), keylogger(1),
+      // phishing(2), evil-twin-wifi(3) — indice aggiornato da nth=2 a
+      // nth=3 dopo l'inserimento di Phishing come terzo scenario.
+      await page.click(".sl-module-scenarios-page__grid .sl-module-card >> nth=3");
       await page.waitForFunction(() => window.location.hash === "#/scenario/evil-twin-wifi");
       await page.waitForSelector(".sl-fake-captive-portal");
       assert.equal(await page.locator(".sl-app-header").count(), 0);
@@ -602,8 +617,8 @@ async function run() {
       assert.equal(focused, "Apri modulo Cybersecurity", "il focus non ha raggiunto la card Cybersecurity entro 15 Tab");
 
       await page.keyboard.press("Enter");
-      // Cybersecurity ospita ora 4 scenari (Oversharing, Keylogger, Evil
-      // Twin Wi-Fi): il click/Invio porta al selettore
+      // Cybersecurity ospita ora 4 scenari (Oversharing, Keylogger,
+      // Phishing, Evil Twin Wi-Fi): il click/Invio porta al selettore
       // #/modules/cybersecurity, non più direttamente allo scenario.
       await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
       await page.waitForSelector(".sl-module-scenarios-page__grid");
