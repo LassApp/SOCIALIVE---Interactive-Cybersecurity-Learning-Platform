@@ -43,26 +43,26 @@ async function run() {
   const browser = await chromium.launch();
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
-  // --- Selettore Cybersecurity: ora con 3 scenari -----------------------
+  // --- Selettore Cybersecurity: ora con 4 scenari (dopo Evil Twin Wi-Fi) -
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
     await page.waitForSelector(".sl-home-page__modules-grid");
 
-    await suite.test("click su Cybersecurity -> selettore con 3 scenari, tutti disponibili", async () => {
+    await suite.test("click su Cybersecurity -> selettore con 4 scenari, tutti disponibili", async () => {
       await page.click(".sl-home-page__modules-grid .sl-module-card >> nth=4");
       await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
       await page.waitForSelector(".sl-module-scenarios-page__grid");
       const cards = page.locator(".sl-module-scenarios-page__grid .sl-module-card");
-      assert.equal(await cards.count(), 3);
+      assert.equal(await cards.count(), 4);
       const badges = await page.locator(".sl-module-scenarios-page__grid .sl-badge").allTextContents();
-      assert.deepEqual(badges.map((b) => b.trim()), ["Disponibile", "Disponibile", "Disponibile"]);
+      assert.deepEqual(badges.map((b) => b.trim()), ["Disponibile", "Disponibile", "Disponibile", "Disponibile"]);
     });
 
     await suite.test("terza card è 'Phishing' e naviga a #/scenario/phishing", async () => {
       const titles = await page.locator(".sl-module-scenarios-page__grid .sl-module-card__title").allTextContents();
-      assert.deepEqual(titles.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing"]);
+      assert.deepEqual(titles.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi"]);
       await page.click(".sl-module-scenarios-page__grid .sl-module-card >> nth=2");
       await page.waitForFunction(() => window.location.hash === "#/scenario/phishing");
       await page.waitForSelector(".sl-phishing");
@@ -238,9 +238,15 @@ async function run() {
     await page.waitForSelector(".sl-phishing");
 
     await suite.test("'Rispondi' presente sull'email target, insieme al CTA (i due non si escludono)", async () => {
-      // La quarta riga (indice 3) è l'email target con ctaLabel, per
-      // costruzione dei dati di inbox.json.
-      await page.click(".sl-phishing__email-row >> nth=3");
+      // CORRETTO: l'email target (campo "isTarget"/"ctaLabel" in
+      // inbox.json) è la SECONDA riga (indice 1, "Banca Centrale
+      // Sicura") nell'ordine reale dei dati — non la quarta come
+      // affermava un commento precedente, disallineato dai dati veri.
+      // Verificato leggendo data/scenarios/phishing/inbox.json: il
+      // codice sorgente del renderer era già corretto (CTA e Rispondi
+      // coesistono sempre, senza alcuna esclusione reciproca), era solo
+      // questo test a puntare alla riga sbagliata.
+      await page.click(".sl-phishing__email-row >> nth=1");
       await page.waitForSelector(".sl-phishing__detail");
       assert.equal(await page.locator(".sl-phishing__cta").count(), 1);
       assert.equal(await page.locator(".sl-phishing__reply-toggle").count(), 1);
@@ -323,7 +329,7 @@ async function run() {
     await page.goto(`${server.url}/#/modules/cybersecurity`);
     await page.waitForSelector(".sl-module-scenarios-page__grid");
 
-    await suite.test("screenshot — selettore Cybersecurity con 3 scenari", async () => {
+    await suite.test("screenshot — selettore Cybersecurity con 4 scenari", async () => {
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, "cybersecurity-selector-3-scenari.png") });
     });
 

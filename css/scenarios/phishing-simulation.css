@@ -72,7 +72,20 @@
   border-bottom: 1px solid var(--sl-color-border-subtle);
 }
 
+/* display:inline-block (BUG REALE TROVATO E CORRETTO): come <h1>,
+   .sl-phishing__brand era block-level di default — la sua bounding box
+   si espandeva a piena larghezza del topbar (1240px su un viewport
+   1280px), anche se il testo visibile ("MailTime") occupa solo ~90px.
+   Nessuna sovrapposizione VISIVA reale col bottone di uscita (ancorato a
+   destra, z-index sopra tutto), ma una sovrapposizione GEOMETRICA sì —
+   ed è esattamente quella che un controllo con boundingBox() rileva
+   correttamente: un'area cliccabile/interattiva non deve mai estendersi
+   oltre il proprio contenuto visibile per un elemento senza sfondo/
+   bordo propri. inline-block riduce la box alla dimensione reale del
+   testo, senza alterare l'aspetto tipografico (stesso font-size/weight/
+   color di prima). */
 .sl-phishing__brand {
+  display: inline-block;
   font-size: var(--sl-font-size-lg);
   font-weight: var(--sl-font-weight-bold);
   color: var(--sl-color-primary-text);
