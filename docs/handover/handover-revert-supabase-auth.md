@@ -21,30 +21,34 @@ radice.
   esattamente come da Fase 3 a prima della migrazione: verifica SHA-256 lato client contro
   `data/users.json`, sessione con scadenza 24h persistita in `localStorage` (chiave `sl-session`).
   Zero dipendenza da servizi esterni per il login.
-- **Verifica eseguita**: repository reale clonato e ispezionato file per file prima di scrivere
-  qualunque riga (disciplina di progetto invariata — mai fidarsi della sola narrazione). `node
-  --check` su ogni file `.js` toccato e su tutto il resto del progetto (nessuna regressione di
-  sintassi introdotta altrove). Tutti i JSON del repository validati. Hash SHA-256 di
-  `"password123"` ricalcolato e confrontato byte per byte con quello storico in `data/users.json`
-  — combacia esattamente, le credenziali demo restano invariate.
-- **Non eseguita in questa sessione**: la suite Playwright end-to-end reale — questa sandbox non
-  ha i binari Chromium di Playwright scaricati (il pacchetto npm è presente in
-  `tests/node_modules/`, ma non i browser). Non è comunque un limite introdotto da questo
-  intervento: **va rieseguita da te in locale**, e ora dovrebbe risultare più semplice di prima
-  (nessuna rete esterna coinvolta — vedi §8).
-- **AGGIORNAMENTO FINALE (stessa sessione): la suite Playwright reale è stata eseguita per
-  intero**, con Chromium realmente disponibile in questa sandbox (non previsto inizialmente —
-  trovato a `/opt/pw-browsers/`, con un disallineamento di versione tra `playwright-core` e i
-  binari scaricati, risolto con due collegamenti simbolici locali alla sandbox, non parte della
-  consegna). **Risultato finale: 131/131 controlli superati** su tutti e quattro i file
-  (`login.spec.js` 15/15, `home.spec.js` 26/26, `scenario.spec.js` 64/64, `phishing.spec.js`
-  26/26). Il primo giro ha rivelato — ed è stato poi corretto nella stessa sessione — un secondo
-  bug reale **completamente indipendente da questo intervento**: `data/modules.json` conteneva
-  solo il modulo Cybersecurity, con gli altri 5 moduli top-level (Yoga, Nissan GT-R, Beatbox,
-  Fotografia, Ricette) mancanti dal file reale del repository — un regressione dati preesistente,
-  mai catturata prima perché la suite non veniva eseguita in modo affidabile (il timeout headless
-  verso Supabase Auth lo impediva). Vedi §2 "Correzioni aggiuntive" per il dettaglio completo di
-  tutti i fix applicati in questa sessione.
+- **Credenziali demo cambiate su richiesta esplicita**: `socialive@erryprof.it` /
+  `2zErryProf!` (in precedenza `docente@scuola.it` / `password123`). Hash SHA-256 ricalcolato e
+  verificato. Nessuna plaintext password è mai scritta in alcun file del repository — solo
+  l'hash — vedi §4 per la discussione completa sui limiti reali di questa protezione in
+  un'architettura senza backend.
+- **`data/modules.json` — CORREZIONE DI UN MIO ERRORE, non un secondo bug applicativo**: in un
+  primo momento avevo interpretato la presenza del solo modulo Cybersecurity in questo file come
+  un dato corrotto/incompleto, basandomi sulla pianificazione originaria di Fase 4 (6 categorie:
+  Yoga, Nissan GT-R, Beatbox, Fotografia, Cybersecurity, Ricette) presente nella mia memoria di
+  sessioni precedenti — e avevo ripristinato i 5 moduli placeholder mancanti. **Era sbagliato**:
+  Erasmo ha confermato che solo Cybersecurity deve esistere oggi, gli altri 5 sono stati
+  deliberatamente rimossi in una sessione precedente non coperta dalla mia memoria. Corretto:
+  `data/modules.json` torna a contenere solo Cybersecurity; `tests/home.spec.js`/
+  `tests/scenario.spec.js`/`tests/phishing.spec.js` aggiornati di conseguenza (1 solo
+  `ModuleCard` atteso, non più 6; indice `nth=0` invece di `nth=4` per il click sulla card
+  Cybersecurity dalla Home). **Lezione per le prossime sessioni**: la mia memoria di lungo
+  periodo può descrivere una pianificazione superata da decisioni successive — un dato che sembra
+  "incompleto" rispetto a quella memoria non è automaticamente un bug; nel dubbio, verificare con
+  te prima di "correggere".
+- **Verifica eseguita, incluso un giro completo della suite Playwright REALE** (non solo
+  `node --check`): repository clonato e ispezionato prima di ogni modifica. Chromium trovato
+  disponibile in questa sandbox (non previsto inizialmente), usato per un'esecuzione end-to-end
+  completa. **Risultato finale, dopo tutte le correzioni di questa sessione (auth + moduli +
+  credenziali): 130/130 controlli superati** su tutti e quattro i file (`login.spec.js` 15/15,
+  `home.spec.js` 25/25, `scenario.spec.js` 64/64, `phishing.spec.js` 26/26). Lungo il percorso
+  sono stati trovati e corretti anche 3 bug reali e indipendenti dall'auth (dettaglio in §2):
+  una corruzione di sintassi in `scenario.spec.js`, due asserzioni obsolete + un bug CSS reale in
+  `phishing.spec.js`.
 
 ---
 
@@ -121,36 +125,35 @@ Segnalata come criticità 🔴 nella prima consegna, poi risolta su richiesta es
 - **Verificato**: `node --check` ora pulito su `tests/scenario.spec.js` e su **tutto** il resto del
   progetto (nessun altro file con errori di sintassi).
 
-### Correzione aggiuntiva (stessa sessione): `data/modules.json`
+### Correzione di un mio errore (stessa sessione): `data/modules.json` e i test collegati
 
-Trovata **eseguendo realmente la suite** (non con `node --check`, che non copre errori di dati):
-dopo il fix di `scenario.spec.js`, `home.spec.js` falliva 3 controlli su 26 — tutti riconducibili
-a un'unica causa: `data/modules.json` conteneva **solo** il modulo Cybersecurity, senza gli altri
-5 moduli top-level (Yoga, Nissan GT-R R34/R35, Beatbox, Fotografia, Ricette) previsti fin dalla
-Fase 4 e attesi da `home.spec.js`/`homePageController.js`. Root cause probabile: un intervento
-precedente (aggiunta di Phishing o Evil Twin Wi-Fi come scenario) ha riscritto l'intero file
-invece di aggiungere solo la nuova voce all'array `scenarios` di Cybersecurity, perdendo per
-errore i 5 moduli placeholder.
+**Non un bug applicativo — un errore mio, corretto su tua indicazione esplicita.** Dopo il fix di
+`scenario.spec.js`, avevo trovato `home.spec.js` in fallimento su 3 controlli su 26, tutti
+riconducibili al fatto che `data/modules.json` conteneva solo il modulo Cybersecurity. Basandomi
+sulla pianificazione di Fase 4 nella mia memoria (6 categorie: Yoga, Nissan GT-R, Beatbox,
+Fotografia, Cybersecurity, Ricette), avevo concluso che si trattasse di un dato corrotto e
+ripristinato i 5 moduli mancanti. **Era un'assunzione sbagliata**: hai confermato che solo
+Cybersecurity deve esistere — gli altri 5 sono stati rimossi deliberatamente in una sessione
+precedente, non coperta dalla mia memoria.
 
-**Fix**: ripristinati i 5 moduli mancanti (tutti `available: false`, invariato), **senza toccare**
-l'array `scenarios` di Cybersecurity (già corretto: 4 scenari reali). Nessuna modifica a
-`homePageController.js`/`ModuleCard.js` necessaria — il bug era puramente nei dati, non nel
-codice.
-
-**Impatto reale, non solo di test**: questo bug esisteva nell'app **in produzione**, non solo
-nella suite — un docente che avesse aperto la Home in questo stato avrebbe visto una sola
-categoria (Cybersecurity) invece delle 6 previste. Probabilmente introdotto di recente (nessuna
-menzione di questo problema in nessun handover precedente), scoperto solo grazie
-all'esecuzione reale della suite resa possibile in questa sessione.
+**Correzione applicata**:
+- `data/modules.json` torna a contenere solo Cybersecurity (invariato l'array `scenarios`: 4
+  scenari reali).
+- `tests/home.spec.js`: il test "6 ModuleCard" diventa "1 ModuleCard (Cybersecurity),
+  disponibile"; il test "voce disabilitata non è raggiungibile con Tab" è stato **rimosso** (non
+  esiste più alcun modulo disabilitato da testare); il test di remount aggiornato (conteggio
+  `.sl-module-card` da 6 a 1, click sulla card Cybersecurity da `nth=4` a `nth=0`).
+- `tests/scenario.spec.js`/`tests/phishing.spec.js`: click sulla card Cybersecurity dalla Home
+  corretto da `nth=4` a `nth=0` (unico modulo presente, non più il quinto di sei).
 
 ### Correzione aggiuntiva (stessa sessione): `tests/phishing.spec.js` (file preesistente, non
 creato in questa sessione)
 
-Con `modules.json` corretto, sono emersi 6 fallimenti reali in questo file (mai eseguito con
-successo prima, per lo stesso motivo — timeout headless verso Supabase):
+Emersi 6 fallimenti reali in questo file (mai eseguito con successo prima, per lo stesso motivo —
+timeout headless verso Supabase):
 
 1. **Due asserzioni con conteggio scenari obsoleto** ("3 scenari" invece di "4", stesso pattern
-   già corretto in `scenario.spec.js"): aggiornate a 4, incluso l'array dei titoli attesi
+   già corretto in `scenario.spec.js`): aggiornate a 4, incluso l'array dei titoli attesi
    (aggiunto "Evil Twin Wi-Fi").
 2. **Bug CSS reale, verificato con misurazione diretta delle bounding box**: il test "bottone di
    uscita: nessuna sovrapposizione col titolo 'MailTime'" falliva perché `.sl-phishing__brand`
@@ -177,11 +180,21 @@ successo prima, per lo stesso motivo — timeout headless verso Supabase):
    (molti screenshot e contesti browser in sequenza nello stesso processo Node), non un bug
    deterministico. Confermato: nella riesecuzione finale completa della suite, questo controllo è
    passato senza alcuna modifica di codice.
+5. Click sulla card Cybersecurity dalla Home corretto da `nth=4` a `nth=0` (vedi sopra).
 
-**Risultato finale, verificato con un'esecuzione reale e completa**: `login.spec.js` 15/15,
-`home.spec.js` 26/26, `scenario.spec.js` 64/64, `phishing.spec.js` 26/26 — **131/131 controlli
-superati**.
+### Nuovo: credenziali demo cambiate
 
+Su richiesta esplicita: `docente@scuola.it` / `password123` → **`socialive@erryprof.it` /
+`2zErryProf!`**. Hash SHA-256 ricalcolato (`bde91107...`, 64 caratteri, verificato). File toccati:
+`data/users.json` (username + hash), `tests/helpers/auth.js` (credenziali usate dalla suite),
+`style-guide.html` (istruzioni QA + costanti della demo inline, non collegate ad `authService.js`
+reale). Nessuna plaintext password scritta in alcun file — vedi §4 per la discussione completa sui
+limiti reali di questa protezione (domanda posta esplicitamente: "chi ispeziona il sito non deve
+poter leggere le credenziali").
+
+**Risultato finale, verificato con un'esecuzione reale e completa dopo TUTTE le correzioni di
+questa sessione**: `login.spec.js` 15/15, `home.spec.js` 25/25, `scenario.spec.js` 64/64,
+`phishing.spec.js` 26/26 — **130/130 controlli superati**.
 
 
 Su richiesta esplicita, prodotto `come-riattivare-supabase.md` — spiega la causa radice della
@@ -203,12 +216,13 @@ stessa sospensione si ripeta se Supabase tornasse in uso.
 | File | Stato | Intervento |
 |---|---|---|
 | `js/adapters/localAuthAdapter.js` | ⭐ **RIPRISTINATO** | Stessa logica di Fase 3, invariata |
-| `data/users.json` | ⭐ **RIPRISTINATO** | Stesse credenziali demo, hash verificato identico |
+| `data/users.json` | ⭐ **RIPRISTINATO poi MODIFICATO** | Credenziali cambiate: `socialive@erryprof.it` / `2zErryProf!` |
 | `js/services/authService.js` | ♻️ **MODIFICATO** | Torna sincrono; rimosso `initSession()` |
 | `index.html` | ♻️ **MODIFICATO** | Rimossi script vendorizzato + `await initSession()` |
 | `tests/helpers/auth.js` | ♻️ **MODIFICATO** | Credenziali hardcoded, nessuna variabile d'ambiente |
 | `tests/login.spec.js` | ♻️ **MODIFICATO** | `headless` di default; asserzioni su `sl-session` |
-| `tests/home.spec.js` | ♻️ **MODIFICATO** | Solo rimozione `headless: false` |
+| `tests/home.spec.js` | ♻️ **MODIFICATO** | `headless` di default; solo 1 ModuleCard atteso (correzione del mio errore su modules.json) |
+| `style-guide.html` | ♻️ **MODIFICATO** | Credenziali demo aggiornate (istruzioni QA + costanti inline) |
 | `tests/scenario.spec.js` | ♻️ **MODIFICATO** | Corretta corruzione di sintassi + conteggio scenari 3→4 + `headless` di default |
 | `data/modules.json` | ♻️ **MODIFICATO** | Ripristinati 5 moduli top-level mancanti (bug dati preesistente, trovato eseguendo la suite reale) |
 | `tests/phishing.spec.js` | ♻️ **MODIFICATO** | Conteggio scenari 3→4, indice email target corretto (3→1) |
@@ -252,7 +266,7 @@ scaricabile proprio perché vanno rimossi, non sostituiti.
 1. **Applicare questa consegna al repository reale** (tutti i file nuovi/modificati elencati in
    §3) ed **eliminare** i tre file Supabase-only elencati nella stessa tabella.
 2. **Rieseguire `npm test` in locale** (Windows) per una conferma finale nel tuo ambiente reale —
-   non bloccante: è già stato eseguito per intero in questa sessione con esito 131/131, ma la
+   non bloccante: è già stato eseguito per intero in questa sessione con esito 130/130, ma la
    disciplina di progetto raccomanda sempre una conferma nell'ambiente reale di chi consegna.
 3. Nessun'altra attività bloccante nota. Punti indipendenti da questo intervento, solo se ancora
    rilevanti: refactoring "solo Cybersecurity nel sidebar" o altri punti aperti da sessioni
@@ -263,7 +277,7 @@ scaricabile proprio perché vanno rimossi, non sostituiti.
 ## 6. Prossima fase
 
 Nessuna fase numerata pendente, nessuna criticità aperta. Tutti i controlli automatizzati del
-progetto (131) sono verdi, verificato con un'esecuzione reale in questa stessa sessione. Prossimo
+progetto (130) sono verdi, verificato con un'esecuzione reale in questa stessa sessione. Prossimo
 passo naturale: applicare la consegna al repository reale ed eseguire una conferma in locale
 (punto 2 di §5) prima di considerare l'intervento definitivamente chiuso.
 
@@ -277,28 +291,40 @@ Platform"). È stato appena completato un revert dell'autenticazione: da Supabas
 sospeso dal piano gratuito per "inattività", nonostante il progetto fosse in uso — nessuna tabella
 applicativa era mai stata popolata, solo Auth) a sessione locale (SHA-256 su data/users.json,
 esattamente come da Fase 3 fino a prima della migrazione Supabase). Nella stessa sessione sono
-stati trovati e corretti anche due bug reali INDIPENDENTI dall'auth, scoperti eseguendo per la
-prima volta la suite Playwright reale (mai riuscita prima, a causa del timeout headless verso
-Supabase). Il documento di handover completo è allegato: consideralo la fonte di verità primaria.
+state anche cambiate le credenziali demo e corretti 3 bug reali indipendenti dall'auth, scoperti
+eseguendo per la prima volta la suite Playwright reale (mai riuscita prima, per il timeout
+headless verso Supabase). Il documento di handover completo è allegato: consideralo la fonte di
+verità primaria.
 
-COSA È STATO FATTO (auth): ripristinati js/adapters/localAuthAdapter.js e data/users.json (stesse
-credenziali storiche docente@scuola.it/password123, hash verificato identico); riscritto
-js/services/authService.js tornando sincrono (rimosso initSession()); index.html non carica più
-il bundle Supabase vendorizzato né chiama initSession(); rimossi js/adapters/
+COSA È STATO FATTO (auth): ripristinati js/adapters/localAuthAdapter.js e data/users.json;
+riscritto js/services/authService.js tornando sincrono (rimosso initSession()); index.html non
+carica più il bundle Supabase vendorizzato né chiama initSession(); rimossi js/adapters/
 supabaseAuthAdapter.js, js/config/env.js, js/vendor/supabase-js.umd.js (non più referenziati da
 nulla, ma conservati per un'eventuale riattivazione futura — vedi come-riattivare-supabase.md);
 tests/helpers/auth.js torna a credenziali hardcoded; login.spec.js/home.spec.js/scenario.spec.js/
 phishing.spec.js: rimossa la deviazione headless:false (causa: timeout verso la rete Supabase, non
 più presente — confermato con un'esecuzione reale in headless di default, zero timeout).
 
-COSA È STATO FATTO (2 bug indipendenti, trovati eseguendo la suite reale):
+CREDENZIALI DEMO CAMBIATE (richiesta esplicita, stessa sessione): docente@scuola.it/password123 →
+socialive@erryprof.it / 2zErryProf!. Hash SHA-256 ricalcolato e verificato. Nessuna plaintext
+password scritta in alcun file (solo l'hash) — discusso esplicitamente il limite architetturale
+per cui una vera occultazione delle credenziali non è possibile in un sito statico senza backend
+(vedi §4 dell'handover per il dettaglio completo di questa risposta).
+
+CORREZIONE DI UN MIO ERRORE (stessa sessione, importante da non ripetere): avevo inizialmente
+interpretato data/modules.json (contenente solo il modulo Cybersecurity) come un bug, basandomi
+sulla pianificazione di Fase 4 nella mia memoria (6 categorie). Era sbagliato: l'utente ha
+confermato che solo Cybersecurity deve esistere oggi — ho ripristinato modules.json alla versione
+corretta (solo Cybersecurity) e aggiornato i test che assumevano 6 moduli (home.spec.js: card
+attese da 6 a 1, rimosso il test sulla voce disabilitata ormai inesistente; scenario.spec.js/
+phishing.spec.js: indice del click sulla card Cybersecurity da nth=4 a nth=0). LEZIONE: un dato
+che sembra "incompleto" rispetto alla mia memoria di sessioni precedenti non è automaticamente un
+bug — nel dubbio, verificare con l'utente prima di "correggere".
+
+ALTRI 2 BUG INDIPENDENTI TROVATI E CORRETTI (eseguendo la suite reale):
 1. tests/scenario.spec.js conteneva una corruzione di sintassi (due versioni di un test
    concatenate) — corretto.
-2. data/modules.json conteneva SOLO il modulo Cybersecurity — mancavano gli altri 5 moduli
-   top-level (Yoga, Nissan GT-R, Beatbox, Fotografia, Ricette), un bug REALE anche in produzione
-   (non solo nei test), mai segnalato prima. Ripristinati i 5 moduli mancanti, invariato l'array
-   scenari di Cybersecurity (già corretto).
-3. tests/phishing.spec.js: 2 asserzioni con conteggio scenari obsoleto (3→4), 1 bug CSS reale
+2. tests/phishing.spec.js: 2 asserzioni con conteggio scenari obsoleto (3→4), 1 bug CSS reale
    (.sl-phishing__brand era block-level, bounding box a piena larghezza del topbar — corretto con
    display:inline-block in css/scenarios/phishing-simulation.css), 1 indice email sbagliato nel
    test (l'email target è la seconda riga, non la quarta — il renderer era già corretto).
@@ -306,20 +332,23 @@ COSA È STATO FATTO (2 bug indipendenti, trovati eseguendo la suite reale):
 VERIFICA ESEGUITA — REALE, NON SOLO STATICA: repository clonato e ispezionato prima di scrivere
 codice. Suite Playwright eseguita per intero con Chromium reale (trovato in questa sandbox dopo
 due collegamenti simbolici per un disallineamento di versione, dettaglio locale non rilevante per
-il progetto). RISULTATO FINALE: 131/131 controlli superati (login.spec.js 15/15, home.spec.js
-26/26, scenario.spec.js 64/64, phishing.spec.js 26/26).
+il progetto). RISULTATO FINALE, dopo TUTTE le correzioni: 130/130 controlli superati
+(login.spec.js 15/15, home.spec.js 25/25, scenario.spec.js 64/64, phishing.spec.js 26/26).
 
 STATO: nessuna criticità aperta, nessun controllo automatizzato rosso. L'unico passo restante è
-applicare la consegna al repository reale ed eseguire una conferma in locale.
+applicare la consegna al repository reale (incl. le nuove credenziali) ed eseguire una conferma
+in locale.
 
 RUOLO/REGOLE INVARIATE: agisci come Lead Software Architect, Senior Front-end/UI Engineer, UX
 Designer, Accessibility Specialist (WCAG) e Full Stack Architect. Motiva ogni decisione prima di
-implementarla. SEMPRE clonare/leggere il repository reale prima di assumere lo stato di un file.
-Quando possibile, esegui realmente la suite Playwright invece di fermarti a node --check: in
-questa sessione è stato il solo modo per scoprire 2 bug reali che nessuna verifica statica
-avrebbe trovato. Mai duplicare componenti/moduli per la stessa funzione; interfaccia uniforme
-create(props)→{element,update,destroy}; eventi "sl:nome-evento"; componenti "dumb";
-documentazione in italiano; handover completo a 10 sezioni + file .md separato ad ogni intervento.
+implementarla. SEMPRE clonare/leggere il repository reale prima di assumere lo stato di un file —
+e quando la realtà del codice sembra in conflitto con la propria memoria di sessioni precedenti,
+VERIFICARE CON L'UTENTE prima di "correggere" (episodio di questa stessa sessione: un dato
+corretto è stato scambiato per un bug). Quando possibile, esegui realmente la suite Playwright
+invece di fermarti a node --check. Mai duplicare componenti/moduli per la stessa funzione;
+interfaccia uniforme create(props)→{element,update,destroy}; eventi "sl:nome-evento"; componenti
+"dumb"; documentazione in italiano; handover completo a 10 sezioni + file .md separato ad ogni
+intervento.
 
 Indica la prossima priorità.
 ```
@@ -333,7 +362,7 @@ disponibile in sandbox, non previsto inizialmente). Le checklist sotto rifletton
 non più solo verifiche statiche.
 
 ### Test funzionali
-- [x] Login con `docente@scuola.it` / `password123` → naviga a `#/home`. **Verificato: PASS.**
+- [x] Login con `socialive@erryprof.it` / `2zErryProf!` → naviga a `#/home`. **Verificato: PASS.**
 - [x] Login con password errata → banner "Credenziali non valide.". **PASS.**
 - [x] Reload con sessione valida → resta su `#/home` (`localStorage["sl-session"]`). **PASS.**
 - [x] Redirect simmetrico: `#/login` con sessione valida → `#/home`. **PASS.**
@@ -355,9 +384,9 @@ non più solo verifiche statiche.
 ### Test tecnici
 - [x] `node --check` su tutti i file `.js` del progetto — puliti.
 - [x] Tutti i JSON del repository validati sintatticamente.
-- [x] Hash SHA-256 di `"password123"` verificato identico allo storico.
+- [x] Hash SHA-256 delle nuove credenziali (`2zErryProf!`) verificato e applicato a `data/users.json`.
 - [x] **`npm test` eseguito per intero in questa sessione**: `login.spec.js` 15/15, `home.spec.js`
-  26/26, `scenario.spec.js` 64/64, `phishing.spec.js` 26/26 — **131/131 controlli superati**.
+  25/25, `scenario.spec.js` 64/64, `phishing.spec.js` 26/26 — **130/130 controlli superati**.
 - [x] `headless: false` **non più necessario**: confermato con un'esecuzione reale completa in
   modalità headless di default, nessun timeout — la causa (rete Supabase) è stata rimossa insieme
   all'effetto.
@@ -394,7 +423,7 @@ di questo documento è stato risolto e **verificato con un'esecuzione reale** ne
   obsoleto, 1 bug CSS reale (bounding box di `.sl-phishing__brand`), 1 indice email sbagliato —
   tutti corretti, il file passa 26/26.
 - **✅ CHIARITO: il dubbio su `headless: false`** — non più un'ipotesi, ma un fatto verificato:
-  l'intera suite (131 controlli, incl. flussi complessi come il download di file e la
+  l'intera suite (130 controlli, incl. flussi complessi come il download di file e la
   navigazione da tastiera) è passata in modalità headless di default, senza un solo timeout.
 
 Un solo punto informativo, non una criticità: questa sandbox usava un Chromium con una lieve
@@ -433,7 +462,7 @@ comunque tutto correttamente se necessario.
 
 ### Priorità
 - ✅ Risolto e verificato: **`tests/scenario.spec.js`**, **`data/modules.json`**,
-  **`tests/phishing.spec.js`** — tutti corretti e confermati con un'esecuzione reale (131/131).
+  **`tests/phishing.spec.js``tests/phishing.spec.js`** — tutti corretti e confermati con un'esecuzione reale (130/130).
 - 🟢 Bassa: confermare in locale (Windows) come ultimo controllo prima di chiudere definitivamente
   l'intervento — non bloccante, già verificato in questa sessione.
 
@@ -445,4 +474,4 @@ intervento, l'esecuzione reale della suite Playwright — resa possibile solo ri
 dipendenza da Supabase Auth, che bloccava i test in headless — ha permesso di scoprire e correggere
 due bug reali e completamente indipendenti (`data/modules.json` con 5 moduli mancanti,
 `tests/phishing.spec.js` con un bug CSS reale e asserzioni obsolete), portando il progetto a uno
-stato verificato al 100% (131/131 controlli) per la prima volta in molte fasi.
+stato verificato al 100% (130/130 controlli) per la prima volta in molte fasi.

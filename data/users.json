@@ -2,8 +2,8 @@
   "users": [
     {
       "id": "user-001",
-      "username": "docente@scuola.it",
-      "passwordHash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
+      "username": "socialive@erryprof.it",
+      "passwordHash": "bde91107066f1b500acc4a37e1c1029d1c4ef54def4365cbc2da6efd4b755d58",
       "roleId": "docente",
       "displayName": "Prof. Erasmo Lassandro",
       "avatar": null
