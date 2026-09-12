@@ -36,6 +36,37 @@
  * Button/Input per lo stato disabled (coerenza visiva nel Design System).
  * Non serve verificare un nuovo contrasto: l'opacità riduce la leggibilità
  * intenzionalmente (comunica "non disponibile"), non deve superare AA.
+ *
+ * SOTTOMENU "Moduli" (nuovo, additivo — vedi rationale completo in
+ * Sidebar.js): il trigger riusa integralmente .sl-sidebar__link (stesso
+ * aspetto di un link normale, coerenza visiva) + un modificatore per
+ * spingere il chevron sul bordo destro. Il pannello flyout riusa la
+ * stessa ricetta già verificata per i popover del progetto (bg-elevated
+ * + shadow-2, ProfileMenu) — bg-elevated è il token esplicitamente
+ * riservato a "sfondo modali/dropdown" (§5.1 architettura Fase 1),
+ * nessun nuovo accostamento colore da verificare. I link al suo interno
+ * riusano .sl-sidebar__link invariata: stessa identità visiva "voce di
+ * navigazione" ovunque nella Sidebar, nessun nuovo linguaggio visivo
+ * inventato per l'occasione.
+ *
+ * position:absolute ancorato alla propria <li> (position:relative), non
+ * position:fixed calcolato via JS come ProfileMenu: la colonna Sidebar
+ * ha larghezza fissa e la voce "Moduli" una posizione verticale stabile
+ * nel proprio flusso flex — un ancoraggio CSS puro è sufficiente e più
+ * semplice (KISS), a differenza del trigger di AppHeader la cui
+ * posizione dipende dalla larghezza variabile della viewport.
+ *
+ * left:100% (nessun gap): un margine tra trigger e pannello creerebbe
+ * una "zona morta" in cui il cursore, muovendosi in linea retta dal
+ * trigger verso il pannello, uscirebbe temporaneamente dall'area di
+ * hover — rischiando una chiusura prematura nonostante il ritardo di
+ * 150ms già previsto in Sidebar.js. Pannello adiacente, zero rischio.
+ *
+ * Regola "[hidden]" ridichiarata esplicitamente: questo pannello impone
+ * un proprio "display: flex" sulla stessa classe che Sidebar.js nasconde/
+ * mostra con l'attributo nativo — stesso bug pattern già corretto più
+ * volte nel progetto (post-card.css, timeline.css, media-viewer.css,
+ * profile-timeline.css).
  */
 
 .sl-sidebar {
@@ -51,10 +82,22 @@
   gap: var(--sl-space-1);
 }
 
+.sl-sidebar__item {
+  /* position:relative solo sulle voci con sottomenu (vedi
+     .sl-sidebar__item--has-children sotto): un ancoraggio superfluo
+     sulle voci semplici non avrebbe alcun effetto, ma è più chiaro
+     dichiararlo solo dove serve davvero. */
+}
+
+.sl-sidebar__item--has-children {
+  position: relative;
+}
+
 .sl-sidebar__link {
   display: flex;
   align-items: center;
   gap: var(--sl-space-3);
+  width: 100%;
   padding: var(--sl-space-3) var(--sl-space-4);
   border-radius: var(--sl-radius-full);
   border-left: 3px solid transparent;
@@ -62,6 +105,15 @@
   font-weight: var(--sl-font-weight-medium);
   color: var(--sl-color-text-primary);
   transition: background-color var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+/* Il trigger è un <button>, non un <a>: reset.css gli applica già
+   background:none/border:none/cursor:pointer/font:inherit/text-align:
+   inherit — qui serve solo spingere il chevron sul bordo destro, cosa
+   che le voci semplici (icona+label, nessun terzo figlio) non
+   richiedono mai. */
+.sl-sidebar__trigger {
+  justify-content: space-between;
 }
 
 .sl-sidebar__icon {
@@ -75,6 +127,17 @@
   width: 100%;
   height: 100%;
   fill: currentColor;
+}
+
+.sl-sidebar__chevron {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  transition: transform var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-sidebar__trigger[aria-expanded="true"] .sl-sidebar__chevron {
+  transform: rotate(90deg);
 }
 
 .sl-sidebar__link:hover {
@@ -94,6 +157,25 @@
 .sl-sidebar__link--disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.sl-sidebar__flyout {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-1);
+  width: 220px;
+  padding: var(--sl-space-2);
+  background-color: var(--sl-color-bg-elevated);
+  border-radius: var(--sl-radius-lg);
+  box-shadow: var(--sl-shadow-2);
+}
+
+.sl-sidebar__flyout[hidden] {
+  display: none;
 }
 
 @media (max-width: 767px) {

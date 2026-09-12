@@ -1,31 +1,19 @@
 /**
  * home-page.css
  * -----------------------------------------------------------------------
- * Layout interno della rotta #/home reale. PageContainer (Fase 4)
- * possiede già lo scheletro esterno (header/sidebar/main): questo file
- * possiede SOLO l'organizzazione del contenuto di #/home dentro l'area
- * .sl-page-container__main — stesso principio "componente vs layout di
- * pagina" già seguito ovunque nel progetto (Sidebar, PostCard, ecc.).
+ * Layout interno della rotta #/home reale. PageContainer possiede già
+ * lo scheletro esterno (header/sidebar/main): questo file possiede SOLO
+ * l'organizzazione del contenuto di #/home dentro l'area
+ * .sl-page-container__main.
  *
- * Sostituisce concettualmente home-page-placeholder.css (Fase 3): quel
- * file va rimosso dal progetto quando questo verrà integrato, non
- * lasciato accanto (nessun consumer lo importerebbe più).
+ * RIMOSSE (nuovo): .sl-home-page__modules-grid e
+ * .sl-home-page__section-title — dead code da quando
+ * homePageController.js ha eliminato la sezione "Moduli" (ora
+ * raggiungibili dal sottomenu della Sidebar, appShell.js). Nessun
+ * consumer residuo le referenzia.
  *
- * Colonna unica centrata (max-width 640px) per Moduli + Feed: un feed
- * reale e una griglia di moduli a larghezze diverse fianco a fianco
- * avrebbero un allineamento visivamente incoerente — un solo contenitore
- * risolve il problema senza che nessuno dei due componenti debba
- * conoscere l'altro (stesso principio "dumb" applicato anche al layout).
- *
- * Nessun nuovo colore introdotto: --sl-color-text-primary per il titolo
- * di sezione, già verificato ovunque su bg-surface — nessuna verifica
- * WCAG aggiuntiva necessaria in questo step.
- *
- * Griglia Moduli: 6 card, colonne auto-fill da 140px minimo — a 640px di
- * contenitore ne stanno comodamente 4 per riga (140×4 + gap×3 ≈ 608px),
- * a schermi più stretti si adatta automaticamente senza query dedicate
- * (stesso approccio già usato per .sg-grid nello stile QA, qui applicato
- * per la prima volta nell'app reale).
+ * Colonna unica centrata (max-width 640px) per il Feed: nessun nuovo
+ * colore introdotto in questo file.
  */
 
 .sl-home-page__content {
@@ -36,30 +24,10 @@
   gap: var(--sl-space-8);
 }
 
-/* Fase 10: wrapper dell'area popolata in modo asincrono (moduli + feed),
-   introdotto insieme alla riscrittura di homePageController.js che
-   legge davvero data/modules.json/data/home/feed.json. Stessa
-   disposizione flex/gap che prima apparteneva direttamente a
-   .sl-home-page__content quando conteneva Moduli e Feed come figli
-   immediati — ora tra i due si inserisce questo contenitore (il solo
-   nodo su cui il controller imposta aria-busy durante il caricamento),
-   quindi deve replicare la stessa disposizione per non alterare la
-   resa visiva. */
+/* Wrapper dell'area popolata in modo asincrono (il Feed): stesso nodo su
+   cui il controller imposta aria-busy durante il caricamento. */
 .sl-home-page__dynamic {
   display: flex;
   flex-direction: column;
   gap: var(--sl-space-8);
-}
-
-.sl-home-page__section-title {
-  font-size: var(--sl-font-size-lg);
-  font-weight: var(--sl-font-weight-semibold);
-  color: var(--sl-color-text-primary);
-  margin-bottom: var(--sl-space-4);
-}
-
-.sl-home-page__modules-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: var(--sl-space-4);
 }

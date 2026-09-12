@@ -2,59 +2,57 @@
  * appShell.js
  * -----------------------------------------------------------------------
  * Orchestrazione condivisa di AppHeader + ProfileMenu + Sidebar + logout,
- * comune a ogni rotta protetta che usa PageContainer (oggi #/home, da
- * questo step anche #/scenario/:scenarioId). Estratta da
- * homePageController.js (Fase 4) non per anticipazione ipotetica, ma
- * perché scenarioPageController (Fase 5, prossimo step) ha bisogno
- * esattamente della stessa identica orchestrazione — un secondo consumo
- * REALE, non un'astrazione preventiva (stesso criterio "non un secondo
- * bisogno ipotetico ma reale" già seguito per focusTrap.js in Fase 2 e
- * per la decisione di non introdurre userRepository.js in Fase 3 §4).
+ * comune a ogni rotta protetta che usa PageContainer (#/home,
+ * #/scenario/:scenarioId, #/modules/:moduleId).
  *
- * NON possiede il layout (PageContainer resta di competenza di ciascun
- * page controller, che decide cosa metterci nel "main"): appShell
- * possiede SOLO header/sidebar e il loro comportamento reciproco —
- * stesso principio "orchestratore vs layout di pagina" già seguito
- * ovunque nel progetto (Sidebar/PostCard non decidono la propria
- * posizione nella pagina, qui si applica lo stesso criterio a un livello
- * più alto).
+ * SIDEBAR — "Moduli" ora INTERATTIVA (nuovo): fino a questo intervento
+ * era una voce statica disabilitata ("nessuna rotta reale la
+ * raggiungeva direttamente"). Ora diventa una voce con sottomenu
+ * (Sidebar.js, prop "children") che elenca direttamente gli scenari
+ * disponibili — niente più passaggio dalla Home per raggiungerli: la
+ * Sidebar è visibile su OGNI rotta protetta (appShell è montato da
+ * homePageController.js E da scenarioPageController.js), quindi il
+ * docente può saltare da uno scenario all'altro senza mai tornare alla
+ * Home.
  *
- * Interfaccia DELIBERATAMENTE diversa sia da quella dei componenti UI
- * (create(props) => {element, update, destroy}) sia da quella dei page
- * controller ((container, params) => destroy): appShell non è né un
- * componente "dumb" riusabile per props né una rotta — è un helper di
- * orchestrazione privato ai page controller che lo consumano. Restituisce
- * { appHeader, sidebar, destroy() }: il chiamante prende gli elementi
- * (appHeader.element / sidebar.element) e li passa a PageContainer come
- * faceva prima direttamente — appShell non conosce PageContainer, non lo
- * importa, non decide il layout.
+ * DATA-DRIVEN, non hardcoded: i sottomenu vengono letti da
+ * data/modules.json (stesso file già consumato da homePageController.js
+ * e moduleScenariosPageController.js, stessa cache condivisa per URL di
+ * localJsonRepository.js — zero richieste di rete aggiuntive se una
+ * qualunque pagina lo ha già richiesto in questa sessione) — coerente
+ * col principio di progetto "i contenuti non devono essere scritti nel
+ * codice". Vengono appiattite le "scenarios" di OGNI modulo con
+ * "available: true" in un'unica lista sotto "Moduli": con un solo
+ * modulo reale oggi (Cybersecurity) il risultato è una lista piatta dei
+ * suoi scenari — se in futuro un secondo modulo diventasse disponibile,
+ * questa stessa lista si allungherebbe con i suoi scenari accodati.
+ * Una struttura a due livelli (Modulo -> propri scenari) sarebbe più
+ * corretta con più moduli reali, ma introdurla oggi per un solo modulo
+ * sarebbe un'astrazione senza un secondo caso reale che la giustifichi
+ * (YAGNI, stesso criterio già seguito ovunque nel progetto) — da
+ * rivalutare quando un secondo modulo passerà a "available: true".
  *
- * OWNERSHIP — cambio rispetto a Fase 4: da questo step, AppHeader e
- * Sidebar sono di proprietà di appShell, non più del page controller che
- * lo consuma. Il page controller NON deve più chiamare
- * appHeader.destroy()/sidebar.destroy() direttamente: lo fa
- * shell.destroy(), una sola volta. Resta coerente con la policy già
- * dichiarata da PageContainer ("header/sidebar/main restano di proprietà
- * del CHIAMANTE, che li ha creati e deve distruggerli lui stesso" — qui
- * il chiamante di PageContainer è il page controller, che a sua volta
- * delega la creazione/distruzione di header+sidebar ad appShell, senza
- * che PageContainer se ne accorga: PageContainer non cambia).
+ * ASINCRONO, ma la Sidebar nasce subito: appShell resta sincrono verso
+ * chi lo chiama (nessun controller deve attendere una Promise per
+ * montare la pagina) — Sidebar viene creata SUBITO con "Moduli" senza
+ * figli (quindi voce foglia interattiva ma senza sottomenu finché i
+ * dati non arrivano; scelta preferita a "disabled" perché è comunque
+ * onesto: appena i dati risolvono, l'utente vede il sottomenu apparire,
+ * non un bottone che passa da disabilitato a abilitato, cambio più
+ * brusco), poi aggiornata via sidebar.update({ items }) non appena il
+ * fetch risolve — stesso pattern asincrono già stabilito da
+ * scenarioPageController.js/homePageController.js.
  *
- * SIDEBAR — voci fisse, invariate da Fase 4: solo "Home" corrisponde a
- * una rotta reale oggi (#/modules e #/settings non esistono in
- * router.js) — un link abilitato verso una rotta inesistente produrrebbe
- * "Pagina non trovata" al click, peggiore di non mostrarlo come
- * disponibile. "activeSidebarId" è il solo parametro che varia tra le
- * pagine consumer (oggi: "home" per la Home; nessuna voce attiva per la
- * pagina di scenario, che non ha una propria voce dedicata in Sidebar).
+ * Guardia "destroyed": se il chiamante distrugge la shell prima che il
+ * fetch di modules.json risolva, il .then() non chiama sidebar.update()
+ * su un componente già rimosso dal DOM — stessa protezione già
+ * verificata con un test dedicato in Fase 5/8 per gli altri controller
+ * asincroni del progetto.
  *
- * PROFILEMENU: stesso pattern di orchestrazione apertura/chiusura già
- * verificato in style-guide.html (Fase 2/Step 5) e riusato in
- * homePageController.js (Fase 4) — AppHeader e ProfileMenu restano
- * reciprocamente ignari, appShell è il "collante", esattamente come lo
- * era prima il page controller. sl:logout → authService.logout(): il
- * redirect a #/login resta gestito centralmente da router.js (ascolta
- * sl:auth-logout), zero logica di navigazione qui.
+ * OWNERSHIP — invariata: AppHeader e Sidebar restano di proprietà di
+ * appShell, il chiamante non li distrugge mai direttamente.
+ *
+ * PROFILEMENU — invariato.
  *
  * Interfaccia: createAppShell({ activeSidebarId }) →
  *   { appHeader, sidebar, destroy() }
@@ -64,9 +62,38 @@ import { create as createAppHeader } from "../../components/AppHeader.js";
 import { create as createProfileMenu } from "../../components/ProfileMenu.js";
 import { create as createSidebar } from "../../components/Sidebar.js";
 import { getCurrentUser, logout } from "../../services/authService.js";
+import { createLocalJsonRepository } from "../../repositories/localJsonRepository.js";
+import { buildFallbackMessage } from "../../utils/fallbackMessage.js";
+
+// Stessa fabbrica/URL già usata da homePageController.js/
+// moduleScenariosPageController.js: la cache di localJsonRepository.js è
+// per URL, non per istanza — nessuna richiesta di rete duplicata anche
+// se più pagine protette montano ciascuna il proprio appShell.
+const modulesRepository = createLocalJsonRepository({
+  url: "data/modules.json",
+  collectionKey: "modules",
+  idField: "id",
+});
+
+// Appiattisce le "scenarios" di ogni modulo disponibile in un'unica
+// lista di voci per il sottomenu — vedi rationale "DATA-DRIVEN" in testa
+// al file sul perché non c'è (ancora) un secondo livello di annidamento.
+function buildModuleChildren(modules) {
+  return modules
+    .filter((moduleRecord) => moduleRecord.available && Array.isArray(moduleRecord.scenarios))
+    .flatMap((moduleRecord) =>
+      moduleRecord.scenarios.map((scenario) => ({
+        id: scenario.id,
+        label: scenario.title,
+        route: `#/scenario/${scenario.id}`,
+        disabled: !scenario.available,
+      }))
+    );
+}
 
 export function createAppShell({ activeSidebarId } = {}) {
   const user = getCurrentUser();
+  let destroyed = false;
 
   const appHeader = createAppHeader({
     user: { name: user?.displayName, avatarSrc: user?.avatar || undefined },
@@ -90,9 +117,6 @@ export function createAppShell({ activeSidebarId } = {}) {
       anchorElement: event.detail.anchorElement,
     });
 
-    // ProfileMenu può chiudersi da sé (ESC, click fuori, azione scelta):
-    // risincronizza aria-expanded su AppHeader senza simulare un secondo
-    // click sul trigger — stesso pattern già verificato in Fase 2/4.
     profileMenu.element.addEventListener("sl:profile-menu-close", () => {
       appHeader.update({ profileMenuOpen: false });
       profileMenu = null;
@@ -107,13 +131,37 @@ export function createAppShell({ activeSidebarId } = {}) {
   const sidebar = createSidebar({
     items: [
       { id: "home", label: "Home", route: "#/home" },
-      { id: "modules", label: "Moduli", disabled: true },
+      { id: "modules", label: "Moduli", children: [] },
       { id: "settings", label: "Impostazioni", disabled: true },
     ],
     activeId: activeSidebarId,
   });
 
+  modulesRepository
+    .list()
+    .then((modules) => {
+      if (destroyed) return;
+      sidebar.update({
+        items: [
+          { id: "home", label: "Home", route: "#/home" },
+          { id: "modules", label: "Moduli", children: buildModuleChildren(modules) },
+          { id: "settings", label: "Impostazioni", disabled: true },
+        ],
+      });
+    })
+    .catch((error) => {
+      // Nessun blocco della pagina per un fallimento sul solo sottomenu:
+      // "Moduli" resta semplicemente senza figli (nessun sottomenu si
+      // apre) — stesso criterio di tolleranza già seguito altrove nel
+      // progetto per problemi non critici (es. sessione non persistita
+      // in authService.js). buildFallbackMessage non serve qui: non c'è
+      // un'area di contenuto dedicata in cui mostrare un messaggio,
+      // solo una voce di navigazione che resta silenziosamente vuota.
+      console.error("[appShell] Impossibile caricare data/modules.json per il sottomenu Sidebar", error);
+    });
+
   function destroy() {
+    destroyed = true;
     appHeader.element.removeEventListener("sl:profile-menu-toggle", handleProfileMenuToggle);
     closeProfileMenu();
     sidebar.destroy();
