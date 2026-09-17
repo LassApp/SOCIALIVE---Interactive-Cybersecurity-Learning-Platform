@@ -53,13 +53,14 @@
  * "pubblico se e solo se seguito": "isPublic" (nuovo, gestito dal
  * pannello Impostazioni) e "isFollowing" sono ora due variabili
  * indipendenti, regola contentVisible = isPublic || isFollowing (vedi
- * profileTimelineRenderer.js). Aggiunti 4 nuovi blocchi dedicati al
+ * profileTimelineRenderer.js). Aggiunti nuovi blocchi dedicati al
  * pannello Impostazioni (bottone ingranaggio, nuovo, prima di "Segui"):
  * toggle pubblico/privato combinato con Segui, "Chi può seguirti" con
  * flusso di approvazione (dialog + stato "Richiesta inviata"), "Chi può
- * commentare" (gating del bottone Commenta di PostCard, prop additiva
- * commentsEnabled/commentsDisabledReason), "Chi vede le storie"
- * (StoriesBar sostituita da una nota testuale quando "Amici stretti").
+ * commentare" (il bottone Commenta di PostCard SCOMPARE, prop additiva
+ * commentsEnabled — non solo disabilitato), "Chi vede le storie"
+ * (StoriesBar sostituita da una nota testuale quando "Amici stretti"),
+ * "Chi può vedere quando sei online" (pallino di stato sull'avatar).
  * NON ancora eseguiti in un browser reale in questa sessione (nessun
  * Chromium scaricabile in questo ambiente sandbox, download bloccato
  * dalla rete consentita) — stessa onestà di processo già richiesta sopra
@@ -247,14 +248,14 @@ async function run() {
     const privateNotice = () => page.locator(".sl-profile-timeline__private-notice");
     const settingsModal = () => page.locator(".sl-modal", { hasText: "Impostazioni privacy" });
 
-    await suite.test("apertura Impostazioni: Modal con 4 controlli", async () => {
+    await suite.test("apertura Impostazioni: Modal con 6 controlli", async () => {
       await page.click(".sl-profile-timeline__settings-trigger");
       await settingsModal().waitFor({ state: "visible" });
-      assert.equal(await settingsModal().locator(".sl-profile-timeline__settings-row").count(), 4);
+      assert.equal(await settingsModal().locator(".sl-profile-timeline__settings-row").count(), 6);
     });
 
     await suite.test("toggle 'Profilo pubblico': Attivo -> Disattivato", async () => {
-      const toggle = settingsModal().locator(".sl-profile-timeline__settings-toggle");
+      const toggle = settingsModal().locator(".sl-profile-timeline__settings-toggle").nth(0);
       assert.equal((await toggle.textContent()).trim(), "Attivo");
       await toggle.click();
       assert.equal((await toggle.textContent()).trim(), "Disattivato");
@@ -355,31 +356,27 @@ async function run() {
       await settingsModal().waitFor({ state: "detached" });
     }
 
-    await suite.test("stato iniziale: commenti abilitati sul primo post", async () => {
-      assert.equal(await firstCommentButton().isDisabled(), false);
+    await suite.test("stato iniziale: bottone Commenta visibile sul primo post", async () => {
+      assert.equal(await firstCommentButton().isVisible(), true);
+      assert.equal(await firstCommentButton().getAttribute("aria-label"), "Commenta il post — 0 commenti");
     });
 
-    await suite.test("'Chi può commentare' -> Nessuno: bottone Commenta disabilitato", async () => {
+    await suite.test("'Chi può commentare' -> Nessuno: bottone Commenta SCOMPARE (non solo disabilitato)", async () => {
       await setCommentPolicy("Nessuno");
-      assert.equal(await firstCommentButton().isDisabled(), true);
-      assert.equal(await firstCommentButton().getAttribute("aria-label"), "I commenti sono disattivati per questo profilo.");
+      assert.equal(await firstCommentButton().isHidden(), true);
     });
 
-    await suite.test("'Chi può commentare' -> Follower, non seguo -> disabilitato con motivo diverso", async () => {
+    await suite.test("'Chi può commentare' -> Follower, non seguo -> ancora nascosto", async () => {
       await setCommentPolicy("Follower");
       await page.click(".sl-profile-timeline__follow-button"); // smetto di seguire
       await page.waitForTimeout(30);
-      assert.equal(await firstCommentButton().isDisabled(), true);
-      assert.equal(
-        await firstCommentButton().getAttribute("aria-label"),
-        "Solo i follower possono commentare i post di questo profilo."
-      );
+      assert.equal(await firstCommentButton().isHidden(), true);
     });
 
-    await suite.test("torno a seguire -> commenti di nuovo abilitati", async () => {
+    await suite.test("torno a seguire -> bottone Commenta di nuovo visibile", async () => {
       await page.click(".sl-profile-timeline__follow-button");
       await page.waitForTimeout(30);
-      assert.equal(await firstCommentButton().isDisabled(), false);
+      assert.equal(await firstCommentButton().isVisible(), true);
     });
 
     await context.close();
@@ -422,6 +419,69 @@ async function run() {
     await suite.test("torno su 'Tutti i follower': StoriesBar di nuovo visibile", async () => {
       await setStoriesAudience("Tutti i follower");
       assert.equal(await page.locator(".sl-stories-bar").isVisible(), true);
+    });
+
+    await context.close();
+  }
+
+  // --- Impostazioni: pallino online/offline + "Condivisione della
+  // posizione" (nuovo) --------------------------------------------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await gotoScenario(page, server.url);
+
+    const settingsModal = () => page.locator(".sl-modal", { hasText: "Impostazioni privacy" });
+    const statusDot = () => page.locator(".sl-profile-timeline__status-dot");
+
+    async function setOnlineVisibility(label) {
+      await page.click(".sl-profile-timeline__settings-trigger");
+      await settingsModal().waitFor({ state: "visible" });
+      await settingsModal()
+        .locator(".sl-profile-timeline__settings-chip-group")
+        .nth(3)
+        .locator(`button:has-text("${label}")`)
+        .click();
+      await page.keyboard.press("Escape");
+      await settingsModal().waitFor({ state: "detached" });
+    }
+
+    await suite.test("pallino di stato presente sull'avatar, con title 'Online' o 'Offline'", async () => {
+      assert.equal(await statusDot().count(), 1);
+      const title = await statusDot().getAttribute("title");
+      assert.ok(title === "Online" || title === "Offline", `title inatteso: "${title}"`);
+      const ariaLabel = await statusDot().getAttribute("aria-label");
+      assert.ok(/^Stato: (online|offline)$/.test(ariaLabel), `aria-label inatteso: "${ariaLabel}"`);
+    });
+
+    await suite.test("stato iniziale: 'Chi può vedere quando sei online' = Tutti, pallino visibile", async () => {
+      assert.equal(await statusDot().isVisible(), true);
+    });
+
+    await suite.test("'Chi può vedere quando sei online' -> Nessuno: pallino nascosto", async () => {
+      await setOnlineVisibility("Nessuno");
+      assert.equal(await statusDot().isHidden(), true);
+    });
+
+    await suite.test("-> Follower, non seguo -> ancora nascosto; seguo di nuovo -> visibile", async () => {
+      await setOnlineVisibility("Follower");
+      await page.click(".sl-profile-timeline__follow-button"); // smetto di seguire
+      await page.waitForTimeout(30);
+      assert.equal(await statusDot().isHidden(), true);
+      await page.click(".sl-profile-timeline__follow-button"); // seguo di nuovo
+      await page.waitForTimeout(30);
+      assert.equal(await statusDot().isVisible(), true);
+    });
+
+    await suite.test("Impostazioni: presente la voce 'Condivisione della posizione' con toggle Attivo/Disattivato", async () => {
+      await page.click(".sl-profile-timeline__settings-trigger");
+      await settingsModal().waitFor({ state: "visible" });
+      const locationToggle = settingsModal().locator(".sl-profile-timeline__settings-toggle").nth(1);
+      assert.equal((await locationToggle.textContent()).trim(), "Attivo");
+      await locationToggle.click();
+      assert.equal((await locationToggle.textContent()).trim(), "Disattivato");
+      await page.keyboard.press("Escape");
+      await settingsModal().waitFor({ state: "detached" });
     });
 
     await context.close();

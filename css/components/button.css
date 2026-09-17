@@ -100,3 +100,17 @@
   cursor: not-allowed;
   pointer-events: none;
 }
+
+/* BUG REALE CORRETTO (profilo Oversharing, "Chi può commentare"): stesso
+   pattern già trovato e corretto più volte altrove nel progetto
+   (post-card.css, timeline.css, media-viewer.css, profile-timeline.css)
+   — .sl-button imposta "display: inline-flex" fin dalla regola base,
+   quindi una dichiarazione d'autore batte sempre lo stile UA di
+   [hidden], indipendentemente dalla specificità. Nessun consumer
+   precedente aveva mai nascosto un Button col solo attributo nativo
+   "hidden" (i casi precedenti nascondevano sempre un contenitore
+   attorno al bottone, mai il bottone stesso) — corretto qui, alla
+   radice, perché riguarda Button.js in generale, non un solo consumer. */
+.sl-button[hidden] {
+  display: none;
+}

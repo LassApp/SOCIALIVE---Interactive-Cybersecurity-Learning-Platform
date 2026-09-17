@@ -95,18 +95,20 @@ function render(refs, props) {
 
   // "commentsEnabled" (additivo, opzionale): assente/true per qualunque
   // consumer esistente (Home, tutti gli scenari) — zero cambio di
-  // comportamento. Primo consumo reale: profileTimelineRenderer.js,
-  // per riflettere l'impostazione "Chi può commentare" del profilo
-  // Oversharing (vedi quel file). Quando disabilitato, il motivo
-  // (post.commentsDisabledReason) sostituisce l'etichetta accessibile
-  // di default — mai il solo colore/opacità come unico segnale.
+  // comportamento. Primo consumo reale: profileTimelineRenderer.js, per
+  // riflettere l'impostazione "Chi può commentare" del profilo
+  // Oversharing (vedi quel file). Il bottone SCOMPARE del tutto quando
+  // non consentito (non solo disabilitato): coerente con il trattamento
+  // già riservato altrove nel profilo a un controllo non disponibile
+  // per la scelta corrente (es. StoriesBar, sostituita da una nota
+  // quando "Chi vede le storie" la nasconde) — un bottone visibile ma
+  // inerte lascerebbe un dubbio ("perché non risponde?") che l'assenza
+  // del tutto non lascia.
   const commentsEnabled = post.commentsEnabled !== false;
+  refs.commentButton.element.hidden = !commentsEnabled;
   refs.commentButton.update({
     label: formatCount(comments),
-    disabled: !commentsEnabled,
-    ariaLabel: commentsEnabled
-      ? `Commenta il post — ${formatCount(comments)} commenti`
-      : post.commentsDisabledReason || "Commenti disattivati per questo post",
+    ariaLabel: `Commenta il post — ${formatCount(comments)} commenti`,
   });
 
   refs.shareButton.update({

@@ -72,10 +72,11 @@
  *      richieste di follow (vedi sotto).
  *   3. "Chi può commentare" — Tutti | Follower | Nessuno
  *      (commentPolicy). Applicata per-post: ogni oggetto in
- *      "feedPosts" riceve un campo "commentsEnabled"
- *      (+ "commentsDisabledReason"), letto da PostCard.js (prop
- *      additiva, Fase corrente — default true, zero impatto sugli
- *      altri consumer di PostCard come la Home).
+ *      "feedPosts" riceve un campo "commentsEnabled", letto da
+ *      PostCard.js (prop additiva — default true/bottone visibile per
+ *      qualunque altro consumer di PostCard, come la Home). Il bottone
+ *      Commenta SCOMPARE del tutto quando non consentito, non solo
+ *      disabilitato (vedi PostCard.js).
  *   4. "Chi vede le storie" — Tutti i follower | Amici stretti
  *      (storiesAudience). In questa demo il visitatore non è mai un
  *      "amico stretto": impostarlo su quel valore nasconde
@@ -112,6 +113,27 @@
  * medesimi default (pubblico attivo, tutti possono seguire/commentare/
  * vedere le storie), per poter ripetere la demo più volte in classi
  * diverse dallo stesso punto di partenza.
+ *
+ * CORREZIONI SUCCESSIVE ALLA PRIMA CONSEGNA DI QUESTO INTERVENTO:
+ *   - buildSettingsIcon() sostituita: la prima versione (bezier "a
+ *     ricciolo") non piaceva esteticamente — resta un ingranaggio, solo
+ *     più geometrico (anello + foro + denti squadrati).
+ *   - I chip di buildOptionGroup ora hanno un vero stato visivo attivo/
+ *     non attivo (profile-timeline.css, regola su [aria-pressed="true"]):
+ *     la prima versione impostava solo l'attributo ARIA, senza alcuna
+ *     regola CSS a leggerlo — bug reale, nessuna "bolla" visibile.
+ *   - Il bottone "Commenta" ora SCOMPARE (hidden) quando non consentito,
+ *     non solo disabilitato: coerente con "Chi vede le storie", che già
+ *     nasconde per intero invece di mostrare un controllo inerte.
+ *   - Pallino di stato online/offline (nuovo) sull'avatar + relativa
+ *     voce "Chi può vedere quando sei online" in Impostazioni — vedi il
+ *     blocco dedicato subito prima di buildProfileHeader() più sotto.
+ *   - Voce "Condivisione della posizione" (nuovo, toggle Attivo/
+ *     Disattivato) in Impostazioni: SOLO di stato in questo intervento,
+ *     nessun effetto visibile collegato — nessun consumer reale lo
+ *     richiedeva ancora (coerente con YAGNI): se in futuro dovesse
+ *     comparire un'etichetta di posizione sui post, questo stato è già
+ *     pronto per pilotarla, zero rilavorazione.
  *
  * ICONA LUCCHETTO — invariata, resta SOLO decorativa (badge circolare
  * nel pannello "Questo profilo è privato"), non interattiva.
@@ -173,20 +195,33 @@ function buildLockIcon() {
   return svg;
 }
 
-// Icona ingranaggio per il bottone "Impostazioni" (nuovo). Stesso
-// pattern inline già usato per il lucchetto: nessuna dipendenza dallo
-// sprite (assets/icons/icons.svg, ancora assente).
+// Icona ingranaggio per il bottone "Impostazioni" — stile "corona con
+// denti squadrati" (anello + foro centrale + 8 denti rettangolari
+// ruotati), deliberatamente diverso dal precedente ingranaggio "a
+// bezier" (troppo simile a un'icona generica di terze parti, sostituito
+// su richiesta esplicita): resta comunque un ingranaggio, riconoscibile
+// come tale, solo con un tratto più geometrico/squadrato coerente con
+// lo stile "outline, stroke 1.5px" già usato per le altre icone inline
+// del progetto (lucchetto, chiusura, chevron).
 function buildSettingsIcon() {
   const svg = svgNode("svg", { viewBox: "0 0 24 24", fill: "none" });
-  svg.appendChild(svgNode("circle", { cx: "12", cy: "12", r: "3", stroke: "currentColor", "stroke-width": "1.5" }));
-  svg.appendChild(
-    svgNode("path", {
-      d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
-      stroke: "currentColor",
-      "stroke-width": "1.5",
-      "stroke-linejoin": "round",
-    })
-  );
+  svg.appendChild(svgNode("circle", { cx: "12", cy: "12", r: "6.5", stroke: "currentColor", "stroke-width": "1.6" }));
+  svg.appendChild(svgNode("circle", { cx: "12", cy: "12", r: "2", fill: "currentColor" }));
+  // 8 denti equidistanti, un solo <rect> ruotato di 45° in 8 copie —
+  // più economico ed esplicito di 8 path scritti a mano.
+  for (let i = 0; i < 8; i += 1) {
+    svg.appendChild(
+      svgNode("rect", {
+        x: "10.75",
+        y: "0.9",
+        width: "2.5",
+        height: "3",
+        rx: "0.6",
+        fill: "currentColor",
+        transform: `rotate(${i * 45} 12 12)`,
+      })
+    );
+  }
   return svg;
 }
 
@@ -268,7 +303,7 @@ function buildToggleButton(initialValue, onChange, collected) {
 
 // postsCount NON arriva da profile.json — derivato da rawPosts.length,
 // l'unica fonte di verità (nessuna duplicazione, Fase 6/Step 1).
-function buildProfileHeader(profile, postsCount, settingsButtonElement, followButtonElement) {
+function buildProfileHeader(profile, postsCount, settingsButtonElement, followButtonElement, statusDotElement) {
   const coverImage = createElement("img", {
     classNames: "sl-profile-timeline__cover-image",
     attrs: { src: profile.coverImage || "", alt: "" },
@@ -313,7 +348,15 @@ function buildProfileHeader(profile, postsCount, settingsButtonElement, followBu
   }
   avatarButton.addEventListener("click", handleAvatarOpen);
 
-  const avatarWrap = createElement("div", { classNames: "sl-profile-timeline__avatar-wrap" }, [avatarButton]);
+  // Pallino di stato (nuovo) in basso a destra sull'avatar — elemento
+  // già pronto (creato dal chiamante, che ne possiede lo stato "online/
+  // offline" e il timer che lo fa cambiare nel tempo): questa funzione
+  // si limita a posizionarlo, stesso principio "dumb" già seguito per
+  // settingsButtonElement/followButtonElement.
+  const avatarWrap = createElement("div", { classNames: "sl-profile-timeline__avatar-wrap" }, [
+    avatarButton,
+    statusDotElement,
+  ]);
 
   // <h1>: il nome utente è il titolo effettivo di questa pagina — un
   // vero profilo social non mostra mai un secondo titolo "editoriale"
@@ -463,6 +506,8 @@ export async function renderProfileTimeline(container, scenario) {
   let followRequestPending = false;
   let commentPolicy = "everyone"; // "everyone" | "followers" | "nobody"
   let storiesAudience = "followers"; // "followers" | "close-friends"
+  let onlineVisibility = "everyone"; // "everyone" | "followers" | "nobody"
+  let locationSharing = true; // "Condivisione della posizione" — solo di stato, nessun effetto visibile ancora (vedi rationale sotto)
   let feed = null; // assegnata più sotto — dichiarata qui perché applyCommentPolicyToPosts() la referenzia
 
   // Regola unica di visibilità del profilo (vedi rationale in testa al
@@ -476,26 +521,22 @@ export async function renderProfileTimeline(container, scenario) {
   // opzione "followers", da isFollowing — va ricalcolato ogni volta che
   // uno dei due cambia, non solo all'apertura di Impostazioni.
   function computeCommentsPermission() {
-    if (commentPolicy === "nobody") {
-      return { enabled: false, reason: "I commenti sono disattivati per questo profilo." };
-    }
-    if (commentPolicy === "followers" && !isFollowing) {
-      return { enabled: false, reason: "Solo i follower possono commentare i post di questo profilo." };
-    }
-    return { enabled: true, reason: null };
+    if (commentPolicy === "nobody") return false;
+    if (commentPolicy === "followers" && !isFollowing) return false;
+    return true;
   }
 
   // Applica la permission a TUTTI i post già caricati (mai un secondo
-  // fetch): "commentsEnabled"/"commentsDisabledReason" sono campi
-  // additivi letti da PostCard.js (default abilitato per qualunque
-  // altro consumer, es. il feed della Home — zero impatto lì). "feed"
-  // può non esistere ancora alla primissima chiamata (applicata
-  // direttamente su feedPosts prima della sua creazione, sotto).
+  // fetch): "commentsEnabled" è un campo additivo letto da PostCard.js
+  // (assente/true per qualunque altro consumer, es. il feed della Home
+  // — zero impatto lì: il bottone Commenta resta semplicemente
+  // visibile). "feed" può non esistere ancora alla primissima chiamata
+  // (applicata direttamente su feedPosts prima della sua creazione,
+  // sotto).
   function applyCommentPolicyToPosts() {
-    const { enabled, reason } = computeCommentsPermission();
+    const enabled = computeCommentsPermission();
     feedPosts.forEach((post) => {
       post.commentsEnabled = enabled;
-      post.commentsDisabledReason = reason;
     });
     if (feed) feed.update({ posts: feedPosts });
   }
@@ -550,6 +591,7 @@ export async function renderProfileTimeline(container, scenario) {
       : "Questo profilo è privato e non lo segui: contenuti nascosti.";
 
     applyCommentPolicyToPosts();
+    updateOnlineDotVisibility();
   }
 
   // Dialog informativo (Modal riusato, non un secondo overlay): nessun
@@ -610,7 +652,59 @@ export async function renderProfileTimeline(container, scenario) {
   privateFollowButton.element.addEventListener("sl:click", handleFollowToggle);
   settingsButton.element.addEventListener("sl:click", openSettingsPanel);
 
-  const header = buildProfileHeader(profile, rawPosts.length, settingsButton.element, headerFollowButton.element);
+  // Pallino "online/offline" (nuovo) — stato SEMPRE casuale a ogni
+  // mount (requisito esplicito: "random ad ogni refresh pagina") e
+  // capace di cambiare da solo nel tempo, non solo al refresh
+  // ("può cambiare anche da un momento all'altro"): un timer si
+  // riprogrammano da solo con un ritardo casuale (6-20s) ad ogni
+  // esecuzione, invece di un setInterval a cadenza fissa — un cambio a
+  // intervalli sempre uguali sarebbe meno credibile di uno stato che
+  // fluttua in modo imprevedibile, come farebbe una persona reale.
+  let isOnline = Math.random() < 0.5;
+  let onlineStatusTimer = null;
+
+  const statusDot = createElement("span", { classNames: "sl-profile-timeline__status-dot" });
+
+  function applyStatusDot() {
+    statusDot.classList.toggle("sl-profile-timeline__status-dot--online", isOnline);
+    // title (tooltip nativo al passaggio del mouse, richiesto
+    // esplicitamente) + aria-label (lo stesso testo per chi non usa il
+    // mouse) — role="img" perché il pallino da solo comunica
+    // un'informazione reale, non è puramente decorativo (stesso
+    // principio già seguito da Avatar.js quando ariaHidden è false).
+    const label = `Stato: ${isOnline ? "online" : "offline"}`;
+    statusDot.title = isOnline ? "Online" : "Offline";
+    statusDot.setAttribute("aria-label", label);
+  }
+  statusDot.setAttribute("role", "img");
+  applyStatusDot();
+
+  function scheduleNextOnlineFlip() {
+    const delay = 6000 + Math.random() * 14000;
+    onlineStatusTimer = setTimeout(() => {
+      isOnline = Math.random() < 0.5;
+      applyStatusDot();
+      scheduleNextOnlineFlip();
+    }, delay);
+  }
+  scheduleNextOnlineFlip();
+
+  // Visibilità del pallino: governata da "Chi può vedere quando sei
+  // online", indipendente dalla visibilità del resto del profilo (il
+  // pallino vive nell'header, sempre presente anche a profilo privato
+  // — stesso principio già motivato per copertina/avatar/bio/statistiche).
+  function updateOnlineDotVisibility() {
+    statusDot.hidden = !(onlineVisibility === "everyone" || (onlineVisibility === "followers" && isFollowing));
+  }
+  updateOnlineDotVisibility();
+
+  const header = buildProfileHeader(
+    profile,
+    rawPosts.length,
+    settingsButton.element,
+    headerFollowButton.element,
+    statusDot
+  );
   const storiesBar = createStoriesBar({ stories });
 
   // Sostituisce StoriesBar quando "storiesAudience" è "close-friends":
@@ -836,6 +930,34 @@ export async function renderProfileTimeline(container, scenario) {
           settingsChildren
         )
       ),
+      buildSettingsRow(
+        "Chi può vedere quando sei online",
+        "Il pallino di stato sull'immagine del profilo",
+        buildOptionGroup(
+          [
+            { value: "everyone", label: "Tutti" },
+            { value: "followers", label: "Follower" },
+            { value: "nobody", label: "Nessuno" },
+          ],
+          onlineVisibility,
+          (next) => {
+            onlineVisibility = next;
+            updateOnlineDotVisibility();
+          },
+          settingsChildren
+        )
+      ),
+      buildSettingsRow(
+        "Condivisione della posizione",
+        "Allega la posizione ai nuovi contenuti",
+        buildToggleButton(
+          locationSharing,
+          (next) => {
+            locationSharing = next;
+          },
+          settingsChildren
+        )
+      ),
     ]);
 
     const modal = createModal({ title: "Impostazioni privacy", content: [note, list] });
@@ -847,6 +969,7 @@ export async function renderProfileTimeline(container, scenario) {
   container.appendChild(wrapper);
 
   return function destroy() {
+    clearTimeout(onlineStatusTimer);
     feed.element.removeEventListener("sl:post-like", handlePostLike);
     wrapper.removeEventListener("sl:post-open", handlePostOpen);
     wrapper.removeEventListener("sl:profile-avatar-open", handleAvatarOpen);

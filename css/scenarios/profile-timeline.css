@@ -137,9 +137,42 @@
 }
 
 .sl-profile-timeline__avatar-wrap {
+  position: relative;
   display: inline-flex;
   border: 3px solid var(--sl-color-bg-canvas);
   border-radius: var(--sl-radius-full);
+}
+
+/* Pallino online/offline (nuovo) — ancorato in basso a destra rispetto
+   ad avatar-wrap (non al solo avatar: così il ring di 3px già presente
+   attorno all'avatar non lo "mangia" visivamente). Verde/grigio via
+   modificatore --online, mai il solo colore come segnale: title (hover)
+   + aria-label portano sempre lo stesso testo "Online"/"Offline" (vedi
+   profileTimelineRenderer.js). Bordo bg-canvas identico a quello di
+   avatar-wrap: stesso effetto "ritaglio" indipendentemente dal colore
+   sottostante dell'avatar. */
+.sl-profile-timeline__status-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--sl-radius-full);
+  border: 3px solid var(--sl-color-bg-canvas);
+  background-color: var(--sl-color-border-strong);
+}
+
+.sl-profile-timeline__status-dot--online {
+  background-color: var(--sl-color-success-500);
+}
+
+/* Stesso bug pattern già corretto più volte nel progetto (post-card.css,
+   timeline.css, media-viewer.css, .private-notice qui sopra): una
+   regola d'autore con "display" (qui: quella implicita di "position:
+   absolute" non basta a nascondere l'elemento da sola) batte sempre lo
+   stile UA di [hidden] — ridichiarato esplicitamente. */
+.sl-profile-timeline__status-dot[hidden] {
+  display: none;
 }
 
 .sl-profile-timeline__username {
@@ -359,9 +392,26 @@
 /* Chip = Button ghost esistente, solo più compatto (padding ridotto
    rispetto al default) per stare bene affiancato ad altri 1-2 chip
    nella stessa riga — stesso criterio già applicato al bottone "Segui"
-   dell'header pubblico (padding compatto rispetto al default). */
+   dell'header pubblico (padding compatto rispetto al default). Bordo
+   sempre presente (anche a riposo): senza, un ghost Button è testo puro
+   e la fila di opzioni non si leggerebbe come un gruppo di scelte
+   cliccabili — border-strong, già verificato ≥3:1 ovunque nel progetto
+   come confine funzionale (input.css/sidebar.css), nessun nuovo
+   accostamento.
+   BUG REALE CORRETTO in questo stesso step: la prima versione si
+   affidava al solo attributo aria-pressed impostato da Button.js, senza
+   alcuna regola CSS a leggerlo — nessuna "bolla" visibile per indicare
+   l'opzione attiva, un vero difetto (mai il solo attributo ARIA come
+   sostituto di un segnale visivo, §5.7 architettura Fase 1). */
 .sl-button.sl-profile-timeline__settings-chip {
   padding: 6px var(--sl-space-3);
+  border: 1px solid var(--sl-color-border-strong);
+}
+
+.sl-button.sl-profile-timeline__settings-chip[aria-pressed="true"] {
+  background-color: var(--sl-color-primary-600);
+  border-color: var(--sl-color-primary-600);
+  color: var(--sl-color-text-inverse);
 }
 
 .sl-button.sl-profile-timeline__settings-toggle {
