@@ -47,6 +47,25 @@
  * è mai stato eseguito. Va verificato per primo, con la stessa
  * disciplina "mai fidarsi della narrazione" già consolidata nel
  * progetto, prima di considerarlo parte della baseline "nota buona".
+ *
+ * MODIFICATO (Impostazioni privacy Oversharing, sessione corrente):
+ * il blocco "Bottone Segui" è stato riscritto — il profilo NON è più
+ * "pubblico se e solo se seguito": "isPublic" (nuovo, gestito dal
+ * pannello Impostazioni) e "isFollowing" sono ora due variabili
+ * indipendenti, regola contentVisible = isPublic || isFollowing (vedi
+ * profileTimelineRenderer.js). Aggiunti 4 nuovi blocchi dedicati al
+ * pannello Impostazioni (bottone ingranaggio, nuovo, prima di "Segui"):
+ * toggle pubblico/privato combinato con Segui, "Chi può seguirti" con
+ * flusso di approvazione (dialog + stato "Richiesta inviata"), "Chi può
+ * commentare" (gating del bottone Commenta di PostCard, prop additiva
+ * commentsEnabled/commentsDisabledReason), "Chi vede le storie"
+ * (StoriesBar sostituita da una nota testuale quando "Amici stretti").
+ * NON ancora eseguiti in un browser reale in questa sessione (nessun
+ * Chromium scaricabile in questo ambiente sandbox, download bloccato
+ * dalla rete consentita) — stessa onestà di processo già richiesta sopra
+ * per il blocco Evil Twin: verificarli per primi con `npm test` in un
+ * ambiente con Playwright/Chromium disponibile, prima di considerarli
+ * parte della baseline "nota buona".
  */
 const assert = require("node:assert/strict");
 const path = require("node:path");
@@ -147,15 +166,15 @@ async function run() {
     await context.close();
   }
 
-  // --- Bottone "Segui" — unico comando anche della visibilità ----------
-  // (fonde la copertura del precedente toggle lucchetto, ora eliminato)
+  // --- Bottone "Segui" — ora regola SOLO la relazione, non basta da
+  // sola a nascondere i contenuti (il profilo è pubblico di default:
+  // vedi il blocco "Impostazioni" sotto per l'interazione con isPublic)
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await gotoScenario(page, server.url);
 
     const headerFollow = () => page.locator(".sl-profile-timeline__follow-button");
-    const privateFollow = () => page.locator(".sl-profile-timeline__private-follow");
     const publicContent = () => page.locator(".sl-profile-timeline__public-content");
     const privateNotice = () => page.locator(".sl-profile-timeline__private-notice");
 
@@ -163,19 +182,17 @@ async function run() {
       assert.equal(await page.locator(".sl-profile-timeline__privacy-toggle").count(), 0);
     });
 
-    await suite.test("Segui: presente PRIMA del conteggio post nella riga statistiche", async () => {
+    await suite.test("riga statistiche: Impostazioni, poi Segui, poi conteggio post", async () => {
       const order = await page
         .locator(".sl-profile-timeline__stats-row")
         .evaluate((row) => Array.from(row.children).map((c) => c.className));
-      assert.ok(order[0].includes("follow-button"), `il bottone Segui non è il primo figlio: ${order.join(" | ")}`);
+      assert.ok(order[0].includes("settings-trigger"), `Impostazioni non è il primo figlio: ${order.join(" | ")}`);
+      assert.ok(order[1].includes("follow-button"), `Segui non è il secondo figlio: ${order.join(" | ")}`);
     });
 
-    await suite.test("stato iniziale: 'Segui già', aria-pressed=true — profilo aperto già seguito", async () => {
+    await suite.test("stato iniziale: 'Segui già', profilo pubblico -> contenuto visibile", async () => {
       assert.equal((await headerFollow().textContent()).trim(), "Segui già");
       assert.equal(await headerFollow().getAttribute("aria-pressed"), "true");
-    });
-
-    await suite.test("stato iniziale: contenuto pubblico visibile, pannello privato nascosto", async () => {
       assert.equal(await publicContent().isVisible(), true);
       assert.equal(await privateNotice().isHidden(), true);
     });
@@ -186,7 +203,7 @@ async function run() {
       assert.equal(statsBefore.length, 3);
     });
 
-    await suite.test("click su 'Segui già' -> 'Segui', aria-pressed=false, evento sl:profile-follow-toggle", async () => {
+    await suite.test("click su 'Segui già' -> 'Segui' (unfollow): profilo pubblico, contenuto resta visibile", async () => {
       const detail = await page.evaluate(
         () =>
           new Promise((resolve) => {
@@ -199,67 +216,212 @@ async function run() {
       assert.deepEqual(detail, { following: false });
       assert.equal((await headerFollow().textContent()).trim(), "Segui");
       assert.equal(await headerFollow().getAttribute("aria-pressed"), "false");
+      assert.equal(await publicContent().isVisible(), true, "un profilo pubblico deve restare visibile anche senza seguirlo");
+      assert.equal(await privateNotice().isHidden(), true);
     });
 
-    await suite.test("dopo il click: contenuto pubblico nascosto, pannello privato visibile", async () => {
-      assert.equal(await publicContent().isHidden(), true);
-      assert.equal(await privateNotice().isVisible(), true);
-    });
-
-    await suite.test("pannello privato: titolo 'Questo profilo è privato'", async () => {
-      const title = await page.locator(".sl-profile-timeline__private-title").textContent();
-      assert.equal(title.trim(), "Questo profilo è privato");
-    });
-
-    await suite.test("pannello privato: descrizione contiene il nome utente reale (da profile.json)", async () => {
-      const description = await page.locator(".sl-profile-timeline__private-description").textContent();
-      assert.ok(description.includes("marti.travel"), "il nome utente non compare nella descrizione");
-    });
-
-    await suite.test("pannello privato: il bottone riflette lo stesso stato 'Segui' dell'header", async () => {
-      assert.equal((await privateFollow().textContent()).trim(), "Segui");
-      assert.equal(await privateFollow().getAttribute("aria-pressed"), "false");
-    });
-
-    await suite.test("statistiche IDENTICHE dopo il click (stessi valori di prima)", async () => {
+    await suite.test("statistiche IDENTICHE dopo l'unfollow (stessi valori di prima)", async () => {
       const statsAfter = await page.locator(".sl-profile-timeline__stat-value").allTextContents();
       assert.deepEqual(statsAfter, statsBefore);
     });
 
-    await suite.test("annuncio aria-live: 'Non segui più questo profilo: contenuti nascosti.'", async () => {
-      const status = await page.locator(".sl-profile-timeline__follow-status").textContent();
-      assert.equal(status.trim(), "Non segui più questo profilo: contenuti nascosti.");
-    });
-
-    await suite.test("click nel pannello privato su 'Segui' -> torna 'Segui già', si riflette sull'header", async () => {
-      await privateFollow().click();
+    await suite.test("click su 'Segui' -> segue di nuovo immediatamente (policy 'Tutti', nessun dialog)", async () => {
+      await headerFollow().click();
       await page.waitForTimeout(30);
       assert.equal((await headerFollow().textContent()).trim(), "Segui già");
       assert.equal(await headerFollow().getAttribute("aria-pressed"), "true");
+      assert.equal(await page.locator(".sl-modal").count(), 0, "nessun dialog atteso con policy 'Tutti'");
+    });
+
+    await context.close();
+  }
+
+  // --- Impostazioni: "Profilo pubblico" combinato con Segui -------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await gotoScenario(page, server.url);
+
+    const headerFollow = () => page.locator(".sl-profile-timeline__follow-button");
+    const publicContent = () => page.locator(".sl-profile-timeline__public-content");
+    const privateNotice = () => page.locator(".sl-profile-timeline__private-notice");
+    const settingsModal = () => page.locator(".sl-modal", { hasText: "Impostazioni privacy" });
+
+    await suite.test("apertura Impostazioni: Modal con 4 controlli", async () => {
+      await page.click(".sl-profile-timeline__settings-trigger");
+      await settingsModal().waitFor({ state: "visible" });
+      assert.equal(await settingsModal().locator(".sl-profile-timeline__settings-row").count(), 4);
+    });
+
+    await suite.test("toggle 'Profilo pubblico': Attivo -> Disattivato", async () => {
+      const toggle = settingsModal().locator(".sl-profile-timeline__settings-toggle");
+      assert.equal((await toggle.textContent()).trim(), "Attivo");
+      await toggle.click();
+      assert.equal((await toggle.textContent()).trim(), "Disattivato");
+      await page.keyboard.press("Escape");
+      await settingsModal().waitFor({ state: "detached" });
+    });
+
+    await suite.test("profilo privato ma ancora seguito -> contenuto resta visibile", async () => {
       assert.equal(await publicContent().isVisible(), true);
       assert.equal(await privateNotice().isHidden(), true);
     });
 
-    await suite.test("dopo il ritorno a 'Segui già': ancora 12 post (nessun duplicato/perdita)", async () => {
-      assert.equal(await page.locator(".sl-feed .sl-post-card").count(), 12);
+    await suite.test("smetto di seguire un profilo privato -> contenuto si nasconde", async () => {
+      await headerFollow().click();
+      await page.waitForTimeout(30);
+      assert.equal(await publicContent().isHidden(), true);
+      assert.equal(await privateNotice().isVisible(), true);
     });
 
-    await suite.test("annuncio aria-live: 'Ora segui questo profilo: contenuti visibili.'", async () => {
-      const status = await page.locator(".sl-profile-timeline__follow-status").textContent();
-      assert.equal(status.trim(), "Ora segui questo profilo: contenuti visibili.");
+    await suite.test("torno a seguire -> contenuto torna visibile", async () => {
+      await headerFollow().click();
+      await page.waitForTimeout(30);
+      assert.equal(await publicContent().isVisible(), true);
+      assert.equal(await privateNotice().isHidden(), true);
     });
 
-    await suite.test("la vista Archivio selezionata prima di smettere di seguire viene preservata", async () => {
-      await page.click(".sl-profile-timeline__tabs >> text=Archivio");
-      await page.waitForSelector(".sl-timeline:not([hidden])");
-      await headerFollow().click(); // -> Segui (non seguo più)
+    await context.close();
+  }
+
+  // --- Impostazioni: "Chi può seguirti" -> Approvazione ------------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await gotoScenario(page, server.url);
+
+    const headerFollow = () => page.locator(".sl-profile-timeline__follow-button");
+    const settingsModal = () => page.locator(".sl-modal", { hasText: "Impostazioni privacy" });
+    const requestModal = () => page.locator(".sl-modal", { hasText: "Richiesta di follow inviata" });
+
+    await suite.test("smetto di seguire, poi imposto 'Chi può seguirti' su Approvazione", async () => {
+      await headerFollow().click();
       await page.waitForTimeout(30);
-      await headerFollow().click(); // -> Segui già (seguo di nuovo)
+      await page.click(".sl-profile-timeline__settings-trigger");
+      await settingsModal().waitFor({ state: "visible" });
+      await settingsModal()
+        .locator(".sl-profile-timeline__settings-chip-group")
+        .nth(0)
+        .locator('button:has-text("Approvazione")')
+        .click();
+      await page.keyboard.press("Escape");
+      await settingsModal().waitFor({ state: "detached" });
+    });
+
+    await suite.test("click su 'Segui' -> dialog di richiesta, bottone 'Richiesta inviata'", async () => {
+      await headerFollow().click();
+      await requestModal().waitFor({ state: "visible" });
+      const text = await requestModal().textContent();
+      assert.ok(text.includes("marti.travel"), "il nome del profilo non compare nel messaggio");
+      assert.ok(text.includes("deve accettare la tua richiesta"), "il messaggio non spiega l'attesa di approvazione");
+      assert.equal((await headerFollow().textContent()).trim(), "Richiesta inviata");
+      assert.equal(await headerFollow().getAttribute("aria-pressed"), "false");
+    });
+
+    await suite.test("chiudo il dialog con 'Ho capito': la richiesta resta in sospeso", async () => {
+      await requestModal().locator('button:has-text("Ho capito")').click();
+      await requestModal().waitFor({ state: "detached" });
+      assert.equal((await headerFollow().textContent()).trim(), "Richiesta inviata");
+    });
+
+    await suite.test("un secondo click sulla richiesta pendente la ritira", async () => {
+      await headerFollow().click();
       await page.waitForTimeout(30);
-      assert.equal(await page.locator(".sl-timeline").isHidden(), false, "l'Archivio non è più visibile dopo il round-trip Segui/Segui già");
-      assert.equal(await page.locator(".sl-feed").isHidden(), true, "il Feed è tornato visibile invece dell'Archivio (reset non richiesto)");
-      // Ripristina la vista Post per non alterare lo stato dei blocchi successivi.
-      await page.click(".sl-profile-timeline__tabs >> text=Post");
+      assert.equal((await headerFollow().textContent()).trim(), "Segui");
+    });
+
+    await context.close();
+  }
+
+  // --- Impostazioni: "Chi può commentare" --------------------------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await gotoScenario(page, server.url);
+
+    const settingsModal = () => page.locator(".sl-modal", { hasText: "Impostazioni privacy" });
+    const firstCommentButton = () =>
+      page.locator(".sl-feed .sl-post-card").nth(0).locator(".sl-post-card__action").nth(1);
+
+    async function setCommentPolicy(label) {
+      await page.click(".sl-profile-timeline__settings-trigger");
+      await settingsModal().waitFor({ state: "visible" });
+      await settingsModal()
+        .locator(".sl-profile-timeline__settings-chip-group")
+        .nth(1)
+        .locator(`button:has-text("${label}")`)
+        .click();
+      await page.keyboard.press("Escape");
+      await settingsModal().waitFor({ state: "detached" });
+    }
+
+    await suite.test("stato iniziale: commenti abilitati sul primo post", async () => {
+      assert.equal(await firstCommentButton().isDisabled(), false);
+    });
+
+    await suite.test("'Chi può commentare' -> Nessuno: bottone Commenta disabilitato", async () => {
+      await setCommentPolicy("Nessuno");
+      assert.equal(await firstCommentButton().isDisabled(), true);
+      assert.equal(await firstCommentButton().getAttribute("aria-label"), "I commenti sono disattivati per questo profilo.");
+    });
+
+    await suite.test("'Chi può commentare' -> Follower, non seguo -> disabilitato con motivo diverso", async () => {
+      await setCommentPolicy("Follower");
+      await page.click(".sl-profile-timeline__follow-button"); // smetto di seguire
+      await page.waitForTimeout(30);
+      assert.equal(await firstCommentButton().isDisabled(), true);
+      assert.equal(
+        await firstCommentButton().getAttribute("aria-label"),
+        "Solo i follower possono commentare i post di questo profilo."
+      );
+    });
+
+    await suite.test("torno a seguire -> commenti di nuovo abilitati", async () => {
+      await page.click(".sl-profile-timeline__follow-button");
+      await page.waitForTimeout(30);
+      assert.equal(await firstCommentButton().isDisabled(), false);
+    });
+
+    await context.close();
+  }
+
+  // --- Impostazioni: "Chi vede le storie" --------------------------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await gotoScenario(page, server.url);
+
+    const settingsModal = () => page.locator(".sl-modal", { hasText: "Impostazioni privacy" });
+
+    async function setStoriesAudience(label) {
+      await page.click(".sl-profile-timeline__settings-trigger");
+      await settingsModal().waitFor({ state: "visible" });
+      await settingsModal()
+        .locator(".sl-profile-timeline__settings-chip-group")
+        .nth(2)
+        .locator(`button:has-text("${label}")`)
+        .click();
+      await page.keyboard.press("Escape");
+      await settingsModal().waitFor({ state: "detached" });
+    }
+
+    await suite.test("stato iniziale: StoriesBar visibile con 5 storie, nota nascosta", async () => {
+      assert.equal(await page.locator(".sl-stories-bar").isVisible(), true);
+      assert.equal(await page.locator(".sl-stories-bar__item").count(), 5);
+      assert.equal(await page.locator(".sl-profile-timeline__stories-note").isVisible(), false);
+    });
+
+    await suite.test("'Chi vede le storie' -> Amici stretti: StoriesBar nascosta, nota visibile", async () => {
+      await setStoriesAudience("Amici stretti");
+      assert.equal(await page.locator(".sl-stories-bar").isHidden(), true);
+      const note = page.locator(".sl-profile-timeline__stories-note");
+      assert.equal(await note.isVisible(), true);
+      assert.equal((await note.textContent()).trim(), "Storie visibili solo agli amici stretti.");
+    });
+
+    await suite.test("torno su 'Tutti i follower': StoriesBar di nuovo visibile", async () => {
+      await setStoriesAudience("Tutti i follower");
+      assert.equal(await page.locator(".sl-stories-bar").isVisible(), true);
     });
 
     await context.close();

@@ -93,9 +93,20 @@ function render(refs, props) {
   });
   refs.likeButton.element.classList.toggle("sl-post-card__action--liked", liked);
 
+  // "commentsEnabled" (additivo, opzionale): assente/true per qualunque
+  // consumer esistente (Home, tutti gli scenari) — zero cambio di
+  // comportamento. Primo consumo reale: profileTimelineRenderer.js,
+  // per riflettere l'impostazione "Chi può commentare" del profilo
+  // Oversharing (vedi quel file). Quando disabilitato, il motivo
+  // (post.commentsDisabledReason) sostituisce l'etichetta accessibile
+  // di default — mai il solo colore/opacità come unico segnale.
+  const commentsEnabled = post.commentsEnabled !== false;
   refs.commentButton.update({
     label: formatCount(comments),
-    ariaLabel: `Commenta il post — ${formatCount(comments)} commenti`,
+    disabled: !commentsEnabled,
+    ariaLabel: commentsEnabled
+      ? `Commenta il post — ${formatCount(comments)} commenti`
+      : post.commentsDisabledReason || "Commenti disattivati per questo post",
   });
 
   refs.shareButton.update({

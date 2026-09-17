@@ -274,3 +274,109 @@
   min-width: 160px;
   justify-content: center;
 }
+
+/* Bottone "Impostazioni" (nuovo): stessa variante icon già verificata
+   altrove nel Design System (AppHeader, MediaViewer, Modal) — nessuna
+   nuova regola di dimensione/hover necessaria, .sl-button--icon la
+   fornisce già. flex-shrink:0 per lo stesso motivo già documentato sul
+   bottone "Segui" qui sopra: non deve schiacciarsi quando la riga è
+   stretta. flex-wrap sulla riga (sotto) resta comunque la difesa
+   principale su mobile, ora che la riga porta un elemento in più. */
+.sl-button.sl-profile-timeline__settings-trigger {
+  flex-shrink: 0;
+}
+
+/* Un elemento in più nella riga statistiche (Impostazioni, Segui, stat)
+   rispetto a quando questa regola fu scritta: flex-wrap aggiunto come
+   difesa su viewport molto stretti — la riga resta comunque centrata
+   (justify-content:center, invariato) anche su due righe. */
+.sl-profile-timeline__stats-row {
+  flex-wrap: wrap;
+}
+
+/* --- Pannello "Impostazioni" (nuovo) ------------------------------------
+ * Contenuto del Modal aperto dal bottone Impostazioni — nessuna nuova
+ * classe su Modal.js stesso: queste regole si applicano solo ai nodi
+ * passati come "content", lo scheletro del Modal (overlay/pannello/
+ * header/bottone chiusura) resta interamente quello di modal.css.
+ * Nessun nuovo accostamento colore: info-bg-subtle/info-text (nota
+ * introduttiva) e border-subtle/text-secondary (righe) sono già
+ * verificati altrove nel progetto per lo stesso identico uso — vedi
+ * badge.css/profile-menu.css.
+ */
+.sl-profile-timeline__settings-note {
+  padding: var(--sl-space-3);
+  border-radius: var(--sl-radius-md);
+  background-color: var(--sl-color-info-bg-subtle);
+  color: var(--sl-color-info-text);
+  font-size: var(--sl-font-size-xs);
+  line-height: var(--sl-line-height-relaxed);
+}
+
+.sl-profile-timeline__settings-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--sl-space-3);
+}
+
+.sl-profile-timeline__settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sl-space-4);
+  padding: var(--sl-space-3) 0;
+  border-bottom: 1px solid var(--sl-color-border-subtle);
+}
+
+.sl-profile-timeline__settings-row:last-child {
+  border-bottom: none;
+}
+
+.sl-profile-timeline__settings-row-text {
+  min-width: 0;
+}
+
+.sl-profile-timeline__settings-row-title {
+  font-size: var(--sl-font-size-sm);
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-profile-timeline__settings-row-desc {
+  margin-top: 2px;
+  font-size: var(--sl-font-size-xs);
+  color: var(--sl-color-text-secondary);
+}
+
+.sl-profile-timeline__settings-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--sl-space-2);
+  flex-shrink: 0;
+}
+
+/* Chip = Button ghost esistente, solo più compatto (padding ridotto
+   rispetto al default) per stare bene affiancato ad altri 1-2 chip
+   nella stessa riga — stesso criterio già applicato al bottone "Segui"
+   dell'header pubblico (padding compatto rispetto al default). */
+.sl-button.sl-profile-timeline__settings-chip {
+  padding: 6px var(--sl-space-3);
+}
+
+.sl-button.sl-profile-timeline__settings-toggle {
+  flex-shrink: 0;
+  min-width: 96px;
+  justify-content: center;
+}
+
+/* Riga mostrata al posto di StoriesBar quando "Chi vede le storie" è
+   impostato su "Amici stretti" (il visitatore di questa demo non lo è
+   mai) — stesso trattamento testuale "soft" già usato altrove nel
+   progetto per stati non felici (fallbackMessage.js), qui inline perché
+   è un singolo elemento di scenario, non un componente condiviso. */
+.sl-profile-timeline__stories-note {
+  padding: var(--sl-space-3) 0;
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-sm);
+}

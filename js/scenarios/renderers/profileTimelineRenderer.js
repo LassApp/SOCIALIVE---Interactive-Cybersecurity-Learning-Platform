@@ -35,63 +35,86 @@
  * promesso e non implementato — stesso principio già seguito da Feed.js
  * per il proprio "niente role=feed".
  *
- * BOTTONE "SEGUI"/"SEGUI GIÀ" — UNICO CONTROLLO DI VISIBILITÀ
- * PUBBLICO/PRIVATO (miglioramento incrementale, post Fase 10.2): in una
- * prima versione di questo intervento esisteva un SECONDO controllo
- * dedicato — un bottone icona a forma di lucchetto — che duplicava, con
- * un controllo indipendente, la stessa decisione che il bottone "Segui"
- * già comunicava concettualmente ("seguo → vedo i contenuti, non seguo
- * → non li vedo"). Su richiesta esplicita, quel secondo controllo è
- * stato ELIMINATO: oggi un solo bottone (in due istanze DOM — vedi
- * sotto) governa sia lo stato "sto seguendo" sia la visibilità del
- * profilo, con un'unica fonte di verità (isFollowing).
- *   - Il profilo si apre SEMPRE già "Segui già" (isFollowing = true di
- *     default): contenuto pubblico visibile — storie, tab Post/Archivio,
- *     entrambi i pannelli — esattamente il comportamento che prima era
- *     dato dal "lucchetto aperto".
- *   - Click su "Segui già" → si passa a "Segui" (isFollowing = false):
- *     storie e i due pannelli Post/Archivio vengono sostituiti dal
- *     pannello "Questo profilo è privato" con l'invito a seguire —
- *     esattamente il comportamento che prima era dato dal "lucchetto
- *     chiuso". Copertina, avatar, bio e le TRE statistiche restano
- *     identiche e visibili in entrambi gli stati (un profilo privato
- *     reale le mostra comunque a chiunque — solo i CONTENUTI sono
- *     riservati).
- *   - Click di nuovo su "Segui" → si torna a "Segui già": il profilo
- *     torna visibile per intero, ripristinando la vista Feed/Archivio
- *     che era selezionata prima (comportamento preesistente, invariato:
- *     publicContent viene solo nascosto/rivelato, mai smontato).
- * Stato SEMPRE locale a questo mount (una variabile nello scope della
- * funzione, mai scritta su storage.js): ogni apertura/refresh dello
- * scenario riparte da "Segui già" — persisterlo vanificherebbe l'effetto
- * didattico della demo (il docente deve poter ripetere il confronto più
- * volte in classi diverse, sempre dallo stesso stato iniziale).
+ * VISIBILITÀ DEL PROFILO — DUE VARIABILI INDIPENDENTI, NON PIÙ UNA SOLA
+ * (miglioramento incrementale, post Fase 10.3, su richiesta esplicita):
+ * un precedente intervento aveva eliminato un secondo controllo
+ * "lucchetto" proprio perché duplicava, senza motivo reale, la stessa
+ * decisione già presa dal bottone "Segui" — un solo bit di stato
+ * (isFollowing) bastava. Quella semplificazione resta corretta per
+ * QUEL caso, ma qui la richiesta è diversa: un vero profilo social ha
+ * DUE concetti distinti che insieme decidono la visibilità dei
+ * contenuti — "il profilo è impostato pubblico o privato" (una scelta
+ * del proprietario, gestita da "Impostazioni") e "io lo seguo o no"
+ * (una relazione del visitatore, gestita da "Segui"). Introdurre di
+ * nuovo un secondo stato non è quindi un ritorno alla duplicazione
+ * eliminata in precedenza: è una semantica reale, verificabile con la
+ * stessa regola che useresti su Instagram/X:
  *
- * DUE bottoni DOM distinti (uno nella riga statistiche dell'header
- * pubblico, uno nel pannello "profilo privato"), perché un nodo non può
- * stare in due punti del DOM contemporaneamente — ma UN SOLO stato
- * condiviso (isFollowing): non sono mai visibili insieme
- * (publicContent/privateNotice si escludono a vicenda), quindi
- * rappresentano concettualmente lo stesso bottone e restano sempre
- * sincronizzati. Variante primary→secondary ed etichetta "Segui"→"Segui
- * già" al click: stesso pattern reale di Instagram/X per comunicare lo
- * stato senza affidarsi al solo colore (§5.7 architettura Fase 1) — il
- * testo stesso cambia. Evento "sl:profile-follow-toggle" (detail:
- * { following }) emesso ad ogni click — nessun listener applicativo
- * reale lo ascolta oggi (stesso trattamento già riservato a
- * sl:search/sl:settings-click), ma la forma è pronta per un futuro
- * consumer.
+ *     contentVisible = isPublic || isFollowing
  *
- * ICONA LUCCHETTO — SOLO DECORATIVA, NON PIÙ UN CONTROLLO: il pannello
- * "Questo profilo è privato" mostra ancora una piccola icona a lucchetto
- * chiuso dentro un badge circolare, sopra il titolo — è rimasta
- * invariata rispetto a prima: NON è il bottone eliminato, è sempre stata
- * una semplice illustrazione statica del concetto "privato" all'interno
- * del box, non interattiva (aria-hidden, nessun listener). buildLockIcon()
- * non accetta più un parametro "locked": prima dell'eliminazione del
- * toggle serviva anche la variante "aperta" per l'icona del bottone a
- * riposo, oggi l'unico consumer rimasto (questa icona decorativa) vuole
- * sempre e solo la variante "chiusa".
+ * cioè: pubblico → sempre visibile, segui tu o no; privato → visibile
+ * SOLO se lo segui. Copertina, avatar, bio e le TRE statistiche restano
+ * sempre visibili in ogni combinazione (un profilo privato reale le
+ * mostra comunque a chiunque — solo i CONTENUTI, storie incluse, sono
+ * riservati).
+ *
+ * BOTTONE IMPOSTAZIONI (nuovo, icona ingranaggio) — posizionato PRIMA
+ * del bottone "Segui" nella riga statistiche, richiesta esplicita. Apre
+ * un Modal (componente esistente, riusato as-is — mai un secondo
+ * overlay component per la stessa funzione) con 4 controlli, tutti
+ * REALMENTE funzionali, non solo illustrativi:
+ *   1. "Profilo pubblico" — un Button a stato (pressed=Attivo/
+ *      Disattivato) che scrive isPublic. Applicato immediatamente,
+ *      anche a pannello ancora aperto (il profilo dietro l'overlay
+ *      aggiorna comunque il proprio DOM).
+ *   2. "Chi può seguirti" — Tutti | Approvazione (followPolicy). Non
+ *      tocca isFollowing per chi già segue: regola solo le FUTURE
+ *      richieste di follow (vedi sotto).
+ *   3. "Chi può commentare" — Tutti | Follower | Nessuno
+ *      (commentPolicy). Applicata per-post: ogni oggetto in
+ *      "feedPosts" riceve un campo "commentsEnabled"
+ *      (+ "commentsDisabledReason"), letto da PostCard.js (prop
+ *      additiva, Fase corrente — default true, zero impatto sugli
+ *      altri consumer di PostCard come la Home).
+ *   4. "Chi vede le storie" — Tutti i follower | Amici stretti
+ *      (storiesAudience). In questa demo il visitatore non è mai un
+ *      "amico stretto": impostarlo su quel valore nasconde
+ *      semplicemente StoriesBar, sostituita da una riga di testo che
+ *      spiega perché (mai un buco silenzioso in UI, §5.7 architettura
+ *      Fase 1 — uno stato non deve mai essere affidato al solo "non
+ *      c'è più nulla qui").
+ *
+ * BOTTONE "SEGUI"/"SEGUI GIÀ" — governa isFollowing, ora in
+ * combinazione con followPolicy:
+ *   - followPolicy "everyone": click su "Segui" segue immediatamente
+ *     (isFollowing = true), invariato dal comportamento precedente.
+ *   - followPolicy "approval": click su "Segui" NON segue subito —
+ *     apre un Modal informativo ("{displayName} deve accettare la tua
+ *     richiesta...") e porta il bottone in un terzo stato visivo,
+ *     "Richiesta inviata" (followRequestPending = true, isFollowing
+ *     resta false: coerente con un vero social, dove la richiesta in
+ *     sospeso non dà ancora accesso ai contenuti). Un secondo click
+ *     sulla richiesta pendente la ritira (torna a "Segui").
+ *   - Click su "Segui già" smette sempre di seguire immediatamente
+ *     (l'unfollow non richiede mai approvazione, su nessun social
+ *     reale).
+ * DUE bottoni DOM distinti (header pubblico + pannello privato), UN
+ * SOLO stato condiviso — invariato dal comportamento precedente, motivo
+ * identico (non sono mai visibili insieme). Evento
+ * "sl:profile-follow-toggle" (detail: { following }) emesso solo
+ * quando isFollowing cambia realmente (non ad ogni click: una richiesta
+ * "in sospeso" non è ancora un vero cambio di stato "seguo").
+ *
+ * TUTTO LO STATO INTRODOTTO QUI (isPublic, followPolicy,
+ * followRequestPending, commentPolicy, storiesAudience) resta SEMPRE
+ * locale a questo mount, mai scritto su storage.js — stesso principio
+ * già motivato per isFollowing: ogni apertura/refresh riparte dai
+ * medesimi default (pubblico attivo, tutti possono seguire/commentare/
+ * vedere le storie), per poter ripetere la demo più volte in classi
+ * diverse dallo stesso punto di partenza.
+ *
+ * ICONA LUCCHETTO — invariata, resta SOLO decorativa (badge circolare
+ * nel pannello "Questo profilo è privato"), non interattiva.
  *
  * MEDIAVIEWER SU AVATAR/COPERTINA/STORIE: "sl:story-open" (emesso da
  * StoriesBar.js) e i due eventi "sl:profile-avatar-open"/"sl:profile-
@@ -112,6 +135,7 @@ import { createLocalJsonResource, createLocalJsonRepository } from "../../reposi
 import { svgNode } from "../../utils/svg.js";
 import { create as createAvatar } from "../../components/Avatar.js";
 import { create as createButton } from "../../components/Button.js";
+import { create as createModal } from "../../components/Modal.js";
 import { create as createStoriesBar } from "../../components/StoriesBar.js";
 import { create as createFeed } from "../../components/Feed.js";
 import { create as createTimeline } from "../../components/Timeline.js";
@@ -149,6 +173,23 @@ function buildLockIcon() {
   return svg;
 }
 
+// Icona ingranaggio per il bottone "Impostazioni" (nuovo). Stesso
+// pattern inline già usato per il lucchetto: nessuna dipendenza dallo
+// sprite (assets/icons/icons.svg, ancora assente).
+function buildSettingsIcon() {
+  const svg = svgNode("svg", { viewBox: "0 0 24 24", fill: "none" });
+  svg.appendChild(svgNode("circle", { cx: "12", cy: "12", r: "3", stroke: "currentColor", "stroke-width": "1.5" }));
+  svg.appendChild(
+    svgNode("path", {
+      d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
+      stroke: "currentColor",
+      "stroke-width": "1.5",
+      "stroke-linejoin": "round",
+    })
+  );
+  return svg;
+}
+
 function buildStat(label, value) {
   return createElement("div", { classNames: "sl-profile-timeline__stat" }, [
     createElement("dt", { classNames: "sl-profile-timeline__stat-value", text: formatCount(value) }),
@@ -156,9 +197,78 @@ function buildStat(label, value) {
   ]);
 }
 
+// --- Helper del pannello "Impostazioni" (nuovo) -------------------------
+// Tre piccoli costruttori generici, riusati per le 4 righe del pannello:
+// nessun nuovo componente UI introdotto (mai duplicare per la stessa
+// funzione) — sono tutte istanze di Button.js, esattamente come già
+// avviene per feedTab/archiveTab (ghost + pressed = selezione) e per
+// headerFollowButton (primary/secondary = stato binario). Restano
+// funzioni MODULO (non closure su renderProfileTimeline) perché non
+// toccano mai lo stato del profilo direttamente: ricevono un valore
+// iniziale e una callback, non sanno cos'altro cambierà a fronte del
+// loro click — la stessa separazione "componente dumb / orchestratore"
+// già applicata ovunque nel Design System, qui a livello di renderer.
+
+function buildSettingsRow(title, description, controlElement) {
+  return createElement("div", { classNames: "sl-profile-timeline__settings-row" }, [
+    createElement("div", { classNames: "sl-profile-timeline__settings-row-text" }, [
+      createElement("p", { classNames: "sl-profile-timeline__settings-row-title", text: title }),
+      createElement("p", { classNames: "sl-profile-timeline__settings-row-desc", text: description }),
+    ]),
+    controlElement,
+  ]);
+}
+
+// Gruppo di opzioni a selezione singola (es. "Tutti"/"Approvazione"):
+// ogni opzione è un Button ghost con "pressed" a riflettere la
+// selezione corrente. "collected" raccoglie le istanze create, così il
+// chiamante può distruggerle tutte insieme alla chiusura del pannello
+// (ogni componente distrugge solo ciò che ha creato — stesso principio
+// già seguito ovunque nel progetto).
+function buildOptionGroup(options, initialValue, onSelect, collected) {
+  let currentValue = initialValue;
+  const buttons = options.map((option) =>
+    createButton({ variant: "ghost", label: option.label, pressed: option.value === currentValue })
+  );
+  buttons.forEach((button, index) => {
+    button.element.classList.add("sl-profile-timeline__settings-chip");
+    button.element.addEventListener("sl:click", () => {
+      currentValue = options[index].value;
+      buttons.forEach((b, i) => b.update({ pressed: options[i].value === currentValue }));
+      onSelect(currentValue);
+    });
+    collected.push(button);
+  });
+  return createElement(
+    "div",
+    { classNames: "sl-profile-timeline__settings-chip-group" },
+    buttons.map((b) => b.element)
+  );
+}
+
+// Toggle binario (es. "Profilo pubblico"): un solo Button, variante e
+// label riflettono lo stato — mai il solo colore come segnale (§5.7
+// architettura Fase 1), l'etichetta cambia sempre insieme al colore.
+function buildToggleButton(initialValue, onChange, collected) {
+  let value = Boolean(initialValue);
+  const button = createButton({
+    variant: value ? "primary" : "secondary",
+    label: value ? "Attivo" : "Disattivato",
+    pressed: value,
+  });
+  button.element.classList.add("sl-profile-timeline__settings-toggle");
+  button.element.addEventListener("sl:click", () => {
+    value = !value;
+    button.update({ variant: value ? "primary" : "secondary", label: value ? "Attivo" : "Disattivato", pressed: value });
+    onChange(value);
+  });
+  collected.push(button);
+  return button.element;
+}
+
 // postsCount NON arriva da profile.json — derivato da rawPosts.length,
 // l'unica fonte di verità (nessuna duplicazione, Fase 6/Step 1).
-function buildProfileHeader(profile, postsCount, followButtonElement) {
+function buildProfileHeader(profile, postsCount, settingsButtonElement, followButtonElement) {
   const coverImage = createElement("img", {
     classNames: "sl-profile-timeline__cover-image",
     attrs: { src: profile.coverImage || "", alt: "" },
@@ -221,12 +331,10 @@ function buildProfileHeader(profile, postsCount, followButtonElement) {
     buildStat("seguiti", profile.stats?.followingCount),
   ]);
 
-  // Riga che affianca le statistiche al bottone "Segui" — richiesta
-  // esplicita: il bottone deve stare PRIMA del conteggio "post", non
-  // sopra o sotto l'intera riga. Nessun secondo controllo qui accanto
-  // (il lucchetto interattivo è stato eliminato, vedi rationale in testa
-  // al file): "Segui"/"Segui già" è oggi l'unico comando di questa riga.
+  // Riga che affianca le statistiche ai due bottoni — ordine richiesto
+  // esplicitamente: Impostazioni, poi Segui, poi il conteggio "post".
   const statsRow = createElement("div", { classNames: "sl-profile-timeline__stats-row" }, [
+    settingsButtonElement,
     followButtonElement,
     stats,
   ]);
@@ -346,61 +454,186 @@ export async function renderProfileTimeline(container, scenario) {
   const author = { name: profile.displayName, avatarSrc: profile.avatar };
   const feedPosts = rawPosts.map((post) => toFeedPost(post, author));
 
-  // UNICA fonte di verità per "sto seguendo" E per la visibilità
-  // pubblico/privato (vedi rationale "BOTTONE SEGUI/SEGUI GIÀ" in testa
-  // al file) — mai in storage.js: ogni mount riparte da true.
+  // Tutto lo stato di visibilità/privacy — SEMPRE locale a questo mount,
+  // mai in storage.js (vedi rationale "TUTTO LO STATO INTRODOTTO QUI" in
+  // testa al file).
   let isFollowing = true;
+  let isPublic = true;
+  let followPolicy = "everyone"; // "everyone" | "approval"
+  let followRequestPending = false;
+  let commentPolicy = "everyone"; // "everyone" | "followers" | "nobody"
+  let storiesAudience = "followers"; // "followers" | "close-friends"
+  let feed = null; // assegnata più sotto — dichiarata qui perché applyCommentPolicyToPosts() la referenzia
 
-  // Entrambi i bottoni nascono già nello stato "Segui già" (il profilo
-  // si apre seguito): variante secondary + pressed:true fin dalla
-  // creazione, non impostati in un secondo momento — evita un frame
-  // iniziale visivamente incoerente con isFollowing=true.
+  // Regola unica di visibilità del profilo (vedi rationale in testa al
+  // file): pubblico -> sempre visibile; privato -> visibile solo se lo
+  // segui.
+  function contentVisible() {
+    return isPublic || isFollowing;
+  }
+
+  // Chi può commentare dipende sia da "commentPolicy" sia, per la sola
+  // opzione "followers", da isFollowing — va ricalcolato ogni volta che
+  // uno dei due cambia, non solo all'apertura di Impostazioni.
+  function computeCommentsPermission() {
+    if (commentPolicy === "nobody") {
+      return { enabled: false, reason: "I commenti sono disattivati per questo profilo." };
+    }
+    if (commentPolicy === "followers" && !isFollowing) {
+      return { enabled: false, reason: "Solo i follower possono commentare i post di questo profilo." };
+    }
+    return { enabled: true, reason: null };
+  }
+
+  // Applica la permission a TUTTI i post già caricati (mai un secondo
+  // fetch): "commentsEnabled"/"commentsDisabledReason" sono campi
+  // additivi letti da PostCard.js (default abilitato per qualunque
+  // altro consumer, es. il feed della Home — zero impatto lì). "feed"
+  // può non esistere ancora alla primissima chiamata (applicata
+  // direttamente su feedPosts prima della sua creazione, sotto).
+  function applyCommentPolicyToPosts() {
+    const { enabled, reason } = computeCommentsPermission();
+    feedPosts.forEach((post) => {
+      post.commentsEnabled = enabled;
+      post.commentsDisabledReason = reason;
+    });
+    if (feed) feed.update({ posts: feedPosts });
+  }
+  applyCommentPolicyToPosts();
+
+  // Entrambi i bottoni "Segui" nascono già nello stato "Segui già" (il
+  // profilo si apre seguito): variante secondary + pressed:true fin
+  // dalla creazione, non impostati in un secondo momento — evita un
+  // frame iniziale visivamente incoerente con isFollowing=true.
   const headerFollowButton = createButton({ variant: "secondary", label: "Segui già", pressed: true });
   headerFollowButton.element.classList.add("sl-profile-timeline__follow-button");
 
   const privateFollowButton = createButton({ variant: "secondary", label: "Segui già", pressed: true });
   privateFollowButton.element.classList.add("sl-profile-timeline__private-follow");
 
-  // Unico punto che applica lo stato "seguo/non seguo" a UI + focus
-  // management: nessuno spostamento forzato del focus (il bottone resta
-  // dov'è, il contenuto sotto si aggiorna). Il pannello Feed/Archivio
-  // che era attivo prima di smettere di seguire resta quello attivo al
-  // ritorno (publicContent viene solo nascosto, mai smontato:
-  // showFeed()/showArchive() non vengono richiamate qui).
-  function setFollowing(nextIsFollowing) {
-    isFollowing = nextIsFollowing;
-    const nextProps = {
-      label: isFollowing ? "Segui già" : "Segui",
-      variant: isFollowing ? "secondary" : "primary",
-      pressed: isFollowing,
-    };
+  const settingsButton = createButton({
+    variant: "icon",
+    ariaLabel: "Impostazioni profilo",
+    icon: buildSettingsIcon(),
+  });
+  settingsButton.element.classList.add("sl-profile-timeline__settings-trigger");
+
+  // Applica isFollowing/followRequestPending a entrambi i bottoni
+  // "Segui" + alla visibilità del profilo + all'annuncio aria-live —
+  // unico punto che tocca questi aspetti insieme, così non possono
+  // disallinearsi. Nessuno spostamento forzato del focus (invariato dal
+  // comportamento precedente): il pannello Feed/Archivio selezionato
+  // prima resta quello attivo al ritorno (publicContent viene solo
+  // nascosto, mai smontato).
+  function refreshFollowUI() {
+    let label;
+    let variant;
+    if (isFollowing) {
+      label = "Segui già";
+      variant = "secondary";
+    } else if (followRequestPending) {
+      label = "Richiesta inviata";
+      variant = "ghost";
+    } else {
+      label = "Segui";
+      variant = "primary";
+    }
+    const nextProps = { label, variant, pressed: isFollowing };
     headerFollowButton.update(nextProps);
     privateFollowButton.update(nextProps);
-    publicContent.hidden = !isFollowing;
-    privateNotice.element.hidden = isFollowing;
-    followStatus.textContent = isFollowing
-      ? "Ora segui questo profilo: contenuti visibili."
-      : "Non segui più questo profilo: contenuti nascosti.";
+
+    const visible = contentVisible();
+    publicContent.hidden = !visible;
+    privateNotice.element.hidden = visible;
+    followStatus.textContent = visible
+      ? "Contenuti visibili."
+      : "Questo profilo è privato e non lo segui: contenuti nascosti.";
+
+    applyCommentPolicyToPosts();
   }
 
-  // Un solo handler per entrambi i bottoni (stesso stato condiviso): non
-  // importa quale dei due sia stato premuto, l'effetto è identico.
+  // Dialog informativo (Modal riusato, non un secondo overlay): nessun
+  // vero backend dietro, ma la sequenza è quella di un social reale —
+  // la richiesta resta in sospeso finché il profilo non la accetta.
+  function openFollowRequestDialog() {
+    const message = createElement("p", {
+      text: `${profile.displayName || "Questo profilo"} deve accettare la tua richiesta per vedere i suoi contenuti.`,
+    });
+    const okButton = createButton({ variant: "primary", label: "Ho capito" });
+    const dialog = createModal({ title: "Richiesta di follow inviata", content: [message, okButton.element] });
+    function handleOk() {
+      dialog.destroy();
+    }
+    okButton.element.addEventListener("sl:click", handleOk);
+    dialog.element.addEventListener("sl:modal-close", () => {
+      okButton.element.removeEventListener("sl:click", handleOk);
+      okButton.destroy();
+    });
+  }
+
+  // Un solo handler per entrambi i bottoni "Segui" (stesso stato
+  // condiviso). L'unfollow è sempre immediato (nessun social reale
+  // richiede approvazione per smettere di seguire); il follow dipende
+  // da "followPolicy".
   function handleFollowToggle() {
-    const next = !isFollowing;
-    setFollowing(next);
+    if (isFollowing) {
+      isFollowing = false;
+      followRequestPending = false;
+      refreshFollowUI();
+      wrapper.dispatchEvent(
+        new CustomEvent("sl:profile-follow-toggle", { bubbles: true, detail: { following: false } })
+      );
+      return;
+    }
+
+    if (followRequestPending) {
+      // Secondo click sulla richiesta pendente: la ritira.
+      followRequestPending = false;
+      refreshFollowUI();
+      return;
+    }
+
+    if (followPolicy === "approval") {
+      followRequestPending = true;
+      refreshFollowUI();
+      openFollowRequestDialog();
+      return;
+    }
+
+    isFollowing = true;
+    refreshFollowUI();
     wrapper.dispatchEvent(
-      new CustomEvent("sl:profile-follow-toggle", { bubbles: true, detail: { following: next } })
+      new CustomEvent("sl:profile-follow-toggle", { bubbles: true, detail: { following: true } })
     );
   }
   headerFollowButton.element.addEventListener("sl:click", handleFollowToggle);
   privateFollowButton.element.addEventListener("sl:click", handleFollowToggle);
+  settingsButton.element.addEventListener("sl:click", openSettingsPanel);
 
-  const header = buildProfileHeader(profile, rawPosts.length, headerFollowButton.element);
+  const header = buildProfileHeader(profile, rawPosts.length, settingsButton.element, headerFollowButton.element);
   const storiesBar = createStoriesBar({ stories });
+
+  // Sostituisce StoriesBar quando "storiesAudience" è "close-friends":
+  // in questa demo il visitatore non è mai un amico stretto, quindi
+  // l'unica scelta onesta è nascondere la barra — ma mai in silenzio
+  // (§5.7 architettura Fase 1, "mai uno stato affidato al solo colore/
+  // alla sola assenza"): una riga di testo spiega perché non c'è nulla.
+  const storiesNote = createElement("p", {
+    classNames: "sl-profile-timeline__stories-note",
+    text: "Storie visibili solo agli amici stretti.",
+  });
+  storiesNote.hidden = true;
+
+  function updateStoriesVisibility() {
+    const showStories = storiesAudience === "followers";
+    storiesBar.element.hidden = !showStories;
+    storiesNote.hidden = showStories;
+  }
+  updateStoriesVisibility();
 
   // hasMore:false — il dataset di uno scenario è un insieme fisso e già
   // completo: nessuna paginazione reale da simulare qui.
-  const feed = createFeed({ posts: feedPosts, isLoading: false, hasMore: false });
+  feed = createFeed({ posts: feedPosts, isLoading: false, hasMore: false });
   const timeline = createTimeline({ posts: rawPosts });
   timeline.element.hidden = true;
 
@@ -460,6 +693,7 @@ export async function renderProfileTimeline(container, scenario) {
   // ridichiarazione CSS necessaria.
   const publicContent = createElement("div", { classNames: "sl-profile-timeline__public-content" }, [
     storiesBar.element,
+    storiesNote,
     viewStatus,
     tabs,
     panels,
@@ -529,6 +763,87 @@ export async function renderProfileTimeline(container, scenario) {
   }
   wrapper.addEventListener("sl:story-open", handleStoryOpen);
 
+  // Pannello "Impostazioni" — Modal riusato con contenuto composto dai
+  // 4 helper sopra. Ricostruito ad ogni apertura (mai tenuto in vita tra
+  // un'apertura e l'altra, stesso principio già seguito da ProfileMenu/
+  // Modal stessi: "create() = apri", nessuna istanza persistente).
+  function openSettingsPanel() {
+    const settingsChildren = []; // Button creati qui sotto, distrutti insieme alla chiusura del Modal
+
+    const note = createElement("p", {
+      classNames: "sl-profile-timeline__settings-note",
+      text: "Anteprima didattica dei controlli di privacy offerti da un social reale: modificali per vedere l'effetto immediato sul profilo.",
+    });
+
+    const list = createElement("div", { classNames: "sl-profile-timeline__settings-list" }, [
+      buildSettingsRow(
+        "Profilo pubblico",
+        "Visibile anche a chi non ti segue",
+        buildToggleButton(
+          isPublic,
+          (next) => {
+            isPublic = next;
+            refreshFollowUI();
+          },
+          settingsChildren
+        )
+      ),
+      buildSettingsRow(
+        "Chi può seguirti",
+        "Chi può inviarti richieste di follow",
+        buildOptionGroup(
+          [
+            { value: "everyone", label: "Tutti" },
+            { value: "approval", label: "Approvazione" },
+          ],
+          followPolicy,
+          (next) => {
+            followPolicy = next;
+          },
+          settingsChildren
+        )
+      ),
+      buildSettingsRow(
+        "Chi può commentare",
+        "Sotto ai tuoi post",
+        buildOptionGroup(
+          [
+            { value: "everyone", label: "Tutti" },
+            { value: "followers", label: "Follower" },
+            { value: "nobody", label: "Nessuno" },
+          ],
+          commentPolicy,
+          (next) => {
+            commentPolicy = next;
+            applyCommentPolicyToPosts();
+          },
+          settingsChildren
+        )
+      ),
+      buildSettingsRow(
+        "Chi vede le storie",
+        "Nella barra in evidenza",
+        buildOptionGroup(
+          [
+            { value: "followers", label: "Tutti i follower" },
+            { value: "close-friends", label: "Amici stretti" },
+          ],
+          storiesAudience,
+          (next) => {
+            storiesAudience = next;
+            updateStoriesVisibility();
+          },
+          settingsChildren
+        )
+      ),
+    ]);
+
+    const modal = createModal({ title: "Impostazioni privacy", content: [note, list] });
+    modal.element.addEventListener("sl:modal-close", () => {
+      settingsChildren.forEach((child) => child.destroy());
+    });
+  }
+
   container.appendChild(wrapper);
 
   return function destroy() {
@@ -541,6 +856,7 @@ export async function renderProfileTimeline(container, scenario) {
     archiveTab.element.removeEventListener("sl:click", showArchive);
     headerFollowButton.element.removeEventListener("sl:click", handleFollowToggle);
     privateFollowButton.element.removeEventListener("sl:click", handleFollowToggle);
+    settingsButton.element.removeEventListener("sl:click", openSettingsPanel);
     header.destroy();
     storiesBar.destroy();
     feed.destroy();
@@ -549,6 +865,7 @@ export async function renderProfileTimeline(container, scenario) {
     archiveTab.destroy();
     headerFollowButton.destroy();
     privateFollowButton.destroy();
+    settingsButton.destroy();
     privateNotice.destroy();
     // MediaViewer vive fuori da "wrapper" (montato direttamente su
     // <body>, come Modal): se questo controller viene smontato mentre il
