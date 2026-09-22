@@ -63,6 +63,29 @@
   margin-top: var(--sl-space-2);
 }
 
+/* "Registrati": stessa larghezza piena di "Accedi" (variante secondary,
+   già fornita da Button.js/button.css — nessun nuovo colore), margine
+   ridotto rispetto al submit (space-1, non space-2): i due bottoni
+   formano una coppia visiva unica primary/secondary, non due azioni
+   scollegate. */
+.sl-button.sl-login-form__register {
+  width: 100%;
+  justify-content: center;
+  margin-top: var(--sl-space-1);
+}
+
+/* Bug pattern già corretto più volte nel progetto (post-card.css,
+   timeline.css, media-viewer.css, profile-timeline.css): una regola
+   d'autore con "display" (qui: display:inline-flex, ereditato da
+   .sl-button in button.css) batte sempre lo stile UA di [hidden] — va
+   ridichiarato esplicitamente con un selettore altrettanto specifico.
+   Necessario qui (Evil Twin Wi-Fi imposta showRegisterButton:false)
+   anche se non lo era per .sl-login-form__submit/__forgot, che nessun
+   consumer nasconde mai. */
+.sl-button.sl-login-form__register[hidden] {
+  display: none;
+}
+
 .sl-login-form__forgot {
   margin-top: var(--sl-space-1);
   align-self: center;

@@ -14,6 +14,16 @@
  * showForgotLink) proprio per servire il portale captive di questo
  * scenario.
  *
+ * MODIFICATO (bottone "Registrati" su LoginForm.js): nuova terza prop
+ * additiva showRegisterButton (default true) — il blocco Evil Twin Wi-Fi
+ * verifica che il portale lo nasconda (showRegisterButton:false, stesso
+ * trattamento già riservato a showBrand/showForgotLink); il blocco
+ * Keylogger verifica la regressione simmetrica (nessuna prop passata,
+ * il bottone resta visibile per default). Copertura completa del
+ * bottone sul login reale (presenza, posizione, type="button", nessun
+ * effetto collaterale, Invio da tastiera invariato) vive in
+ * login.spec.js, non qui.
+ *
  * CORRETTA CORRUZIONE DI SINTASSI (revert Supabase Auth, sessione
  * successiva): un intervento precedente aveva incollato due versioni
  * conflittuali dello stesso test ("selettore Cybersecurity mostra N
@@ -693,6 +703,10 @@ async function run() {
       assert.equal(await page.locator(".sl-fake-captive-portal .sl-login-form__forgot").isVisible(), false);
     });
 
+    await suite.test("il portale NON mostra 'Registrati' (showRegisterButton:false, nuovo)", async () => {
+      assert.equal(await page.locator(".sl-fake-captive-portal .sl-login-form__register").isVisible(), false);
+    });
+
     let downloadedContent = "";
     await suite.test("submit con email 'loose' (senza dominio) -> download reale del file di log", async () => {
       await page.fill(".sl-fake-captive-portal .sl-login-form__form input[type='email']", "ospite@wifi");
@@ -797,9 +811,13 @@ async function run() {
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
 
-    await suite.test("regressione: Keylogger genera ancora un download reale dopo l'estrazione di textDownload.js", async () => {
+    await suite.test("regressione: Keylogger mostra ancora 'Registrati' (nessuna prop passata, default true)", async () => {
       await page.goto(`${server.url}/#/scenario/keylogger`);
       await page.waitForSelector(".sl-fake-login-capture");
+      assert.equal(await page.locator(".sl-fake-login-capture .sl-login-form__register").isVisible(), true);
+    });
+
+    await suite.test("regressione: Keylogger genera ancora un download reale dopo l'estrazione di textDownload.js", async () => {
       await page.fill(".sl-fake-login-capture .sl-login-form__form input[type='email']", "prof@scuola");
       await page.fill(".sl-fake-login-capture .sl-login-form__form input[type='password']", "test123");
       const [download] = await Promise.all([

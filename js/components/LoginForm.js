@@ -65,19 +65,32 @@
  * + --sl-color-error-text, la stessa coppia "soft" già verificata e usata
  * da Badge/ProfileMenu — nessun nuovo accostamento colore).
  *
- * "showBrand" / "showForgotLink" (additive, Evil Twin Wi-Fi — vedi
- * fakeCaptivePortalRenderer.js): un consumer con un proprio brand (un
- * portale Wi-Fi captive fittizio, con un "provider" diverso da
- * SocialAlive) e senza un vero flusso di recupero password (tipico di un
- * login guest) deve poter nascondere brand/tagline/"Password
- * dimenticata?" senza che il chiamante debba fare un accesso diretto al
- * DOM interno del componente (che romperebbe l'incapsulamento "a
- * convenzione" già rispettato in tutto il Design System — stesso
- * principio per cui PageContainer non fa mai querySelector sulla propria
- * struttura). Default true in entrambi i casi: zero cambio di
- * comportamento per il login reale (loginPageController.js) e per il
- * Keylogger (fakeLoginCaptureRenderer.js), nessuno dei due passa queste
- * prop.
+ * "showBrand" / "showForgotLink" / "showRegisterButton" (additive, Evil
+ * Twin Wi-Fi — vedi fakeCaptivePortalRenderer.js): un consumer con un
+ * proprio brand (un portale Wi-Fi captive fittizio, con un "provider"
+ * diverso da SocialAlive) e senza un vero flusso di recupero password/
+ * registrazione (tipico di un login guest) deve poter nascondere
+ * brand/tagline/"Password dimenticata?"/"Registrati" senza che il
+ * chiamante debba fare un accesso diretto al DOM interno del componente
+ * (che romperebbe l'incapsulamento "a convenzione" già rispettato in
+ * tutto il Design System — stesso principio per cui PageContainer non fa
+ * mai querySelector sulla propria struttura). Default true in tutti i
+ * casi: zero cambio di comportamento per il login reale
+ * (loginPageController.js) e per il Keylogger
+ * (fakeLoginCaptureRenderer.js), nessuno dei due passa queste prop.
+ *
+ * "Registrati" (nuovo): bottone secondario, sotto "Accedi" — nessun
+ * flusso di registrazione esiste (fuori scope, come "Password
+ * dimenticata?"): emette solo "sl:login-register", stesso trattamento
+ * già riservato a "sl:login-forgot-password" ("emetti l'evento ora,
+ * collega il comportamento reale quando esisterà"). type="button" (non
+ * "submit"): un Invio da tastiera nei campi del form deve continuare ad
+ * attivare "Accedi" (il bottone submit reale), mai "Registrati" — stesso
+ * principio già garantito per "Password dimenticata?", qui esteso a un
+ * secondo bottone non di invio all'interno dello stesso <form>. Si
+ * disabilita insieme a email/password/Accedi durante "isSubmitting":
+ * nessuna azione deve restare cliccabile mentre un accesso è già in
+ * corso.
  *
  * Interfaccia: create(props) → { element, update(props), destroy() }
  *
@@ -99,11 +112,15 @@
  *   - showForgotLink {boolean} default: true — a false nasconde
  *     "Password dimenticata?" (Evil Twin Wi-Fi: un portale Wi-Fi guest
  *     non ha un vero account da recuperare)
+ *   - showRegisterButton {boolean} default: true — a false nasconde
+ *     "Registrati" (Evil Twin Wi-Fi: un portale Wi-Fi guest non offre
+ *     una registrazione)
  *
  * Eventi emessi (su element, bubbling):
  *   - sl:login-submit           detail: { email, password } (solo se il
  *     formato di entrambi i campi è valido)
  *   - sl:login-forgot-password  detail: {}
+ *   - sl:login-register         detail: {}
  */
 
 import { createElement } from "../utils/dom.js";
@@ -176,6 +193,14 @@ export function create(props = {}) {
   submitButton.element.classList.add("sl-login-form__submit");
   childComponents.push(submitButton);
 
+  // "Registrati" — bottone secondario, non di invio: vedi rationale
+  // "Registrati (nuovo)" in testa al file (type:"button", nessun flusso
+  // reale, si disabilita con isSubmitting).
+  const registerButton = createButton({ type: "button", variant: "secondary", label: "Registrati" });
+  registerButton.element.classList.add("sl-login-form__register");
+  registerButton.element.hidden = props.showRegisterButton === false;
+  childComponents.push(registerButton);
+
   const forgotLink = createElement("button", {
     classNames: "sl-login-form__forgot",
     attrs: { type: "button" },
@@ -188,7 +213,7 @@ export function create(props = {}) {
   const form = createElement(
     "form",
     { classNames: "sl-login-form__form", attrs: { novalidate: "true" } },
-    [errorBanner, emailInput.element, passwordInput.element, submitButton.element, forgotLink]
+    [errorBanner, emailInput.element, passwordInput.element, submitButton.element, registerButton.element, forgotLink]
   );
 
   const card = createCard({ content: [form] });
@@ -221,6 +246,7 @@ export function create(props = {}) {
       label: submitting ? "Accesso in corso…" : "Accedi",
       icon: submitting ? spinner.element : null,
     });
+    registerButton.update({ disabled: submitting });
   }
 
   renderFromProps();
@@ -257,6 +283,10 @@ export function create(props = {}) {
     element.dispatchEvent(new CustomEvent("sl:login-forgot-password", { bubbles: true, detail: {} }));
   }
 
+  function handleRegisterClick() {
+    element.dispatchEvent(new CustomEvent("sl:login-register", { bubbles: true, detail: {} }));
+  }
+
   function handleSubmit(event) {
     event.preventDefault();
     state.hasAttemptedSubmit = true;
@@ -288,6 +318,11 @@ export function create(props = {}) {
   passwordInput.element.addEventListener("sl:input", handlePasswordInput);
   passwordInput.element.addEventListener("sl:blur", handlePasswordBlur);
   forgotLink.addEventListener("click", handleForgotClick);
+  // registerButton è un'istanza di Button.js (non un <button> grezzo
+  // come forgotLink): si ascolta "sl:click", non "click" nativo — stessa
+  // convenzione già seguita ovunque nel progetto per consumare un Button
+  // (es. Modal.js/profileTimelineRenderer.js sui propri bottoni).
+  registerButton.element.addEventListener("sl:click", handleRegisterClick);
   form.addEventListener("submit", handleSubmit);
 
   function update(nextProps = {}) {
@@ -301,6 +336,7 @@ export function create(props = {}) {
     passwordInput.element.removeEventListener("sl:input", handlePasswordInput);
     passwordInput.element.removeEventListener("sl:blur", handlePasswordBlur);
     forgotLink.removeEventListener("click", handleForgotClick);
+    registerButton.element.removeEventListener("sl:click", handleRegisterClick);
     form.removeEventListener("submit", handleSubmit);
     childComponents.forEach((instance) => instance.destroy());
     element.remove();

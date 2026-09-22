@@ -27,9 +27,12 @@
  *
  * BRANDING DEL PORTALE: header (provider/headline/subheadline) costruito
  * qui, non da LoginForm — il form viene montato con showBrand:false/
- * showForgotLink:false (prop additive di LoginForm.js) per contribuire
- * SOLO i campi email/password, senza duplicare intestazioni né violare
- * l'incapsulamento del componente con un accesso diretto al suo DOM.
+ * showForgotLink:false/showRegisterButton:false (prop additive di
+ * LoginForm.js) per contribuire SOLO i campi email/password, senza
+ * duplicare intestazioni né violare l'incapsulamento del componente con
+ * un accesso diretto al suo DOM. "Registrati" in particolare non avrebbe
+ * senso su un portale Wi-Fi guest (nessun account da creare per
+ * connettersi).
  *
  * Firma richiesta dall'engine: (container, scenario) => Promise<destroy|undefined>.
  */
@@ -208,7 +211,12 @@ export async function renderFakeCaptivePortal(container, scenario) {
     const socialWrap = createElement("div", { classNames: "sl-fake-captive-portal__social-buttons" }, socialButtons);
     const divider = createElement("p", { classNames: "sl-fake-captive-portal__divider", text: "oppure" });
 
-    const loginForm = createLoginForm({ emailValidation: "loose", showBrand: false, showForgotLink: false });
+    const loginForm = createLoginForm({
+      emailValidation: "loose",
+      showBrand: false,
+      showForgotLink: false,
+      showRegisterButton: false,
+    });
     childComponents.push(loginForm);
 
     const terms = createElement("p", { classNames: "sl-fake-captive-portal__terms", text: portalContent.termsText || "" });

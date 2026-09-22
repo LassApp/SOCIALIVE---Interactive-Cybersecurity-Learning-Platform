@@ -13,10 +13,11 @@
  * (architettura Fase 1 §2.1, "le pagine sono le uniche autorizzate a
  * orchestrare").
  *
- * Nessuna gestione di sl:login-forgot-password oltre a ricevere
- * l'evento: nessun flusso di recupero esiste (fuori scope, già
- * documentato in LoginForm.js) — il listener è qui solo per completezza
- * dell'interfaccia, pronto a essere popolato quando servirà davvero.
+ * Nessuna gestione di sl:login-forgot-password/sl:login-register oltre a
+ * riceverli: nessun flusso di recupero o registrazione esiste (fuori
+ * scope, già documentato in LoginForm.js) — i due listener sono qui solo
+ * per completezza dell'interfaccia, pronti a essere popolati quando
+ * servirà davvero.
  */
 
 import { createElement } from "../utils/dom.js";
@@ -46,14 +47,20 @@ export function createLoginPageController(container) {
     // Intenzionalmente vuoto — vedi rationale in testa al file.
   }
 
+  function handleRegister() {
+    // Intenzionalmente vuoto — vedi rationale in testa al file.
+  }
+
   loginForm.element.addEventListener("sl:login-submit", handleSubmit);
   loginForm.element.addEventListener("sl:login-forgot-password", handleForgotPassword);
+  loginForm.element.addEventListener("sl:login-register", handleRegister);
 
   container.appendChild(page);
 
   return function destroy() {
     loginForm.element.removeEventListener("sl:login-submit", handleSubmit);
     loginForm.element.removeEventListener("sl:login-forgot-password", handleForgotPassword);
+    loginForm.element.removeEventListener("sl:login-register", handleRegister);
     loginForm.destroy();
     page.remove();
   };

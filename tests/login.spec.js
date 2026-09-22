@@ -8,6 +8,15 @@
  * loginAsDocente() da helpers/auth.js per partire da una sessione
  * autenticata reale, non un bypass.
  *
+ * MODIFICATO (bottone "Registrati", nuovo): blocco dedicato dopo la
+ * validazione di formato — presenza/posizione (tra "Accedi" e "Password
+ * dimenticata?"), type="button" (mai "submit"), nessun effetto
+ * collaterale al click (niente submit/cambio hash/errore), Invio da
+ * tastiera nei campi che continua ad attivare "Accedi". La regressione
+ * sulla visibilità del bottone nei renderer che riusano LoginForm.js
+ * (Keylogger: visibile per default; Evil Twin Wi-Fi: nascosto via
+ * showRegisterButton:false) vive in scenario.spec.js, non qui.
+ *
  * RIPRISTINATO (revert da Supabase Auth a sessione locale):
  *   - chromium.launch() torna alla modalità headless di default — la
  *     deviazione { headless: false } era una necessità empiricamente
@@ -126,6 +135,51 @@ async function run() {
         .locator(".sl-input__helper")
         .textContent();
       assert.equal(helperText.trim(), "Inserisci un indirizzo email valido.");
+    });
+
+    await context.close();
+  }
+
+  // --- Bottone "Registrati" (nuovo, non funzionante per design) --------
+  {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.goto(`${server.url}/#/login`);
+    await page.waitForSelector(".sl-login-form");
+
+    const registerButton = () => page.locator(".sl-login-form__register");
+
+    await suite.test("Registrati: presente, posizionato tra Accedi e 'Password dimenticata?'", async () => {
+      const order = await page
+        .locator(".sl-login-form__form")
+        .evaluate((form) => Array.from(form.children).map((c) => c.className));
+      const submitIndex = order.findIndex((c) => c.includes("sl-login-form__submit"));
+      const registerIndex = order.findIndex((c) => c.includes("sl-login-form__register"));
+      const forgotIndex = order.findIndex((c) => c.includes("sl-login-form__forgot"));
+      assert.ok(
+        submitIndex < registerIndex && registerIndex < forgotIndex,
+        `ordine inatteso nel form: ${order.join(" | ")}`
+      );
+      assert.equal((await registerButton().textContent()).trim(), "Registrati");
+    });
+
+    await suite.test("Registrati: type=\"button\", mai type=\"submit\"", async () => {
+      assert.equal(await registerButton().getAttribute("type"), "button");
+    });
+
+    await suite.test("click su Registrati: nessun submit, nessun cambio di hash, nessun errore", async () => {
+      await registerButton().click();
+      await page.waitForTimeout(100);
+      assert.equal(await page.evaluate(() => window.location.hash), "#/login");
+      assert.equal(await page.locator(".sl-login-form__error-banner").isVisible(), false);
+    });
+
+    await suite.test("Invio da tastiera nei campi attiva ancora 'Accedi', non 'Registrati'", async () => {
+      await page.fill(".sl-login-form__form input[type='email']", "");
+      await page.fill(".sl-login-form__form input[type='password']", "");
+      await page.press(".sl-login-form__form input[type='password']", "Enter");
+      const emailField = page.locator(".sl-login-form__form input[type='email']");
+      assert.equal(await emailField.getAttribute("aria-invalid"), "true");
     });
 
     await context.close();
