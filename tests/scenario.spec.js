@@ -24,6 +24,20 @@
  * effetto collaterale, Invio da tastiera invariato) vive in
  * login.spec.js, non qui.
  *
+ * MODIFICATO ULTERIORMENTE (allineamento alla Sidebar con flyout
+ * "Moduli"): la griglia moduli in Home e il selettore
+ * "#/modules/:moduleId" raggiunto cliccandola sono stati sostituiti dal
+ * sottomenu "Moduli" della Sidebar (appShell.js/Sidebar.js, visibile su
+ * ogni rotta protetta) — questo file referenziava ancora
+ * ".sl-home-page__modules-grid"/"#/modules/cybersecurity" come se
+ * fossero il percorso di navigazione reale, sia nell'entry point di
+ * Evil Twin Wi-Fi sia nel flusso completo da tastiera (mai riallineati
+ * al nuovo codice — stessa classe di errore "test che descrive un
+ * comportamento non più reale" già documentata più volte nella storia
+ * del progetto). Sostituiti con la navigazione via flyout reale: click/
+ * Invio sul trigger "Moduli" (aria-haspopup/aria-expanded) apre il
+ * pannello, i cui link vanno diretti a #/scenario/:id.
+ *
  * CORRETTA CORRUZIONE DI SINTASSI (revert Supabase Auth, sessione
  * successiva): un intervento precedente aveva incollato due versioni
  * conflittuali dello stesso test ("selettore Cybersecurity mostra N
@@ -648,19 +662,30 @@ async function run() {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
+    await page.waitForSelector(".sl-sidebar__trigger");
 
-    await suite.test("selettore Cybersecurity mostra 4 scenari (Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi)", async () => {
-      await page.click(".sl-home-page__modules-grid .sl-module-card >> nth=4");
-      await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
-      await page.waitForSelector(".sl-module-scenarios-page__grid");
-      assert.equal(await page.locator(".sl-module-scenarios-page__grid .sl-module-card").count(), 4);
+    await suite.test("Sidebar: il flyout 'Moduli' elenca 4 scenari (Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi)", async () => {
+      // hover, non click: un click() di Playwright genera un vero
+      // mousemove che fa scattare "mouseenter" sul trigger PRIMA del
+      // click stesso — Sidebar.js apre il flyout all'hover (mouseenter
+      // sull'intera <li>) e poi handleTriggerClick(), vedendo isOpen
+      // già true, lo richiuderebbe subito dopo (stesso comportamento
+      // per un utente reale con mouse: hover apre, un click successivo
+      // sul trigger già aperto lo toggla chiuso — per questo il codice
+      // riserva esplicitamente il click al caso tastiera/touch, dove
+      // l'hover non esiste). hover() riproduce fedelmente il percorso
+      // mouse reale (apre via mouseenter, nessun secondo click sul
+      // trigger).
+      await page.hover(".sl-sidebar__trigger");
+      await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
+      const labels = await page.locator(".sl-sidebar__flyout .sl-sidebar__link").allTextContents();
+      assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi"]);
     });
 
     await suite.test("click su Evil Twin Wi-Fi -> #/scenario/evil-twin-wifi, chrome:none rispettato", async () => {
       // Ordine reale in data/modules.json: oversharing(0), keylogger(1),
-      // phishing(2), evil-twin-wifi(3) — indice aggiornato da nth=2 a
-      // nth=3 dopo l'inserimento di Phishing come terzo scenario.
-      await page.click(".sl-module-scenarios-page__grid .sl-module-card >> nth=3");
+      // phishing(2), evil-twin-wifi(3).
+      await page.click(".sl-sidebar__flyout .sl-sidebar__link >> nth=3");
       await page.waitForFunction(() => window.location.hash === "#/scenario/evil-twin-wifi");
       await page.waitForSelector(".sl-fake-captive-portal");
       assert.equal(await page.locator(".sl-app-header").count(), 0);
@@ -837,41 +862,38 @@ async function run() {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
-    // FIX (scoperto eseguendo davvero la suite per la prima volta in questa
-    // sessione): homePageController.js popola la griglia moduli in modo
-    // asincrono (Promise.all su modules.json/feed.json) — senza attendere
-    // esplicitamente il suo rendering, il ciclo di Tab qui sotto può
-    // eseguirsi PRIMA che la card Cybersecurity esista nel DOM, producendo
-    // un fallimento a cascata su tutti i controlli successivi del blocco.
-    // Stesso principio di attesa già applicato altrove nel file (es. dopo
-    // ogni navigazione che monta contenuto asincrono).
-    await page.waitForSelector(".sl-home-page__modules-grid");
+    // Il sottomenu "Moduli" della Sidebar si popola in modo asincrono
+    // (fetch di data/modules.json in appShell.js, indipendente dal Feed
+    // della Home) — senza attendere esplicitamente che il trigger sia
+    // diventato una voce "disclosure" reale (children.length > 0), il
+    // ciclo di Tab qui sotto potrebbe eseguirsi mentre "Moduli" è ancora
+    // un placeholder non interattivo, producendo un fallimento a cascata
+    // su tutti i controlli successivi del blocco. Stesso principio di
+    // attesa già applicato altrove nel file (es. dopo ogni navigazione
+    // che monta contenuto asincrono).
+    await page.waitForSelector(".sl-sidebar__trigger");
 
-    await suite.test("flusso da tastiera: Sidebar -> Moduli -> Cybersecurity (Invio) -> selettore", async () => {
+    await suite.test("flusso da tastiera: Sidebar -> trigger 'Moduli' (Invio) apre il flyout", async () => {
       let focused = null;
       for (let i = 0; i < 15; i += 1) {
         await page.keyboard.press("Tab");
-        focused = await page.evaluate(() => document.activeElement.getAttribute("aria-label"));
-        if (focused === "Apri modulo Cybersecurity") break;
+        focused = await page.evaluate(() => document.activeElement.classList.contains("sl-sidebar__trigger"));
+        if (focused) break;
       }
-      assert.equal(focused, "Apri modulo Cybersecurity", "il focus non ha raggiunto la card Cybersecurity entro 15 Tab");
+      assert.ok(focused, "il focus non ha raggiunto il trigger 'Moduli' entro 15 Tab");
 
       await page.keyboard.press("Enter");
-      // Cybersecurity ospita ora 4 scenari (Oversharing, Keylogger,
-      // Phishing, Evil Twin Wi-Fi): il click/Invio porta al selettore
-      // #/modules/cybersecurity, non più direttamente allo scenario.
-      await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
-      await page.waitForSelector(".sl-module-scenarios-page__grid");
+      await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
     });
 
-    await suite.test("flusso da tastiera: dal selettore raggiunge Oversharing (Invio)", async () => {
+    await suite.test("flusso da tastiera: dal flyout raggiunge Oversharing (Invio)", async () => {
       let focused = null;
-      for (let i = 0; i < 15; i += 1) {
+      for (let i = 0; i < 6; i += 1) {
         await page.keyboard.press("Tab");
-        focused = await page.evaluate(() => document.activeElement.getAttribute("aria-label"));
-        if (focused === "Apri modulo Oversharing") break;
+        focused = await page.evaluate(() => document.activeElement.textContent.trim());
+        if (focused === "Oversharing") break;
       }
-      assert.equal(focused, "Apri modulo Oversharing", "il focus non ha raggiunto la card Oversharing entro 15 Tab");
+      assert.equal(focused, "Oversharing", "il focus non ha raggiunto la voce 'Oversharing' nel flyout entro 6 Tab");
 
       await page.keyboard.press("Enter");
       await page.waitForFunction(() => window.location.hash === "#/scenario/oversharing");

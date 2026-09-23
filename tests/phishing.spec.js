@@ -25,6 +25,14 @@
  * attiva (non solo quella target), stessa finzione end-to-end già
  * verificata per i form del finto sito bancario (nessuna richiesta di
  * rete, validazione minima, conferma neutra).
+ *
+ * MODIFICATO (allineamento alla Sidebar con flyout "Moduli"): il punto
+ * di ingresso non è più "click su Cybersecurity in Home -> selettore
+ * #/modules/cybersecurity" (la griglia moduli in Home è stata rimossa),
+ * ma "click sul trigger 'Moduli' della Sidebar -> flyout con i 4
+ * scenari". La rotta #/modules/:moduleId resta registrata e funzionante
+ * — non più raggiunta cliccando in giro, ma ancora verificata navigandoci
+ * direttamente via URL nel blocco screenshot (vedi commento lì).
  */
 const assert = require("node:assert/strict");
 const path = require("node:path");
@@ -43,27 +51,33 @@ async function run() {
   const browser = await chromium.launch();
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
-  // --- Selettore Cybersecurity: ora con 4 scenari (dopo Evil Twin Wi-Fi) -
+  // --- Sidebar: flyout "Moduli" con 4 scenari (dopo Evil Twin Wi-Fi) ----
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
-    await page.waitForSelector(".sl-home-page__modules-grid");
+    await page.waitForSelector(".sl-sidebar__trigger");
 
-    await suite.test("click su Cybersecurity -> selettore con 4 scenari, tutti disponibili", async () => {
-      await page.click(".sl-home-page__modules-grid .sl-module-card >> nth=4");
-      await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
-      await page.waitForSelector(".sl-module-scenarios-page__grid");
-      const cards = page.locator(".sl-module-scenarios-page__grid .sl-module-card");
-      assert.equal(await cards.count(), 4);
-      const badges = await page.locator(".sl-module-scenarios-page__grid .sl-badge").allTextContents();
-      assert.deepEqual(badges.map((b) => b.trim()), ["Disponibile", "Disponibile", "Disponibile", "Disponibile"]);
+    await suite.test("click su 'Moduli' apre il flyout con 4 scenari, nell'ordine reale di data/modules.json", async () => {
+      // hover, non click: un click() di Playwright genera un vero
+      // mousemove che fa scattare "mouseenter" sul trigger PRIMA del
+      // click stesso — Sidebar.js apre il flyout all'hover (mouseenter
+      // sull'intera <li>) e poi handleTriggerClick(), vedendo isOpen
+      // già true, lo richiuderebbe subito dopo (stesso comportamento
+      // per un utente reale con mouse: hover apre, un click successivo
+      // sul trigger già aperto lo toggla chiuso — per questo il codice
+      // riserva esplicitamente il click al caso tastiera/touch, dove
+      // l'hover non esiste). hover() riproduce fedelmente il percorso
+      // mouse reale (apre via mouseenter, nessun secondo click sul
+      // trigger).
+      await page.hover(".sl-sidebar__trigger");
+      await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
+      const labels = await page.locator(".sl-sidebar__flyout .sl-sidebar__link").allTextContents();
+      assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi"]);
     });
 
-    await suite.test("terza card è 'Phishing' e naviga a #/scenario/phishing", async () => {
-      const titles = await page.locator(".sl-module-scenarios-page__grid .sl-module-card__title").allTextContents();
-      assert.deepEqual(titles.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi"]);
-      await page.click(".sl-module-scenarios-page__grid .sl-module-card >> nth=2");
+    await suite.test("terza voce è 'Phishing' e naviga a #/scenario/phishing", async () => {
+      await page.click(".sl-sidebar__flyout .sl-sidebar__link >> nth=2");
       await page.waitForFunction(() => window.location.hash === "#/scenario/phishing");
       await page.waitForSelector(".sl-phishing");
     });
@@ -321,13 +335,27 @@ async function run() {
     await context.close();
   }
 
-  // --- Screenshot ----------------------------------------------------------
+  // --- Screenshot ------------------------------------------------------
+  // Nota: da questa fase in poi la Sidebar porta DIRETTAMENTE a
+  // #/scenario/:id (flyout "Moduli", vedi blocco iniziale di questo
+  // file) — #/modules/:moduleId non è più raggiungibile cliccando in
+  // giro, ma la rotta e moduleScenariosPageController.js restano
+  // registrati in index.html e funzionanti: verificato qui navigandoci
+  // direttamente via URL (stesso principio già seguito altrove nel
+  // progetto per le rotte non più linkate dalla UI corrente).
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
     await page.goto(`${server.url}/#/modules/cybersecurity`);
     await page.waitForSelector(".sl-module-scenarios-page__grid");
+
+    await suite.test("rotta diretta #/modules/cybersecurity: 4 scenari, tutti disponibili", async () => {
+      const cards = page.locator(".sl-module-scenarios-page__grid .sl-module-card");
+      assert.equal(await cards.count(), 4);
+      const badges = await page.locator(".sl-module-scenarios-page__grid .sl-badge").allTextContents();
+      assert.deepEqual(badges.map((b) => b.trim()), ["Disponibile", "Disponibile", "Disponibile", "Disponibile"]);
+    });
 
     await suite.test("screenshot — selettore Cybersecurity con 4 scenari", async () => {
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, "cybersecurity-selector-3-scenari.png") });

@@ -16,6 +16,20 @@
  * nel flusso di login, quindi la causa non si applica più (vedi
  * rationale completo in login.spec.js).
  *
+ * MODIFICATO (allineamento alla Sidebar con flyout "Moduli"): la griglia
+ * di ModuleCard sopra il Feed è stata rimossa da homePageController.js
+ * (i moduli sono ora raggiungibili dal sottomenu "Moduli" della Sidebar,
+ * appShell.js/Sidebar.js, visibile su ogni rotta protetta) — ma questo
+ * file continuava a referenziare ".sl-home-page__modules-grid" e la
+ * pagina selettore "#/modules/:moduleId" come se fossero ancora il
+ * percorso di navigazione reale: i test non erano mai stati riallineati
+ * al nuovo codice (stessa classe di errore "handover/test che descrive
+ * un comportamento non più reale" già documentata più volte nella
+ * storia del progetto). Sostituiti con la copertura del flyout reale
+ * (trigger aria-haspopup/aria-expanded, contenuto data-driven da
+ * data/modules.json, navigazione diretta a #/scenario/:id) — mai
+ * verificato prima d'ora in nessun file della suite.
+ *
  * ESTESO (post Fase 10, intervento "MediaViewer generico") con la
  * copertura dell'apertura del post di Mario Bianchi nel MediaViewer.
  */
@@ -30,8 +44,6 @@ const { loginAsDocente } = require("./helpers/auth");
 const APP_ROOT = path.join(__dirname, "..");
 const SCREENSHOT_DIR = path.join(__dirname, "screenshots");
 
-const MODULE_ORDER = ["yoga", "nissan-gtr", "beatbox", "fotografia", "cybersecurity", "ricette"];
-
 async function run() {
   const suite = createSuite("home.spec.js");
   const server = await startServer(APP_ROOT);
@@ -43,7 +55,14 @@ async function run() {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
-    await page.waitForSelector(".sl-home-page__modules-grid"); // popolato in modo asincrono da data/modules.json+feed.json
+    // Due fetch asincrone indipendenti, non più una sola: il feed
+    // (data/home/feed.json, homePageController.js) e il sottomenu
+    // "Moduli" della Sidebar (data/modules.json, appShell.js) — la
+    // vecchia griglia moduli in Home è stata rimossa, i suoi contenuti
+    // vivono ora nel flyout della Sidebar (vedi rationale in
+    // appShell.js/Sidebar.js).
+    await page.waitForSelector(".sl-post-card");
+    await page.waitForSelector(".sl-sidebar__trigger");
 
     await suite.test("document.title corretto su #/home", async () => {
       assert.equal(await page.title(), "Home \u2014 SocialAlive");
@@ -62,23 +81,38 @@ async function run() {
       assert.ok(await h1.evaluate((el) => el.classList.contains("sl-visually-hidden")));
     });
 
-    await suite.test("6 ModuleCard nell'ordine atteso, solo Cybersecurity disponibile", async () => {
-      const cards = page.locator(".sl-home-page__modules-grid .sl-module-card");
-      assert.equal(await cards.count(), 6);
-      for (let i = 0; i < MODULE_ORDER.length; i += 1) {
-        const card = cards.nth(i);
-        const isAvailable = MODULE_ORDER[i] === "cybersecurity";
-        assert.equal(await card.getAttribute("role"), isAvailable ? "button" : null);
-        assert.equal(
-          (await card.locator(".sl-badge").textContent()).trim(),
-          isAvailable ? "Disponibile" : "In arrivo"
-        );
-      }
+    await suite.test("Sidebar: 'Moduli' è un trigger con sottomenu, chiuso di default (aria-haspopup/aria-expanded)", async () => {
+      const trigger = page.locator(".sl-sidebar__trigger");
+      assert.equal(await trigger.count(), 1);
+      assert.equal(await trigger.getAttribute("aria-haspopup"), "true");
+      assert.equal(await trigger.getAttribute("aria-expanded"), "false");
+      assert.equal(await page.locator(".sl-sidebar__flyout").isVisible(), false);
     });
 
-    await suite.test("voce disabilitata non è raggiungibile con Tab (nessun tabindex)", async () => {
-      const yogaCard = page.locator(".sl-home-page__modules-grid .sl-module-card").nth(0);
-      assert.equal(await yogaCard.getAttribute("tabindex"), null);
+    await suite.test("click su 'Moduli' apre il flyout con i 4 scenari reali (data/modules.json)", async () => {
+      // hover, non click: un click() di Playwright genera un vero
+      // mousemove che fa scattare "mouseenter" sul trigger PRIMA del
+      // click stesso — Sidebar.js apre il flyout all'hover (mouseenter
+      // sull'intera <li>) e poi handleTriggerClick(), vedendo isOpen
+      // già true, lo richiuderebbe subito dopo (stesso comportamento
+      // per un utente reale con mouse: hover apre, un click successivo
+      // sul trigger già aperto lo toggla chiuso — per questo il codice
+      // riserva esplicitamente il click al caso tastiera/touch, dove
+      // l'hover non esiste). hover() riproduce fedelmente il percorso
+      // mouse reale (apre via mouseenter, nessun secondo click sul
+      // trigger).
+      await page.hover(".sl-sidebar__trigger");
+      await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
+      assert.equal(await page.locator(".sl-sidebar__trigger").getAttribute("aria-expanded"), "true");
+      const labels = await page.locator(".sl-sidebar__flyout .sl-sidebar__link").allTextContents();
+      assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi"]);
+    });
+
+    await suite.test("'Impostazioni' resta disabilitata, non raggiungibile con Tab", async () => {
+      const settingsItem = page.locator(".sl-sidebar__link--disabled");
+      assert.equal(await settingsItem.count(), 1);
+      assert.equal((await settingsItem.textContent()).trim(), "Impostazioni");
+      assert.equal(await settingsItem.getAttribute("tabindex"), null);
     });
 
     await suite.test("Feed: 3 post, autori corretti, nessun riferimento a 'Prof. Anna Ferrari'", async () => {
@@ -135,7 +169,7 @@ async function run() {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
-    await page.waitForSelector(".sl-home-page__modules-grid");
+    await page.waitForSelector(".sl-post-card");
 
     await suite.test("click sull'immagine del post di Mario Bianchi -> MediaViewer si apre", async () => {
       await page.click(".sl-post-card >> nth=0 >> .sl-post-card__media");
@@ -220,7 +254,8 @@ async function run() {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
-    await page.waitForSelector(".sl-home-page__modules-grid");
+    await page.waitForSelector(".sl-post-card");
+    await page.waitForSelector(".sl-sidebar__trigger");
 
     await suite.test("screenshot Home — desktop Light", async () => {
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, "home-desktop-light.png"), fullPage: true });
@@ -258,20 +293,36 @@ async function run() {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
-    await page.waitForSelector(".sl-home-page__modules-grid");
+    await page.waitForSelector(".sl-sidebar__trigger");
 
-    await suite.test("navigazione Home -> selettore Cybersecurity -> Oversharing -> Home: nessun componente duplicato", async () => {
-      await page.click(".sl-home-page__modules-grid .sl-module-card >> nth=4");
-      await page.waitForFunction(() => window.location.hash === "#/modules/cybersecurity");
-      await page.waitForSelector(".sl-module-scenarios-page__grid");
-      await page.click(".sl-module-scenarios-page__grid .sl-module-card >> nth=0");
+    await suite.test("navigazione Home -> flyout Moduli -> Oversharing -> Home: nessun componente duplicato", async () => {
+      // hover, non click: un click() di Playwright genera un vero
+      // mousemove che fa scattare "mouseenter" sul trigger PRIMA del
+      // click stesso — Sidebar.js apre il flyout all'hover (mouseenter
+      // sull'intera <li>) e poi handleTriggerClick(), vedendo isOpen
+      // già true, lo richiuderebbe subito dopo (stesso comportamento
+      // per un utente reale con mouse: hover apre, un click successivo
+      // sul trigger già aperto lo toggla chiuso — per questo il codice
+      // riserva esplicitamente il click al caso tastiera/touch, dove
+      // l'hover non esiste). hover() riproduce fedelmente il percorso
+      // mouse reale (apre via mouseenter, nessun secondo click sul
+      // trigger).
+      await page.hover(".sl-sidebar__trigger");
+      await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
+      await page.click(".sl-sidebar__flyout .sl-sidebar__link >> nth=0");
       await page.waitForFunction(() => window.location.hash === "#/scenario/oversharing");
       await page.waitForSelector(".sl-profile-timeline");
       await page.click(".sl-sidebar__link[href='#/home']");
       await page.waitForFunction(() => window.location.hash === "#/home");
-      await page.waitForSelector(".sl-home-page__modules-grid");
+      // ".sl-post-card" da solo è ambiguo qui: appena l'hash cambia
+      // (sincrono) ma prima che l'evento "hashchange" async di router.js
+      // abbia sostituito il DOM, i 12 post-card di Oversharing sono
+      // ancora presenti — un semplice waitForSelector(".sl-post-card")
+      // li intercetterebbe come falso positivo. ".sl-home-page__content"
+      // esiste SOLO su Home: aspettarlo garantisce che lo swap sia già
+      // avvenuto prima di contare i post-card al suo interno.
+      await page.waitForSelector(".sl-home-page__content .sl-post-card");
       assert.equal(await page.locator(".sl-app-header").count(), 1);
-      assert.equal(await page.locator(".sl-module-card").count(), 6);
       assert.equal(await page.locator(".sl-post-card").count(), 3);
     });
 
