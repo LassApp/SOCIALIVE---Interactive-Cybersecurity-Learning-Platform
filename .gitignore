@@ -1,0 +1,16 @@
+# .gitignore
+# -----------------------------------------------------------------------
+# Mai esistito nel repository fino ad ora — creato insieme alla lettura
+# delle credenziali di test da variabile d'ambiente (tests/helpers/auth.js):
+# senza questo file, un ".env" locale con le credenziali reali finirebbe
+# committato per errore alla prima "git add .", vanificando lo scopo
+# stesso di tenerle fuori dal codice versionato.
+#
+# Voci previste fin dal piano di Fase 1 (§10, "Preparazione GitHub"), mai
+# effettivamente scritte finora.
+
+.env
+.DS_Store
+Thumbs.db
+*.log
+node_modules/

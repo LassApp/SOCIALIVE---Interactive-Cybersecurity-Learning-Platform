@@ -16,18 +16,27 @@ tre pagine (KISS).
 
 ## Come eseguirla
 
-Prerequisiti: Node.js e il pacchetto `playwright` con Chromium già installato
-(`npx playwright install chromium` se non fosse già disponibile nell'ambiente).
+Prerequisiti: Node.js, il pacchetto `playwright` con Chromium già installato
+(`npx playwright install chromium` se non fosse già disponibile nell'ambiente),
+e le variabili d'ambiente `SL_TEST_EMAIL`/`SL_TEST_PASSWORD` impostate con le
+credenziali reali di `data/users.json` — mai hardcoded nel repository (vedi
+`helpers/auth.js` per il rationale completo). Un modo comodo per impostarle
+senza doverle riscrivere ad ogni sessione di shell: un file `.env` locale, non
+versionato (aggiunto a `.gitignore`), caricato con `export $(cat .env | xargs)`
+prima di `npm test`.
 
 ```bash
 cd tests
 npm install        # solo la prima volta, installa playwright come devDependency
-npm test           # esegue le tre suite in sequenza (login, home, scenario)
+export SL_TEST_EMAIL="..."       # credenziali reali di data/users.json
+export SL_TEST_PASSWORD="..."
+npm test           # esegue le quattro suite in sequenza (login, home, scenario, phishing)
 
 # oppure singolarmente:
 npm run test:login
 npm run test:home
 npm run test:scenario
+npm run test:phishing
 ```
 
 Ogni suite avvia da sé un server statico locale su una porta libera

@@ -380,9 +380,9 @@ async function run() {
       await settingsModal().waitFor({ state: "detached" });
     }
 
-    await suite.test("stato iniziale: bottone Commenta visibile sul primo post", async () => {
+    await suite.test("stato iniziale: bottone Commenta visibile sul primo post, commentPolicy di default 'everyone' (15 commenti reali, nessun filtro attivo)", async () => {
       assert.equal(await firstCommentButton().isVisible(), true);
-      assert.equal(await firstCommentButton().getAttribute("aria-label"), "Commenta il post — 0 commenti");
+      assert.equal(await firstCommentButton().getAttribute("aria-label"), "Commenta il post — 15 commenti");
     });
 
     await suite.test("'Chi può commentare' -> Nessuno: bottone Commenta SCOMPARE (non solo disabilitato)", async () => {
@@ -639,6 +639,16 @@ async function run() {
 
     await suite.test("screenshot scenario — mobile 375px, pannello privato (non seguo)", async () => {
       await page.click(".sl-profile-timeline__tabs >> text=Post");
+      // Con isPublic/isFollowing separati (contentVisible = isPublic ||
+      // isFollowing), il solo "smetti di seguire" non basta più a
+      // rivelare il pannello privato: il profilo resta pubblico di
+      // default (isPublic = true), quindi va prima impostato su privato
+      // da Impostazioni, e SOLO DOPO si può smettere di seguire.
+      await page.click(".sl-profile-timeline__settings-trigger");
+      await page.locator(".sl-modal", { hasText: "Impostazioni privacy" }).waitFor({ state: "visible" });
+      await page.click(".sl-profile-timeline__settings-toggle");
+      await page.keyboard.press("Escape");
+      await page.locator(".sl-modal", { hasText: "Impostazioni privacy" }).waitFor({ state: "detached" });
       await page.click(".sl-profile-timeline__follow-button");
       await page.waitForSelector(".sl-profile-timeline__private-notice:not([hidden])");
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, "scenario-private-mobile-375.png"), fullPage: true });

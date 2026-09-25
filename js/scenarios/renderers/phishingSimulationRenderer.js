@@ -114,8 +114,8 @@
  * MailTime, barra indirizzo del finto sito) resta però edge-to-edge
  * (span dell'intera larghezza), mentre il CONTENUTO sotto è racchiuso in
  * una colonna centrata (max-width 640px, lo stesso valore già stabilito
- * altrove nel Design System — profile-timeline.css,
- * module-scenarios-page.css — non un nuovo numero arbitrario): un vero
+ * altrove nel Design System — profile-timeline.css — non un nuovo
+ * numero arbitrario): un vero
  * client di posta a schermo intero non stira comunque il testo dei
  * messaggi per l'intera larghezza di un monitor. Per ottenere questo
  * (topbar full-width, contenuto centrato) senza duplicare la "chrome" in

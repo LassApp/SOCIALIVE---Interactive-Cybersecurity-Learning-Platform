@@ -30,9 +30,14 @@
  * di ingresso non è più "click su Cybersecurity in Home -> selettore
  * #/modules/cybersecurity" (la griglia moduli in Home è stata rimossa),
  * ma "click sul trigger 'Moduli' della Sidebar -> flyout con i 4
- * scenari". La rotta #/modules/:moduleId resta registrata e funzionante
- * — non più raggiunta cliccando in giro, ma ancora verificata navigandoci
- * direttamente via URL nel blocco screenshot (vedi commento lì).
+ * scenari".
+ *
+ * MODIFICATO ULTERIORMENTE: la rotta #/modules/:moduleId e
+ * moduleScenariosPageController.js, rimasti irraggiungibili dalla UI dal
+ * momento dell'introduzione del flyout, sono stati eliminati per intero
+ * (non solo scollegati) — l'ultimo blocco del file verifica la
+ * regressione: un tentativo diretto via URL ricade ora sul fallback
+ * "Pagina non trovata", come qualunque altra rotta non registrata.
  */
 const assert = require("node:assert/strict");
 const path = require("node:path");
@@ -335,30 +340,26 @@ async function run() {
     await context.close();
   }
 
-  // --- Screenshot ------------------------------------------------------
-  // Nota: da questa fase in poi la Sidebar porta DIRETTAMENTE a
-  // #/scenario/:id (flyout "Moduli", vedi blocco iniziale di questo
-  // file) — #/modules/:moduleId non è più raggiungibile cliccando in
-  // giro, ma la rotta e moduleScenariosPageController.js restano
-  // registrati in index.html e funzionanti: verificato qui navigandoci
-  // direttamente via URL (stesso principio già seguito altrove nel
-  // progetto per le rotte non più linkate dalla UI corrente).
+  // --- Regressione: #/modules/:moduleId eliminata per intero ------------
+  // La pagina selettore (moduleScenariosPageController.js) è rimasta
+  // irraggiungibile dalla UI dal momento in cui la Sidebar ha ottenuto il
+  // flyout "Moduli" (vedi blocco iniziale di questo file) — non solo
+  // "non più linkata", ma eliminata per intero come codice morto (stesso
+  // criterio già applicato altrove nel progetto: "eliminato, non solo
+  // nascosto"). Un tentativo di raggiungerla via URL diretto deve quindi
+  // ricadere sul fallback generico "Pagina non trovata", esattamente come
+  // qualunque altro hash non registrato — non un errore silenzioso, non
+  // una pagina bianca.
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
-    await page.goto(`${server.url}/#/modules/cybersecurity`);
-    await page.waitForSelector(".sl-module-scenarios-page__grid");
 
-    await suite.test("rotta diretta #/modules/cybersecurity: 4 scenari, tutti disponibili", async () => {
-      const cards = page.locator(".sl-module-scenarios-page__grid .sl-module-card");
-      assert.equal(await cards.count(), 4);
-      const badges = await page.locator(".sl-module-scenarios-page__grid .sl-badge").allTextContents();
-      assert.deepEqual(badges.map((b) => b.trim()), ["Disponibile", "Disponibile", "Disponibile", "Disponibile"]);
-    });
-
-    await suite.test("screenshot — selettore Cybersecurity con 4 scenari", async () => {
-      await page.screenshot({ path: path.join(SCREENSHOT_DIR, "cybersecurity-selector-3-scenari.png") });
+    await suite.test("#/modules/cybersecurity non è più una rotta registrata -> 'Pagina non trovata'", async () => {
+      await page.goto(`${server.url}/#/modules/cybersecurity`);
+      const message = await page.waitForSelector("#app-root p");
+      assert.equal((await message.textContent()).trim(), "Pagina non trovata.");
+      assert.equal(await page.locator(".sl-module-scenarios-page__grid").count(), 0);
     });
 
     await context.close();

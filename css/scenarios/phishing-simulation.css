@@ -20,8 +20,7 @@
  * client/browser a schermo intero ha una barra applicativa che tocca i
  * bordi. Il CONTENUTO sotto resta invece racchiuso in una colonna
  * centrata (max-width 640px, la stessa larghezza già usata da
- * profile-timeline.css/module-scenarios-page.css — non un nuovo numero
- * arbitrario): un client di posta reale non stira comunque il testo dei
+ * profile-timeline.css — non un nuovo numero arbitrario): un client di posta reale non stira comunque il testo dei
  * messaggi per l'intera larghezza di un monitor. Per Inbox/Dettaglio
  * questo richiede un wrapper "-content" dedicato, separato dal topbar
  * (vedi .sl-phishing__inbox-content/.sl-phishing__detail-content sotto,

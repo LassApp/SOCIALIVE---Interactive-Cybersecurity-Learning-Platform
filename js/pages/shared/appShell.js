@@ -3,26 +3,25 @@
  * -----------------------------------------------------------------------
  * Orchestrazione condivisa di AppHeader + ProfileMenu + Sidebar + logout,
  * comune a ogni rotta protetta che usa PageContainer (#/home,
- * #/scenario/:scenarioId, #/modules/:moduleId).
+ * #/scenario/:scenarioId).
  *
  * SIDEBAR — "Moduli" ora INTERATTIVA (nuovo): fino a questo intervento
  * era una voce statica disabilitata ("nessuna rotta reale la
  * raggiungeva direttamente"). Ora diventa una voce con sottomenu
  * (Sidebar.js, prop "children") che elenca direttamente gli scenari
- * disponibili — niente più passaggio dalla Home per raggiungerli: la
- * Sidebar è visibile su OGNI rotta protetta (appShell è montato da
+ * disponibili — niente più passaggio da una pagina selettore dedicata
+ * per raggiungerli (quella pagina, #/modules/:moduleId, è stata
+ * eliminata per intero una volta diventata irraggiungibile — vedi
+ * moduleScenariosPageController.js nella cronologia git): la Sidebar è
+ * visibile su OGNI rotta protetta (appShell è montato da
  * homePageController.js E da scenarioPageController.js), quindi il
  * docente può saltare da uno scenario all'altro senza mai tornare alla
  * Home.
  *
  * DATA-DRIVEN, non hardcoded: i sottomenu vengono letti da
- * data/modules.json (stesso file già consumato da homePageController.js
- * e moduleScenariosPageController.js, stessa cache condivisa per URL di
- * localJsonRepository.js — zero richieste di rete aggiuntive se una
- * qualunque pagina lo ha già richiesto in questa sessione) — coerente
- * col principio di progetto "i contenuti non devono essere scritti nel
- * codice". Vengono appiattite le "scenarios" di OGNI modulo con
- * "available: true" in un'unica lista sotto "Moduli": con un solo
+ * data/modules.json — coerente col principio di progetto "i contenuti
+ * non devono essere scritti nel codice". Vengono appiattite le
+ * "scenarios" di OGNI modulo con "available: true" in un'unica lista sotto "Moduli": con un solo
  * modulo reale oggi (Cybersecurity) il risultato è una lista piatta dei
  * suoi scenari — se in futuro un secondo modulo diventasse disponibile,
  * questa stessa lista si allungherebbe con i suoi scenari accodati.
@@ -65,10 +64,10 @@ import { getCurrentUser, logout } from "../../services/authService.js";
 import { createLocalJsonRepository } from "../../repositories/localJsonRepository.js";
 import { buildFallbackMessage } from "../../utils/fallbackMessage.js";
 
-// Stessa fabbrica/URL già usata da homePageController.js/
-// moduleScenariosPageController.js: la cache di localJsonRepository.js è
-// per URL, non per istanza — nessuna richiesta di rete duplicata anche
-// se più pagine protette montano ciascuna il proprio appShell.
+// Unica fabbrica/URL per il sottomenu Sidebar: la cache di
+// localJsonRepository.js è per URL, non per istanza — nessuna richiesta
+// di rete duplicata anche se più pagine protette montano ciascuna il
+// proprio appShell.
 const modulesRepository = createLocalJsonRepository({
   url: "data/modules.json",
   collectionKey: "modules",
