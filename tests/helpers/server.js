@@ -28,6 +28,14 @@ const MIME_TYPES = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".png": "image/png",
+  // ".pdf" (nuovo — richiesto dall'allegato statico della bolletta
+  // EnergiaPlus, scenario Phishing): senza questa voce il server di test
+  // serviva il file con "application/octet-stream" (fallback di riga 60),
+  // che un browser reale gestisce comunque correttamente per un <a
+  // download>, ma un test che verifica l'header content-type per davvero
+  // (non solo che il download "parta") lo scoprirebbe come discrepanza —
+  // trovato proprio da un test così, non per lettura del codice.
+  ".pdf": "application/pdf",
 };
 
 /**

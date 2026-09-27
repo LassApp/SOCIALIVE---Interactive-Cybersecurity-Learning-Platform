@@ -213,6 +213,7 @@ import { create as createButton } from "../../components/Button.js";
 import { create as createInput } from "../../components/Input.js";
 import { create as createLoader } from "../../components/Loader.js";
 import { create as createBadge } from "../../components/Badge.js";
+import { svgNode } from "../../utils/svg.js";
 
 // Stesso ordine di grandezza già usato altrove nel progetto per una
 // finta latenza di submit (Keylogger, style-guide.html): 800ms — vedi
@@ -233,6 +234,59 @@ function validateRequired(value) {
   return (value || "").trim() ? null : "Campo obbligatorio.";
 }
 
+// Icona a graffetta — SOLO nella riga di inbox, indicatore decorativo
+// (aria-hidden) che replica un pattern reale di ogni client di posta
+// ("questa email ha un allegato"): il nome accessibile della riga (sotto)
+// porta già l'informazione a parole ("Con allegato."), l'icona non deve
+// essere letta una seconda volta.
+function buildPaperclipIcon() {
+  const svg = svgNode("svg", { viewBox: "0 0 24 24", fill: "none" });
+  svg.appendChild(
+    svgNode("path", {
+      d: "M7 12.5 15 4.5a3.2 3.2 0 0 1 4.5 4.5L11 17.5a5.2 5.2 0 0 1-7.5-7.5L11 2.5",
+      stroke: "currentColor",
+      "stroke-width": "1.6",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+    })
+  );
+  return svg;
+}
+
+// Icona documento (PDF) — sul biglietto di allegato nel dettaglio email.
+// Foglio con angolo piegato, stesso linguaggio visivo "outline, stroke
+// 1.5-1.6px" già usato da tutte le altre icone inline del progetto
+// (Modal/MediaViewer/PostCard/profileTimelineRenderer) — nessuno sprite
+// esterno da caricare (debito noto, invariato).
+function buildDocumentIcon() {
+  const svg = svgNode("svg", { viewBox: "0 0 24 24", fill: "none" });
+  svg.appendChild(
+    svgNode("path", {
+      d: "M6.5 3h7l4 4v13a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z",
+      stroke: "currentColor",
+      "stroke-width": "1.5",
+      "stroke-linejoin": "round",
+    })
+  );
+  svg.appendChild(
+    svgNode("path", {
+      d: "M13.5 3v4h4",
+      stroke: "currentColor",
+      "stroke-width": "1.5",
+      "stroke-linejoin": "round",
+    })
+  );
+  svg.appendChild(
+    svgNode("path", {
+      d: "M8.5 13h7M8.5 16.2h4.5",
+      stroke: "currentColor",
+      "stroke-width": "1.4",
+      "stroke-linecap": "round",
+    })
+  );
+  return svg;
+}
+
 // Riga della lista inbox: bottone nativo con l'intero contenuto visibile
 // come figli (avatar decorativo + blocco testuale) — il nome accessibile
 // arriva da un aria-label esplicito (sotto), non dal testo concatenato
@@ -249,7 +303,21 @@ function buildEmailRow(email, onOpen) {
     classNames: "sl-phishing__email-timestamp",
     text: email.timestamp || "",
   });
-  const topLine = createElement("span", { classNames: "sl-phishing__email-line" }, [senderEl, timestampEl]);
+  // Graffetta accanto all'orario, prima del testo — stessa posizione in
+  // cui la mostra la maggior parte dei client di posta reali — SOLO se
+  // l'email porta un "attachment" (oggi: solo EnergiaPlus).
+  const timestampGroupChildren = [timestampEl];
+  if (email.attachment) {
+    timestampGroupChildren.unshift(
+      createElement(
+        "span",
+        { classNames: "sl-phishing__email-attachment-indicator", attrs: { "aria-hidden": "true" } },
+        [buildPaperclipIcon()]
+      )
+    );
+  }
+  const timestampGroup = createElement("span", { classNames: "sl-phishing__email-timestamp-group" }, timestampGroupChildren);
+  const topLine = createElement("span", { classNames: "sl-phishing__email-line" }, [senderEl, timestampGroup]);
 
   const subjectEl = createElement("span", {
     classNames: ["sl-phishing__email-subject", email.unread ? "sl-phishing__email-subject--unread" : ""],
@@ -269,7 +337,7 @@ function buildEmailRow(email, onOpen) {
   // Stato "non letta" dichiarato esplicitamente per chi usa uno screen
   // reader — mai affidato al solo peso tipografico (vedi rationale in
   // testa al file).
-  const accessibleName = `${email.unread ? "Non letta. " : ""}${email.sender?.name || ""}: ${email.subject || ""}`;
+  const accessibleName = `${email.unread ? "Non letta. " : ""}${email.sender?.name || ""}: ${email.subject || ""}${email.attachment ? ". Con allegato." : ""}`;
 
   const row = createElement(
     "button",
@@ -479,6 +547,46 @@ function buildReplyBox(onSent) {
 // ctaLabel (solo l'email target, per costruzione dei dati) — ogni email,
 // target o di riempimento, ha comunque sempre un bottone "Rispondi"
 // (vedi rationale ""RISPONDI" INLINE" in testa al file).
+// Biglietto di allegato nel dettaglio email — vero <a href download>,
+// non un bottone con download simulato via Blob (a differenza del log
+// del Keylogger, generato al volo): il PDF è un file statico incluso
+// nel progetto (stesso principio già seguito per le immagini in
+// assets/), quindi non c'è nulla da costruire a runtime — un link nativo
+// dà gratuitamente comportamento di download corretto in ogni browser,
+// coerente con l'uso di elementi nativi già preferito ovunque nel
+// progetto. "download" fissa il nome del file scaricato indipendentemente
+// dal nome reale dell'asset su disco (stesso disaccoppiamento già usato
+// da mediaViewerLauncher.js tra dato e presentazione).
+function buildAttachmentCard(attachment) {
+  const icon = createElement(
+    "span",
+    { classNames: "sl-phishing__attachment-icon", attrs: { "aria-hidden": "true" } },
+    [buildDocumentIcon()]
+  );
+  const name = createElement("span", {
+    classNames: "sl-phishing__attachment-name",
+    text: attachment.fileName || "Allegato",
+  });
+  const meta = createElement("span", {
+    classNames: "sl-phishing__attachment-meta",
+    text: ["PDF", attachment.sizeLabel].filter(Boolean).join(" \u2014 "),
+  });
+  const text = createElement("span", { classNames: "sl-phishing__attachment-text" }, [name, meta]);
+
+  return createElement(
+    "a",
+    {
+      classNames: "sl-phishing__attachment",
+      attrs: {
+        href: attachment.url,
+        download: attachment.fileName || true,
+        "aria-label": `Scarica l'allegato ${attachment.fileName || ""}`,
+      },
+    },
+    [icon, text]
+  );
+}
+
 function buildEmailDetailView(email, { onOpenSite, onBack }) {
   const topbar = buildMailTopbar();
 
@@ -517,6 +625,13 @@ function buildEmailDetailView(email, { onOpenSite, onBack }) {
   const body = createElement("p", { classNames: "sl-phishing__detail-body", text: email.body || "" });
 
   const contentChildren = [backButton.element, subject, metaRow, body];
+
+  // Allegato — SOLO se il dato lo prevede (campo "attachment" in
+  // inbox.json, oggi solo su EnergiaPlus): stesso principio di
+  // condizionalità già seguito due righe più sotto per "ctaLabel".
+  if (email.attachment) {
+    contentChildren.push(buildAttachmentCard(email.attachment));
+  }
 
   // CTA presente SOLO se il dato lo prevede (campo "ctaLabel" in
   // inbox.json, oggi solo sull'email target) — vedi rationale "STEP

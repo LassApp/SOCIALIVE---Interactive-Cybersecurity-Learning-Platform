@@ -202,6 +202,29 @@
   font-size: var(--sl-font-size-xs);
 }
 
+/* Wrapper graffetta+orario: solo per poterli affiancare senza toccare
+   .sl-phishing__email-line (che resta "sender ... timestamp" con
+   justify-content:space-between) — il gruppo intero occupa lo slot
+   destro come prima faceva il solo timestamp. */
+.sl-phishing__email-timestamp-group {
+  display: flex;
+  align-items: center;
+  gap: var(--sl-space-1);
+  flex-shrink: 0;
+}
+
+.sl-phishing__email-attachment-indicator {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  color: var(--sl-color-text-secondary);
+}
+
+.sl-phishing__email-attachment-indicator svg {
+  width: 100%;
+  height: 100%;
+}
+
 .sl-phishing__email-subject {
   color: var(--sl-color-text-primary);
   font-size: var(--sl-font-size-sm);
@@ -279,6 +302,64 @@
   font-size: var(--sl-font-size-md);
   line-height: var(--sl-line-height-relaxed);
   white-space: pre-line;
+}
+
+/* Biglietto allegato — stesso trattamento "superficie sollevata" già
+   dato altrove nel Design System a un blocco secondario dentro un flusso
+   di testo (bg-elevated + border-subtle + radius-md, es. barra indirizzo
+   del finto sito qualche riga più sotto): nessun nuovo accostamento
+   colore. align-self:flex-start (come __cta/__reply-toggle): il
+   biglietto non deve mai allargarsi a piena colonna, un allegato reale
+   ha una larghezza intrinseca contenuta. */
+.sl-phishing__attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sl-space-3);
+  align-self: flex-start;
+  max-width: 100%;
+  padding: var(--sl-space-3) var(--sl-space-4);
+  background-color: var(--sl-color-bg-elevated);
+  border: 1px solid var(--sl-color-border-subtle);
+  border-radius: var(--sl-radius-md);
+  transition: background-color var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-phishing__attachment:hover,
+.sl-phishing__attachment:focus-visible {
+  background-color: var(--sl-color-bg-hover);
+}
+
+.sl-phishing__attachment-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  color: var(--sl-color-error-text);
+}
+
+.sl-phishing__attachment-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.sl-phishing__attachment-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sl-phishing__attachment-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-sm);
+  font-weight: var(--sl-font-weight-medium);
+}
+
+.sl-phishing__attachment-meta {
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-xs);
 }
 
 .sl-button.sl-phishing__cta {
