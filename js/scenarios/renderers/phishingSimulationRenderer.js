@@ -305,7 +305,7 @@ function buildEmailRow(email, onOpen) {
   });
   // Graffetta accanto all'orario, prima del testo — stessa posizione in
   // cui la mostra la maggior parte dei client di posta reali — SOLO se
-  // l'email porta un "attachment" (oggi: solo EnergiaPlus).
+  // l'email porta un "attachment" (oggi: solo Voltrea).
   const timestampGroupChildren = [timestampEl];
   if (email.attachment) {
     timestampGroupChildren.unshift(
@@ -627,7 +627,7 @@ function buildEmailDetailView(email, { onOpenSite, onBack }) {
   const contentChildren = [backButton.element, subject, metaRow, body];
 
   // Allegato — SOLO se il dato lo prevede (campo "attachment" in
-  // inbox.json, oggi solo su EnergiaPlus): stesso principio di
+  // inbox.json, oggi solo su Voltrea): stesso principio di
   // condizionalità già seguito due righe più sotto per "ctaLabel".
   if (email.attachment) {
     contentChildren.push(buildAttachmentCard(email.attachment));

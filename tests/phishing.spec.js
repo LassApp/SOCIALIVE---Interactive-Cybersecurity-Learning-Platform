@@ -153,7 +153,7 @@ async function run() {
     await context.close();
   }
 
-  // --- Allegato PDF sull'email EnergiaPlus (nuovo) -----------------------
+  // --- Allegato PDF sull'email Voltrea (nuovo) -----------------------
   // "email-003" (decoy, isTarget:false) porta ora un campo "attachment" in
   // inbox.json: verifica sia l'indicatore nella riga di inbox (graffetta)
   // sia il biglietto scaricabile nel dettaglio — vero <a href download>
@@ -174,26 +174,26 @@ async function run() {
     await page.goto(`${server.url}/#/scenario/phishing`);
     await page.waitForSelector(".sl-phishing");
 
-    await suite.test("Inbox: SOLO la riga EnergiaPlus mostra l'indicatore di allegato", async () => {
+    await suite.test("Inbox: SOLO la riga Voltrea mostra l'indicatore di allegato", async () => {
       assert.equal(await page.locator(".sl-phishing__email-attachment-indicator").count(), 1);
-      const energiaPlusRow = page.locator(".sl-phishing__email-row >> nth=2");
-      assert.equal(await energiaPlusRow.locator(".sl-phishing__email-attachment-indicator").count(), 1);
+      const voltreaRow = page.locator(".sl-phishing__email-row >> nth=2");
+      assert.equal(await voltreaRow.locator(".sl-phishing__email-attachment-indicator").count(), 1);
       const bankRow = page.locator(".sl-phishing__email-row >> nth=1");
       assert.equal(await bankRow.locator(".sl-phishing__email-attachment-indicator").count(), 0);
     });
 
-    await suite.test("Nome accessibile della riga EnergiaPlus dichiara 'Con allegato.'", async () => {
+    await suite.test("Nome accessibile della riga Voltrea dichiara 'Con allegato.'", async () => {
       const label = await page.locator(".sl-phishing__email-row >> nth=2").getAttribute("aria-label");
       assert.ok(label.includes("Con allegato."), `aria-label inatteso: "${label}"`);
     });
 
-    await suite.test("Apertura EnergiaPlus: biglietto allegato con nome file e didascalia corretti", async () => {
+    await suite.test("Apertura Voltrea: biglietto allegato con nome file e didascalia corretti", async () => {
       await page.click(".sl-phishing__email-row >> nth=2");
       await page.waitForSelector(".sl-phishing__detail");
       const attachment = page.locator(".sl-phishing__attachment");
       assert.equal(await attachment.count(), 1);
       const name = (await page.locator(".sl-phishing__attachment-name").textContent()).trim();
-      assert.equal(name, "Bolletta_EnergiaPlus_Ottobre_2026.pdf");
+      assert.equal(name, "Bolletta_Voltrea_Ottobre_2026.pdf");
       const meta = (await page.locator(".sl-phishing__attachment-meta").textContent()).trim();
       assert.equal(meta, "PDF \u2014 6 KB");
     });
@@ -201,8 +201,8 @@ async function run() {
     await suite.test("Il biglietto è un vero link scaricabile verso l'asset statico reale", async () => {
       const attachment = page.locator(".sl-phishing__attachment");
       const href = await attachment.getAttribute("href");
-      assert.equal(href, "assets/documents/phishing/bolletta-energiaplus-ottobre-2026.pdf");
-      assert.equal(await attachment.getAttribute("download"), "Bolletta_EnergiaPlus_Ottobre_2026.pdf");
+      assert.equal(href, "assets/documents/phishing/bolletta-voltrea-ottobre-2026.pdf");
+      assert.equal(await attachment.getAttribute("download"), "Bolletta_Voltrea_Ottobre_2026.pdf");
       // Il file deve esistere per davvero e rispondere 200 con il content-type
       // corretto — non solo comparire come href nel DOM.
       const response = await page.request.get(`${server.url}/${href}`);

@@ -27,16 +27,16 @@
         },
         {
           "id": "email-003",
-          "sender": { "name": "EnergiaPlus", "address": "bollette@energiaplus.example" },
+          "sender": { "name": "Voltrea", "address": "bollette@voltrea.example" },
           "subject": "La tua bolletta di ottobre è disponibile",
           "snippet": "Gentile cliente, la tua bolletta è pronta per la consultazione...",
-          "body": "Gentile cliente,\n\nla tua bolletta relativa al mese di ottobre è ora disponibile nella tua area riservata. In allegato trovi una copia in PDF per i tuoi archivi. L'importo verrà addebitato automaticamente il giorno 15 del mese.\n\nGrazie per aver scelto EnergiaPlus.",
+          "body": "Gentile cliente,\n\nla tua bolletta relativa al mese di ottobre è ora disponibile nella tua area riservata. In allegato trovi una copia in PDF per i tuoi archivi. L'importo verrà addebitato automaticamente il giorno 15 del mese.\n\nGrazie per aver scelto Voltrea.",
           "timestamp": "09:15",
           "unread": true,
           "isTarget": false,
           "attachment": {
-            "fileName": "Bolletta_EnergiaPlus_Ottobre_2026.pdf",
-            "url": "assets/documents/phishing/bolletta-energiaplus-ottobre-2026.pdf",
+            "fileName": "Bolletta_Voltrea_Ottobre_2026.pdf",
+            "url": "assets/documents/phishing/bolletta-voltrea-ottobre-2026.pdf",
             "sizeLabel": "6 KB"
           }
         },
