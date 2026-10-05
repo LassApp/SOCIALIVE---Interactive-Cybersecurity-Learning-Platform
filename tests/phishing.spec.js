@@ -110,8 +110,8 @@ async function run() {
     await page.goto(`${server.url}/#/scenario/phishing`);
     await page.waitForSelector(".sl-phishing");
 
-    await suite.test("Inbox: 5 email, apertura email target mostra il CTA", async () => {
-      assert.equal(await page.locator(".sl-phishing__email-row").count(), 5);
+    await suite.test("Inbox: 6 email, apertura email target mostra il CTA", async () => {
+      assert.equal(await page.locator(".sl-phishing__email-row").count(), 6);
       await page.click(".sl-phishing__email-row >> nth=1");
       await page.waitForSelector(".sl-phishing__detail");
       const cta = await page.locator(".sl-phishing__cta").textContent();
@@ -212,10 +212,10 @@ async function run() {
       assert.ok(bytes.slice(0, 5).toString("latin1") === "%PDF-", "il file scaricato non è un PDF valido");
     });
 
-    await suite.test("Le altre 4 email restano senza biglietto allegato nel proprio dettaglio", async () => {
+    await suite.test("Le altre 5 email restano senza biglietto allegato nel proprio dettaglio", async () => {
       await page.click(".sl-phishing__back");
       await page.waitForSelector(".sl-phishing__email-row");
-      for (const index of [0, 1, 3, 4]) {
+      for (const index of [0, 1, 3, 4, 5]) {
         await page.click(`.sl-phishing__email-row >> nth=${index}`);
         await page.waitForSelector(".sl-phishing__detail");
         assert.equal(await page.locator(".sl-phishing__attachment").count(), 0);
@@ -226,6 +226,45 @@ async function run() {
 
     await suite.test("VINCOLO ETICO: l'apertura e il download dell'allegato non generano richieste verso host esterni", async () => {
       assert.deepEqual(externalRequests, []);
+    });
+
+    await context.close();
+  }
+
+  // --- Email "le mie password" (nuova) ------------------------------------
+  // Email-006: non è un'email di phishing (mittente = il titolare stesso
+  // della casella, isTarget:false) — è materiale di sfondo che mostra una
+  // cattiva pratica reale molto diffusa (annotare le password in chiaro
+  // dentro un'email) per rinforzare, con un secondo esempio concreto dentro
+  // la stessa inbox, perché la posta non va mai trattata come un posto
+  // sicuro dove conservare credenziali.
+  {
+    const context = await browser.newContext({ viewport: { width: 1024, height: 900 } });
+    const page = await context.newPage();
+
+    await loginAsDocente(page, server.url);
+    await page.goto(`${server.url}/#/scenario/phishing`);
+    await page.waitForSelector(".sl-phishing");
+
+    await suite.test("Inbox: l'ultima riga è 'le mie password', mittente Davide Colombo, già letta", async () => {
+      const lastRow = page.locator(".sl-phishing__email-row >> nth=5");
+      const label = await lastRow.getAttribute("aria-label");
+      assert.ok(label.startsWith("Davide Colombo: le mie password"), `aria-label inatteso: "${label}"`);
+      assert.ok(!label.startsWith("Non letta."), "l'email risulta erroneamente 'non letta'");
+    });
+
+    await suite.test("Apertura 'le mie password': corpo con l'elenco di servizi/password in chiaro", async () => {
+      await page.click(".sl-phishing__email-row >> nth=5");
+      await page.waitForSelector(".sl-phishing__detail");
+      const body = await page.locator(".sl-phishing__detail-body").textContent();
+      ["instagram passw 123456", "fb 7890", "netflix netflix01", "amazon amazon2020", "paypal paypal01", "spotify spotify123"].forEach(
+        (line) => assert.ok(body.includes(line), `riga mancante nel corpo: "${line}"`)
+      );
+    });
+
+    await suite.test("'le mie password' non ha CTA né biglietto allegato (non è l'email target)", async () => {
+      assert.equal(await page.locator(".sl-phishing__cta").count(), 0);
+      assert.equal(await page.locator(".sl-phishing__attachment").count(), 0);
     });
 
     await context.close();
@@ -284,9 +323,9 @@ async function run() {
       assert.equal(await page.locator(".sl-phishing__folder-tab >> nth=0").getAttribute("aria-pressed"), "false");
     });
 
-    await suite.test("torna su 'Posta in arrivo': 5 email di nuovo visibili", async () => {
+    await suite.test("torna su 'Posta in arrivo': 6 email di nuovo visibili", async () => {
       await page.click(".sl-phishing__folder-tab >> nth=0");
-      assert.equal(await page.locator(".sl-phishing__email-row").count(), 5);
+      assert.equal(await page.locator(".sl-phishing__email-row").count(), 6);
     });
 
     await suite.test("stato letta: apertura di un'email non letta aggiorna aria-label E peso tipografico al ritorno", async () => {

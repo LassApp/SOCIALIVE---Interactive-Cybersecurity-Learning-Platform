@@ -59,6 +59,16 @@
           "timestamp": "Ieri, 11:03",
           "unread": false,
           "isTarget": false
+        },
+        {
+          "id": "email-006",
+          "sender": { "name": "Davide Colombo", "address": "davide.colombo86@gmail.com" },
+          "subject": "le mie password",
+          "snippet": "Le scrivo qui così non le perdo più. Prima o poi le cambio tutte...",
+          "body": "Le scrivo qui così non le perdo più. Prima o poi le cambio tutte, ma intanto meglio annotarle da qualche parte:\n\ninstagram passw 123456\nfb 7890\nnetflix netflix01\namazon amazon2020\npaypal paypal01\nspotify spotify123\nmail (questa) qwerty1\n\nAppena ho un minuto le aggiorno.",
+          "timestamp": "3 giorni fa, 23:41",
+          "unread": false,
+          "isTarget": false
         }
       ]
     },
