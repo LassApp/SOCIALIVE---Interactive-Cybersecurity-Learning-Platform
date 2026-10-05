@@ -246,10 +246,10 @@ async function run() {
     await page.goto(`${server.url}/#/scenario/phishing`);
     await page.waitForSelector(".sl-phishing");
 
-    await suite.test("Inbox: l'ultima riga è 'le mie password', mittente Davide Colombo, già letta", async () => {
+    await suite.test("Inbox: l'ultima riga è 'le mie password', mittente Erry Prof, già letta", async () => {
       const lastRow = page.locator(".sl-phishing__email-row >> nth=5");
       const label = await lastRow.getAttribute("aria-label");
-      assert.ok(label.startsWith("Davide Colombo: le mie password"), `aria-label inatteso: "${label}"`);
+      assert.ok(label.startsWith("Erry Prof: le mie password"), `aria-label inatteso: "${label}"`);
       assert.ok(!label.startsWith("Non letta."), "l'email risulta erroneamente 'non letta'");
     });
 
