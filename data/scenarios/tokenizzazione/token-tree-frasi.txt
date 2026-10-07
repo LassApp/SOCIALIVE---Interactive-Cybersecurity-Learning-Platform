@@ -1,0 +1,200 @@
+Frasi generabili dall'albero token-tree.json (198) - solo per rilettura, non fa parte del repository.
+
+Oggi è una bella giornata.
+Oggi è una bella giornata!
+Oggi è una bella giornata di sole.
+Oggi è una bella giornata di sole!
+Oggi è una bella giornata di festa.
+Oggi è una bella giornata di festa!
+Oggi è una bella giornata di primavera.
+Oggi è una bella giornata di primavera!
+Oggi è una bella serata.
+Oggi è una bella serata!
+Oggi è una bella serata tra amici.
+Oggi è una bella serata tra amici!
+Oggi è una bella serata tra colleghi.
+Oggi è una bella serata tra colleghi!
+Oggi è una bella serata tra familiari.
+Oggi è una bella serata tra familiari!
+Oggi è una bella mattinata.
+Oggi è una bella mattinata!
+Oggi è una splendida giornata.
+Oggi è una splendida giornata!
+Oggi è una splendida giornata per una passeggiata.
+Oggi è una splendida giornata per una passeggiata!
+Oggi è una splendida giornata per una gita.
+Oggi è una splendida giornata per una gita!
+Oggi è una splendida giornata per una corsa.
+Oggi è una splendida giornata per una corsa!
+Oggi è una splendida giornata per uscire.
+Oggi è una splendida giornata per uscire!
+Oggi è una splendida giornata per rilassarsi.
+Oggi è una splendida giornata per rilassarsi!
+Oggi è una splendida serata.
+Oggi è una splendida serata!
+Oggi è una splendida occasione.
+Oggi è una splendida occasione!
+Oggi è una splendida occasione per festeggiare.
+Oggi è una splendida occasione per festeggiare!
+Oggi è una splendida occasione per ricominciare.
+Oggi è una splendida occasione per ricominciare!
+Oggi è una splendida occasione per imparare.
+Oggi è una splendida occasione per imparare!
+Oggi è una giornata importante.
+Oggi è una giornata importante!
+Oggi è una giornata particolare.
+Oggi è una giornata particolare!
+Oggi è una giornata lunga.
+Oggi è una giornata lunga!
+Oggi è una giornata lunga ma produttiva.
+Oggi è una giornata lunga ma produttiva!
+Oggi è una giornata lunga ma serena.
+Oggi è una giornata lunga ma serena!
+Oggi è una giornata lunga ma tranquilla.
+Oggi è una giornata lunga ma tranquilla!
+Oggi è molto caldo.
+Oggi è molto caldo!
+Oggi è molto caldo e umido.
+Oggi è molto caldo e umido!
+Oggi è molto caldo e soleggiato.
+Oggi è molto caldo e soleggiato!
+Oggi è molto caldo e afoso.
+Oggi è molto caldo e afoso!
+Oggi è molto freddo.
+Oggi è molto freddo!
+Oggi è molto freddo ma sereno.
+Oggi è molto freddo ma sereno!
+Oggi è molto freddo ma soleggiato.
+Oggi è molto freddo ma soleggiato!
+Oggi è molto freddo ma tranquillo.
+Oggi è molto freddo ma tranquillo!
+Oggi è molto ventoso.
+Oggi è molto ventoso!
+Oggi è molto nuvoloso.
+Oggi è molto nuvoloso!
+Oggi è davvero bello.
+Oggi è davvero bello!
+Oggi è davvero caldo.
+Oggi è davvero caldo!
+Oggi è davvero speciale.
+Oggi è davvero speciale!
+Oggi è davvero strano.
+Oggi è davvero strano!
+Oggi è davvero strano ma bello.
+Oggi è davvero strano ma bello!
+Oggi è davvero strano ma divertente.
+Oggi è davvero strano ma divertente!
+Oggi vado al lavoro.
+Oggi vado al lavoro!
+Oggi vado al lavoro in bici.
+Oggi vado al lavoro in bici!
+Oggi vado al lavoro in auto.
+Oggi vado al lavoro in auto!
+Oggi vado al lavoro in treno.
+Oggi vado al lavoro in treno!
+Oggi vado al supermercato.
+Oggi vado al supermercato!
+Oggi vado al cinema.
+Oggi vado al cinema!
+Oggi vado al cinema con amici.
+Oggi vado al cinema con amici!
+Oggi vado al cinema con colleghi.
+Oggi vado al cinema con colleghi!
+Oggi vado al cinema con tutti.
+Oggi vado al cinema con tutti!
+Oggi vado al mare.
+Oggi vado al mare!
+Oggi vado a scuola.
+Oggi vado a scuola!
+Oggi vado a scuola in bici.
+Oggi vado a scuola in bici!
+Oggi vado a scuola in autobus.
+Oggi vado a scuola in autobus!
+Oggi vado a scuola in auto.
+Oggi vado a scuola in auto!
+Oggi vado a casa.
+Oggi vado a casa!
+Oggi vado a correre.
+Oggi vado a correre!
+Oggi vado a correre in centro.
+Oggi vado a correre in centro!
+Oggi vado a correre in montagna.
+Oggi vado a correre in montagna!
+Oggi vado a correre in spiaggia.
+Oggi vado a correre in spiaggia!
+Oggi vado a letto.
+Oggi vado a letto!
+Oggi vado a letto presto.
+Oggi vado a letto presto!
+Oggi vado in palestra.
+Oggi vado in palestra!
+Oggi vado in ufficio.
+Oggi vado in ufficio!
+Oggi vado in ufficio presto.
+Oggi vado in ufficio presto!
+Oggi vado in centro.
+Oggi vado in centro!
+Oggi vado in centro a piedi.
+Oggi vado in centro a piedi!
+Oggi vado in centro a cena.
+Oggi vado in centro a cena!
+Oggi vado in centro a pranzo.
+Oggi vado in centro a pranzo!
+Oggi 06 ottobre 2026.
+Oggi 06 ottobre 2026!
+Oggi 06 ottobre piove.
+Oggi 06 ottobre piove!
+Oggi 06/10.
+Oggi 06/10!
+Oggi 06/10/2026.
+Oggi 06/10/2026!
+Oggi 06/10/2027.
+Oggi 06/10/2027!
+Oggi 06/11.
+Oggi 06/11!
+Oggi 06/11/2026.
+Oggi 06/11/2026!
+Oggi 06/11/2027.
+Oggi 06/11/2027!
+Oggi 06/12.
+Oggi 06/12!
+Oggi 06/12/2026.
+Oggi 06/12/2026!
+Oggi 06/12/2027.
+Oggi 06/12/2027!
+Oggi 06:10.
+Oggi 06:10!
+Oggi 06:20.
+Oggi 06:20!
+Oggi 06:30.
+Oggi 06:30!
+Oggi 06:45.
+Oggi 06:45!
+Oggi mi sento bene.
+Oggi mi sento bene!
+Oggi mi sento stanco.
+Oggi mi sento stanco!
+Oggi mi sento stanco ma felice.
+Oggi mi sento stanco ma felice!
+Oggi mi sento stanco ma sereno.
+Oggi mi sento stanco ma sereno!
+Oggi mi sento felice.
+Oggi mi sento felice!
+Oggi mi sono svegliato presto.
+Oggi mi sono svegliato presto!
+Oggi mi sono svegliato tardi.
+Oggi mi sono svegliato tardi!
+Oggi mi sono alzato presto.
+Oggi mi sono alzato presto!
+Oggi mi sono alzato tardi.
+Oggi mi sono alzato tardi!
+Oggi piove.
+Oggi piove!
+Oggi piove molto.
+Oggi piove molto!
+Oggi piove da stamattina.
+Oggi piove da stamattina!
+Oggi piove da ieri.
+Oggi piove da ieri!
+Oggi piove da giorni.
+Oggi piove da giorni!

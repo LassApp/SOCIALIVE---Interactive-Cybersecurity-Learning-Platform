@@ -1,0 +1,422 @@
+{
+  "encoding": "o200k_base",
+  "generatedWith": "gpt-tokenizer@4.0.0",
+  "tokens": {
+    "10": {
+      "plain": { "pieces": ["10"], "ids": [702] },
+      "spaced": { "pieces": [" ","10"], "ids": [220,702] }
+    },
+    "11": {
+      "plain": { "pieces": ["11"], "ids": [994] },
+      "spaced": { "pieces": [" ","11"], "ids": [220,994] }
+    },
+    "12": {
+      "plain": { "pieces": ["12"], "ids": [899] },
+      "spaced": { "pieces": [" ","12"], "ids": [220,899] }
+    },
+    "20": {
+      "plain": { "pieces": ["20"], "ids": [455] },
+      "spaced": { "pieces": [" ","20"], "ids": [220,455] }
+    },
+    "30": {
+      "plain": { "pieces": ["30"], "ids": [1130] },
+      "spaced": { "pieces": [" ","30"], "ids": [220,1130] }
+    },
+    "45": {
+      "plain": { "pieces": ["45"], "ids": [2548] },
+      "spaced": { "pieces": [" ","45"], "ids": [220,2548] }
+    },
+    "2026": {
+      "plain": { "pieces": ["202","6"], "ids": [1323,21] },
+      "spaced": { "pieces": [" ","202","6"], "ids": [220,1323,21] }
+    },
+    "2027": {
+      "plain": { "pieces": ["202","7"], "ids": [1323,22] },
+      "spaced": { "pieces": [" ","202","7"], "ids": [220,1323,22] }
+    },
+    ":": {
+      "plain": { "pieces": [":"], "ids": [25] },
+      "spaced": { "pieces": [" :"], "ids": [712] }
+    },
+    "!": {
+      "plain": { "pieces": ["!"], "ids": [0] },
+      "spaced": { "pieces": [" !"], "ids": [1073] }
+    },
+    ".": {
+      "plain": { "pieces": ["."], "ids": [13] },
+      "spaced": { "pieces": [" ."], "ids": [887] }
+    },
+    "/": {
+      "plain": { "pieces": ["/"], "ids": [14] },
+      "spaced": { "pieces": [" /"], "ids": [820] }
+    },
+    "06": {
+      "plain": { "pieces": ["06"], "ids": [3218] },
+      "spaced": { "pieces": [" ","06"], "ids": [220,3218] }
+    },
+    "a": {
+      "plain": { "pieces": ["a"], "ids": [64] },
+      "spaced": { "pieces": [" a"], "ids": [261] }
+    },
+    "afoso": {
+      "plain": { "pieces": ["af","oso"], "ids": [1553,12408] },
+      "spaced": { "pieces": [" af","oso"], "ids": [1283,12408] }
+    },
+    "al": {
+      "plain": { "pieces": ["al"], "ids": [280] },
+      "spaced": { "pieces": [" al"], "ids": [434] }
+    },
+    "alzato": {
+      "plain": { "pieces": ["alz","ato"], "ids": [151133,2754] },
+      "spaced": { "pieces": [" al","z","ato"], "ids": [434,89,2754] }
+    },
+    "amici": {
+      "plain": { "pieces": ["am","ici"], "ids": [313,3757] },
+      "spaced": { "pieces": [" amici"], "ids": [142448] }
+    },
+    "auto": {
+      "plain": { "pieces": ["auto"], "ids": [7254] },
+      "spaced": { "pieces": [" auto"], "ids": [5271] }
+    },
+    "autobus": {
+      "plain": { "pieces": ["aut","obus"], "ids": [1828,120212] },
+      "spaced": { "pieces": [" autobus"], "ids": [173934] }
+    },
+    "bella": {
+      "plain": { "pieces": ["bella"], "ids": [141108] },
+      "spaced": { "pieces": [" bella"], "ids": [96064] }
+    },
+    "bello": {
+      "plain": { "pieces": ["b","ello"], "ids": [65,6053] },
+      "spaced": { "pieces": [" bello"], "ids": [149496] }
+    },
+    "bene": {
+      "plain": { "pieces": ["bene"], "ids": [133916] },
+      "spaced": { "pieces": [" bene"], "ids": [25042] }
+    },
+    "bici": {
+      "plain": { "pieces": ["b","ici"], "ids": [65,3757] },
+      "spaced": { "pieces": [" bici"], "ids": [175441] }
+    },
+    "caldo": {
+      "plain": { "pieces": ["cal","do"], "ids": [5842,2408] },
+      "spaced": { "pieces": [" caldo"], "ids": [152466] }
+    },
+    "casa": {
+      "plain": { "pieces": ["c","asa"], "ids": [66,5643] },
+      "spaced": { "pieces": [" casa"], "ids": [10859] }
+    },
+    "cena": {
+      "plain": { "pieces": ["c","ena"], "ids": [66,2995] },
+      "spaced": { "pieces": [" cena"], "ids": [51570] }
+    },
+    "centro": {
+      "plain": { "pieces": ["cent","ro"], "ids": [1939,298] },
+      "spaced": { "pieces": [" centro"], "ids": [20727] }
+    },
+    "cinema": {
+      "plain": { "pieces": ["cin","ema"], "ids": [19562,4603] },
+      "spaced": { "pieces": [" cinema"], "ids": [37553] }
+    },
+    "colleghi": {
+      "plain": { "pieces": ["col","le","ghi"], "ids": [1798,282,75124] },
+      "spaced": { "pieces": [" colle","ghi"], "ids": [22001,75124] }
+    },
+    "con": {
+      "plain": { "pieces": ["con"], "ids": [542] },
+      "spaced": { "pieces": [" con"], "ids": [406] }
+    },
+    "correre": {
+      "plain": { "pieces": ["corr","ere"], "ids": [116563,512] },
+      "spaced": { "pieces": [" corr","ere"], "ids": [16963,512] }
+    },
+    "corsa": {
+      "plain": { "pieces": ["c","orsa"], "ids": [66,61238] },
+      "spaced": { "pieces": [" cors","a"], "ids": [49625,64] }
+    },
+    "da": {
+      "plain": { "pieces": ["da"], "ids": [2529] },
+      "spaced": { "pieces": [" da"], "ids": [1033] }
+    },
+    "davvero": {
+      "plain": { "pieces": ["dav","vero"], "ids": [144237,74683] },
+      "spaced": { "pieces": [" davvero"], "ids": [121116] }
+    },
+    "di": {
+      "plain": { "pieces": ["di"], "ids": [4091] },
+      "spaced": { "pieces": [" di"], "ids": [1320] }
+    },
+    "divertente": {
+      "plain": { "pieces": ["div","ert","ente"], "ids": [862,805,1576] },
+      "spaced": { "pieces": [" divert","ente"], "ids": [30443,1576] }
+    },
+    "e": {
+      "plain": { "pieces": ["e"], "ids": [68] },
+      "spaced": { "pieces": [" e"], "ids": [319] }
+    },
+    "è": {
+      "plain": { "pieces": ["è"], "ids": [957] },
+      "spaced": { "pieces": [" è"], "ids": [6272] }
+    },
+    "familiari": {
+      "plain": { "pieces": ["fam","ili","ari"], "ids": [130662,2751,1683] },
+      "spaced": { "pieces": [" famili","ari"], "ids": [95509,1683] }
+    },
+    "felice": {
+      "plain": { "pieces": ["fel","ice"], "ids": [27849,603] },
+      "spaced": { "pieces": [" fel","ice"], "ids": [11438,603] }
+    },
+    "festa": {
+      "plain": { "pieces": ["f","esta"], "ids": [69,6507] },
+      "spaced": { "pieces": [" festa"], "ids": [52308] }
+    },
+    "festeggiare": {
+      "plain": { "pieces": ["fest","egg","iare"], "ids": [32560,72126,38290] },
+      "spaced": { "pieces": [" fest","egg","iare"], "ids": [9602,72126,38290] }
+    },
+    "freddo": {
+      "plain": { "pieces": ["fre","dd","o"], "ids": [17310,1183,78] },
+      "spaced": { "pieces": [" fre","dd","o"], "ids": [3963,1183,78] }
+    },
+    "giornata": {
+      "plain": { "pieces": ["gior","nata"], "ids": [56826,106597] },
+      "spaced": { "pieces": [" giornata"], "ids": [146739] }
+    },
+    "giorni": {
+      "plain": { "pieces": ["gior","ni"], "ids": [56826,1906] },
+      "spaced": { "pieces": [" giorni"], "ids": [73528] }
+    },
+    "gita": {
+      "plain": { "pieces": ["g","ita"], "ids": [70,2580] },
+      "spaced": { "pieces": [" g","ita"], "ids": [329,2580] }
+    },
+    "ieri": {
+      "plain": { "pieces": ["ieri"], "ids": [52194] },
+      "spaced": { "pieces": [" ieri"], "ids": [171744] }
+    },
+    "imparare": {
+      "plain": { "pieces": ["im","par","are"], "ids": [321,796,644] },
+      "spaced": { "pieces": [" impar","are"], "ids": [122883,644] }
+    },
+    "importante": {
+      "plain": { "pieces": ["import","ante"], "ids": [561,2116] },
+      "spaced": { "pieces": [" importante"], "ids": [13431] }
+    },
+    "in": {
+      "plain": { "pieces": ["in"], "ids": [258] },
+      "spaced": { "pieces": [" in"], "ids": [306] }
+    },
+    "lavoro": {
+      "plain": { "pieces": ["l","avor","o"], "ids": [75,3633,78] },
+      "spaced": { "pieces": [" lavoro"], "ids": [59238] }
+    },
+    "letto": {
+      "plain": { "pieces": ["let","to"], "ids": [1347,935] },
+      "spaced": { "pieces": [" letto"], "ids": [132242] }
+    },
+    "lunga": {
+      "plain": { "pieces": ["l","unga"], "ids": [75,15832] },
+      "spaced": { "pieces": [" lunga"], "ids": [172711] }
+    },
+    "ma": {
+      "plain": { "pieces": ["ma"], "ids": [809] },
+      "spaced": { "pieces": [" ma"], "ids": [831] }
+    },
+    "mare": {
+      "plain": { "pieces": ["mare"], "ids": [44757] },
+      "spaced": { "pieces": [" mare"], "ids": [37159] }
+    },
+    "mattinata": {
+      "plain": { "pieces": ["m","att","in","ata"], "ids": [76,2002,258,546] },
+      "spaced": { "pieces": [" matt","in","ata"], "ids": [20906,258,546] }
+    },
+    "mi": {
+      "plain": { "pieces": ["mi"], "ids": [3900] },
+      "spaced": { "pieces": [" mi"], "ids": [3997] }
+    },
+    "molto": {
+      "plain": { "pieces": ["mol","to"], "ids": [52355,935] },
+      "spaced": { "pieces": [" molto"], "ids": [42986] }
+    },
+    "montagna": {
+      "plain": { "pieces": ["mont","agna"], "ids": [27939,49911] },
+      "spaced": { "pieces": [" mont","agna"], "ids": [11554,49911] }
+    },
+    "nuvoloso": {
+      "plain": { "pieces": ["nu","vol","oso"], "ids": [8502,2978,12408] },
+      "spaced": { "pieces": [" nu","vol","oso"], "ids": [4120,2978,12408] }
+    },
+    "occasione": {
+      "plain": { "pieces": ["oc","cas","ione"], "ids": [432,14617,4655] },
+      "spaced": { "pieces": [" occasione"], "ids": [196909] }
+    },
+    "Oggi": {
+      "plain": { "pieces": ["O","ggi"], "ids": [46,71506] },
+      "spaced": { "pieces": [" O","ggi"], "ids": [532,71506] }
+    },
+    "ottobre": {
+      "plain": { "pieces": ["ott","obre"], "ids": [2441,15329] },
+      "spaced": { "pieces": [" ottobre"], "ids": [163445] }
+    },
+    "palestra": {
+      "plain": { "pieces": ["p","ales","tra"], "ids": [79,3459,1787] },
+      "spaced": { "pieces": [" palestra"], "ids": [166933] }
+    },
+    "particolare": {
+      "plain": { "pieces": ["part","icol","are"], "ids": [5815,19040,644] },
+      "spaced": { "pieces": [" particolare"], "ids": [105067] }
+    },
+    "passeggiata": {
+      "plain": { "pieces": ["p","asse","ggi","ata"], "ids": [79,5788,71506,546] },
+      "spaced": { "pieces": [" passe","ggi","ata"], "ids": [22210,71506,546] }
+    },
+    "per": {
+      "plain": { "pieces": ["per"], "ids": [543] },
+      "spaced": { "pieces": [" per"], "ids": [777] }
+    },
+    "piedi": {
+      "plain": { "pieces": ["p","ied","i"], "ids": [79,1165,72] },
+      "spaced": { "pieces": [" piedi"], "ids": [189800] }
+    },
+    "piove": {
+      "plain": { "pieces": ["pi","ove"], "ids": [3455,1048] },
+      "spaced": { "pieces": [" pi","ove"], "ids": [6404,1048] }
+    },
+    "pranzo": {
+      "plain": { "pieces": ["pr","anzo"], "ids": [638,167321] },
+      "spaced": { "pieces": [" pran","zo"], "ids": [57621,4151] }
+    },
+    "presto": {
+      "plain": { "pieces": ["pre","sto"], "ids": [2235,19089] },
+      "spaced": { "pieces": [" presto"], "ids": [176689] }
+    },
+    "primavera": {
+      "plain": { "pieces": ["prim","avera"], "ids": [16697,67640] },
+      "spaced": { "pieces": [" primavera"], "ids": [99399] }
+    },
+    "produttiva": {
+      "plain": { "pieces": ["prod","utt","iva"], "ids": [36781,8504,5638] },
+      "spaced": { "pieces": [" produtt","iva"], "ids": [175709,5638] }
+    },
+    "ricominciare": {
+      "plain": { "pieces": ["ric","om","inc","iare"], "ids": [2740,310,2768,38290] },
+      "spaced": { "pieces": [" ric","om","inc","iare"], "ids": [27594,310,2768,38290] }
+    },
+    "rilassarsi": {
+      "plain": { "pieces": ["ril","ass","arsi"], "ids": [17519,456,34288] },
+      "spaced": { "pieces": [" ril","ass","arsi"], "ids": [99484,456,34288] }
+    },
+    "scuola": {
+      "plain": { "pieces": ["sc","u","ola"], "ids": [2786,84,5204] },
+      "spaced": { "pieces": [" scuola"], "ids": [147660] }
+    },
+    "sento": {
+      "plain": { "pieces": ["s","ento"], "ids": [82,13969] },
+      "spaced": { "pieces": [" sent","o"], "ids": [3860,78] }
+    },
+    "serata": {
+      "plain": { "pieces": ["ser","ata"], "ids": [599,546] },
+      "spaced": { "pieces": [" ser","ata"], "ids": [1334,546] }
+    },
+    "serena": {
+      "plain": { "pieces": ["ser","ena"], "ids": [599,2995] },
+      "spaced": { "pieces": [" ser","ena"], "ids": [1334,2995] }
+    },
+    "sereno": {
+      "plain": { "pieces": ["ser","eno"], "ids": [599,7702] },
+      "spaced": { "pieces": [" ser","eno"], "ids": [1334,7702] }
+    },
+    "sole": {
+      "plain": { "pieces": ["sole"], "ids": [2553] },
+      "spaced": { "pieces": [" sole"], "ids": [15139] }
+    },
+    "soleggiato": {
+      "plain": { "pieces": ["so","leg","gi","ato"], "ids": [786,2001,6248,2754] },
+      "spaced": { "pieces": [" so","leg","gi","ato"], "ids": [813,2001,6248,2754] }
+    },
+    "sono": {
+      "plain": { "pieces": ["sono"], "ids": [60511] },
+      "spaced": { "pieces": [" sono"], "ids": [16251] }
+    },
+    "speciale": {
+      "plain": { "pieces": ["special","e"], "ids": [32718,68] },
+      "spaced": { "pieces": [" speciale"], "ids": [57207] }
+    },
+    "spiaggia": {
+      "plain": { "pieces": ["spi","aggia"], "ids": [86870,184258] },
+      "spaced": { "pieces": [" spi","aggia"], "ids": [70297,184258] }
+    },
+    "splendida": {
+      "plain": { "pieces": ["spl","endida"], "ids": [102924,175323] },
+      "spaced": { "pieces": [" splend","ida"], "ids": [145769,2261] }
+    },
+    "stamattina": {
+      "plain": { "pieces": ["st","am","att","ina"], "ids": [302,313,2002,1522] },
+      "spaced": { "pieces": [" stam","att","ina"], "ids": [89832,2002,1522] }
+    },
+    "stanco": {
+      "plain": { "pieces": ["st","anco"], "ids": [302,14319] },
+      "spaced": { "pieces": [" st","anco"], "ids": [420,14319] }
+    },
+    "strano": {
+      "plain": { "pieces": ["str","ano"], "ids": [689,3137] },
+      "spaced": { "pieces": [" str","ano"], "ids": [989,3137] }
+    },
+    "supermercato": {
+      "plain": { "pieces": ["super","merc","ato"], "ids": [17789,7159,2754] },
+      "spaced": { "pieces": [" supermerc","ato"], "ids": [100321,2754] }
+    },
+    "svegliato": {
+      "plain": { "pieces": ["s","veg","li","ato"], "ids": [82,46998,1307,2754] },
+      "spaced": { "pieces": [" sve","gli","ato"], "ids": [25441,73300,2754] }
+    },
+    "tardi": {
+      "plain": { "pieces": ["t","ardi"], "ids": [83,27648] },
+      "spaced": { "pieces": [" t","ardi"], "ids": [260,27648] }
+    },
+    "tra": {
+      "plain": { "pieces": ["tra"], "ids": [1787] },
+      "spaced": { "pieces": [" tra"], "ids": [9747] }
+    },
+    "tranquilla": {
+      "plain": { "pieces": ["tran","quilla"], "ids": [42168,130498] },
+      "spaced": { "pieces": [" tranqu","illa"], "ids": [26426,5561] }
+    },
+    "tranquillo": {
+      "plain": { "pieces": ["tran","qu","illo"], "ids": [42168,351,16726] },
+      "spaced": { "pieces": [" tranqu","illo"], "ids": [26426,16726] }
+    },
+    "treno": {
+      "plain": { "pieces": ["tr","eno"], "ids": [371,7702] },
+      "spaced": { "pieces": [" tr","eno"], "ids": [498,7702] }
+    },
+    "tutti": {
+      "plain": { "pieces": ["t","utti"], "ids": [83,67696] },
+      "spaced": { "pieces": [" tutti"], "ids": [34333] }
+    },
+    "ufficio": {
+      "plain": { "pieces": ["uff","icio"], "ids": [1972,9067] },
+      "spaced": { "pieces": [" uff","icio"], "ids": [73082,9067] }
+    },
+    "umido": {
+      "plain": { "pieces": ["um","ido"], "ids": [394,2295] },
+      "spaced": { "pieces": [" um","ido"], "ids": [1713,2295] }
+    },
+    "una": {
+      "plain": { "pieces": ["una"], "ids": [4024] },
+      "spaced": { "pieces": [" una"], "ids": [1969] }
+    },
+    "uscire": {
+      "plain": { "pieces": ["usc","ire"], "ids": [30081,594] },
+      "spaced": { "pieces": [" usc","ire"], "ids": [146284,594] }
+    },
+    "vado": {
+      "plain": { "pieces": ["v","ado"], "ids": [85,1064] },
+      "spaced": { "pieces": [" v","ado"], "ids": [323,1064] }
+    },
+    "ventoso": {
+      "plain": { "pieces": ["vent","oso"], "ids": [818,12408] },
+      "spaced": { "pieces": [" vent","oso"], "ids": [9869,12408] }
+    }
+  }
+}

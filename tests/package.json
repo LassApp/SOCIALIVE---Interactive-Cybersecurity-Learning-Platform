@@ -8,7 +8,8 @@
     "test:login": "node login.spec.js",
     "test:home": "node home.spec.js",
     "test:scenario": "node scenario.spec.js",
-    "test:phishing": "node phishing.spec.js"
+    "test:phishing": "node phishing.spec.js",
+    "test:token": "node token.spec.js"
   },
   "devDependencies": {
     "playwright": "^1.56.0"

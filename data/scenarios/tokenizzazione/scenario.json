@@ -1,0 +1,10 @@
+{
+  "id": "tokenizzazione",
+  "type": "token-prediction",
+  "title": "Tokenizzazione",
+  "description": "Una frase che nasce un token alla volta: a ogni passo il modello assegna una percentuale ai possibili token successivi e sceglie il più probabile, per capire come un LLM genera una risposta.",
+  "dataRefs": {
+    "tree": "data/scenarios/tokenizzazione/token-tree.json",
+    "vocab": "data/scenarios/tokenizzazione/token-vocab.json"
+  }
+}

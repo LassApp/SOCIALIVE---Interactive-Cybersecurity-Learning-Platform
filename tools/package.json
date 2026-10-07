@@ -1,0 +1,12 @@
+{
+  "name": "socialive-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Strumenti di sviluppo di SOCIALIVE. Non fanno parte dell'app spedita, mai referenziati da index.html (stessa logica di tests/).",
+  "scripts": {
+    "build:token-vocab": "node build-token-vocab.js"
+  },
+  "devDependencies": {
+    "gpt-tokenizer": "4.0.0"
+  }
+}

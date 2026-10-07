@@ -1,0 +1,893 @@
+{
+  "root": "Oggi",
+  "children": [
+    {
+      "token": "è",
+      "children": [
+        {
+          "token": "una",
+          "children": [
+            {
+              "token": "bella",
+              "children": [
+                {
+                  "token": "giornata",
+                  "children": [
+                    { "token": "." },
+                    { "token": "!" },
+                    {
+                      "token": "di",
+                      "children": [
+                        {
+                          "token": "sole",
+                          "children": [
+                            { "token": "." },
+                            { "token": "!" }
+                          ]
+                        },
+                        {
+                          "token": "festa",
+                          "children": [
+                            { "token": "." },
+                            { "token": "!" }
+                          ]
+                        },
+                        {
+                          "token": "primavera",
+                          "children": [
+                            { "token": "." },
+                            { "token": "!" }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "token": "serata",
+                  "children": [
+                    { "token": "." },
+                    { "token": "!" },
+                    {
+                      "token": "tra",
+                      "children": [
+                        {
+                          "token": "amici",
+                          "children": [
+                            { "token": "." },
+                            { "token": "!" }
+                          ]
+                        },
+                        {
+                          "token": "colleghi",
+                          "children": [
+                            { "token": "." },
+                            { "token": "!" }
+                          ]
+                        },
+                        {
+                          "token": "familiari",
+                          "children": [
+                            { "token": "." },
+                            { "token": "!" }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "token": "mattinata",
+                  "children": [
+                    { "token": "." },
+                    { "token": "!" }
+                  ]
+                }
+              ]
+            },
+            {
+              "token": "splendida",
+              "children": [
+                {
+                  "token": "giornata",
+                  "children": [
+                    { "token": "." },
+                    { "token": "!" },
+                    {
+                      "token": "per",
+                      "children": [
+                        {
+                          "token": "una",
+                          "children": [
+                            {
+                              "token": "passeggiata",
+                              "children": [
+                                { "token": "." },
+                                { "token": "!" }
+                              ]
+                            },
+                            {
+                              "token": "gita",
+                              "children": [
+                                { "token": "." },
+                                { "token": "!" }
+                              ]
+                            },
+                            {
+                              "token": "corsa",
+                              "children": [
+                                { "token": "." },
+                                { "token": "!" }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "token": "uscire",
+                          "children": [
+                            { "token": "." },
+                            { "token": "!" }
+                          ]
+                        },
+                        {
+                          "token": "rilassarsi",
+                          "children": [
+                            { "token": "." },
+                            { "token": "!" }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "token": "serata",
+                  "children": [
+                    { "token": "." },
+                    { "token": "!" }
+                  ]
+                },
+                {
+                  "token": "occasione",
+                  "children": [
+                    { "token": "." },
+                    { "token": "!" },
+                    {
+                      "token": "per",
+                      "children": [
+                        {
+                          "token": "festeggiare",
+                          "children": [
+                            { "token": "." },
+                            { "token": "!" }
+                          ]
+                        },
+                        {
+                          "token": "ricominciare",
+                          "children": [
+                            { "token": "." },
+                            { "token": "!" }
+                          ]
+                        },
+                        {
+                          "token": "imparare",
+                          "children": [
+                            { "token": "." },
+                            { "token": "!" }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "token": "giornata",
+              "children": [
+                {
+                  "token": "importante",
+                  "children": [
+                    { "token": "." },
+                    { "token": "!" }
+                  ]
+                },
+                {
+                  "token": "particolare",
+                  "children": [
+                    { "token": "." },
+                    { "token": "!" }
+                  ]
+                },
+                {
+                  "token": "lunga",
+                  "children": [
+                    { "token": "." },
+                    { "token": "!" },
+                    {
+                      "token": "ma",
+                      "children": [
+                        {
+                          "token": "produttiva",
+                          "children": [
+                            { "token": "." },
+                            { "token": "!" }
+                          ]
+                        },
+                        {
+                          "token": "serena",
+                          "children": [
+                            { "token": "." },
+                            { "token": "!" }
+                          ]
+                        },
+                        {
+                          "token": "tranquilla",
+                          "children": [
+                            { "token": "." },
+                            { "token": "!" }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "token": "molto",
+          "children": [
+            {
+              "token": "caldo",
+              "children": [
+                { "token": "." },
+                { "token": "!" },
+                {
+                  "token": "e",
+                  "children": [
+                    {
+                      "token": "umido",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "soleggiato",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "afoso",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "token": "freddo",
+              "children": [
+                { "token": "." },
+                { "token": "!" },
+                {
+                  "token": "ma",
+                  "children": [
+                    {
+                      "token": "sereno",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "soleggiato",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "tranquillo",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "token": "ventoso",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            },
+            {
+              "token": "nuvoloso",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            }
+          ]
+        },
+        {
+          "token": "davvero",
+          "children": [
+            {
+              "token": "bello",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            },
+            {
+              "token": "caldo",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            },
+            {
+              "token": "speciale",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            },
+            {
+              "token": "strano",
+              "children": [
+                { "token": "." },
+                { "token": "!" },
+                {
+                  "token": "ma",
+                  "children": [
+                    {
+                      "token": "bello",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "divertente",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "token": "vado",
+      "children": [
+        {
+          "token": "al",
+          "children": [
+            {
+              "token": "lavoro",
+              "children": [
+                { "token": "." },
+                { "token": "!" },
+                {
+                  "token": "in",
+                  "children": [
+                    {
+                      "token": "bici",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "auto",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "treno",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "token": "supermercato",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            },
+            {
+              "token": "cinema",
+              "children": [
+                { "token": "." },
+                { "token": "!" },
+                {
+                  "token": "con",
+                  "children": [
+                    {
+                      "token": "amici",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "colleghi",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "tutti",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "token": "mare",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            }
+          ]
+        },
+        {
+          "token": "a",
+          "children": [
+            {
+              "token": "scuola",
+              "children": [
+                { "token": "." },
+                { "token": "!" },
+                {
+                  "token": "in",
+                  "children": [
+                    {
+                      "token": "bici",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "autobus",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "auto",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "token": "casa",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            },
+            {
+              "token": "correre",
+              "children": [
+                { "token": "." },
+                { "token": "!" },
+                {
+                  "token": "in",
+                  "children": [
+                    {
+                      "token": "centro",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "montagna",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "spiaggia",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "token": "letto",
+              "children": [
+                { "token": "." },
+                { "token": "!" },
+                {
+                  "token": "presto",
+                  "children": [
+                    { "token": "." },
+                    { "token": "!" }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "token": "in",
+          "children": [
+            {
+              "token": "palestra",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            },
+            {
+              "token": "ufficio",
+              "children": [
+                { "token": "." },
+                { "token": "!" },
+                {
+                  "token": "presto",
+                  "children": [
+                    { "token": "." },
+                    { "token": "!" }
+                  ]
+                }
+              ]
+            },
+            {
+              "token": "centro",
+              "children": [
+                { "token": "." },
+                { "token": "!" },
+                {
+                  "token": "a",
+                  "children": [
+                    {
+                      "token": "piedi",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "cena",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "pranzo",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "token": "06",
+      "children": [
+        {
+          "token": "ottobre",
+          "children": [
+            {
+              "token": "2026",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            },
+            {
+              "token": "piove",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            }
+          ]
+        },
+        {
+          "token": "/",
+          "children": [
+            {
+              "token": "10",
+              "children": [
+                { "token": "." },
+                { "token": "!" },
+                {
+                  "token": "/",
+                  "children": [
+                    {
+                      "token": "2026",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "2027",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "token": "11",
+              "children": [
+                { "token": "." },
+                { "token": "!" },
+                {
+                  "token": "/",
+                  "children": [
+                    {
+                      "token": "2026",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "2027",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "token": "12",
+              "children": [
+                { "token": "." },
+                { "token": "!" },
+                {
+                  "token": "/",
+                  "children": [
+                    {
+                      "token": "2026",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "2027",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "token": ":",
+          "children": [
+            {
+              "token": "10",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            },
+            {
+              "token": "20",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            },
+            {
+              "token": "30",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            },
+            {
+              "token": "45",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "token": "mi",
+      "children": [
+        {
+          "token": "sento",
+          "children": [
+            {
+              "token": "bene",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            },
+            {
+              "token": "stanco",
+              "children": [
+                { "token": "." },
+                { "token": "!" },
+                {
+                  "token": "ma",
+                  "children": [
+                    {
+                      "token": "felice",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    },
+                    {
+                      "token": "sereno",
+                      "children": [
+                        { "token": "." },
+                        { "token": "!" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "token": "felice",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            }
+          ]
+        },
+        {
+          "token": "sono",
+          "children": [
+            {
+              "token": "svegliato",
+              "children": [
+                {
+                  "token": "presto",
+                  "children": [
+                    { "token": "." },
+                    { "token": "!" }
+                  ]
+                },
+                {
+                  "token": "tardi",
+                  "children": [
+                    { "token": "." },
+                    { "token": "!" }
+                  ]
+                }
+              ]
+            },
+            {
+              "token": "alzato",
+              "children": [
+                {
+                  "token": "presto",
+                  "children": [
+                    { "token": "." },
+                    { "token": "!" }
+                  ]
+                },
+                {
+                  "token": "tardi",
+                  "children": [
+                    { "token": "." },
+                    { "token": "!" }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "token": "piove",
+      "children": [
+        { "token": "." },
+        { "token": "!" },
+        {
+          "token": "molto",
+          "children": [
+            { "token": "." },
+            { "token": "!" }
+          ]
+        },
+        {
+          "token": "da",
+          "children": [
+            {
+              "token": "stamattina",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            },
+            {
+              "token": "ieri",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            },
+            {
+              "token": "giorni",
+              "children": [
+                { "token": "." },
+                { "token": "!" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
