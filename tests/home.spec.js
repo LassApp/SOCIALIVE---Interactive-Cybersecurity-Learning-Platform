@@ -40,6 +40,7 @@ const { chromium } = require("playwright");
 const { startServer } = require("./helpers/server");
 const { createSuite } = require("./helpers/testKit");
 const { loginAsDocente } = require("./helpers/auth");
+const { expandSidebarGroup } = require("./helpers/sidebar");
 
 const APP_ROOT = path.join(__dirname, "..");
 const SCREENSHOT_DIR = path.join(__dirname, "screenshots");
@@ -81,7 +82,7 @@ async function run() {
       assert.ok(await h1.evaluate((el) => el.classList.contains("sl-visually-hidden")));
     });
 
-    await suite.test("Sidebar: 'Moduli' è un trigger con sottomenu, chiuso di default (aria-haspopup/aria-expanded)", async () => {
+    await suite.test("Sidebar: 'Scenari' è un trigger con sottomenu, chiuso di default (aria-haspopup/aria-expanded)", async () => {
       const trigger = page.locator(".sl-sidebar__trigger");
       assert.equal(await trigger.count(), 1);
       assert.equal(await trigger.getAttribute("aria-haspopup"), "true");
@@ -89,7 +90,7 @@ async function run() {
       assert.equal(await page.locator(".sl-sidebar__flyout").isVisible(), false);
     });
 
-    await suite.test("click su 'Moduli' apre il flyout con i 4 scenari reali (data/modules.json)", async () => {
+    await suite.test("hover su 'Scenari' apre il flyout con le 2 categorie reali (Cybersecurity, AI) di data/modules.json, chiuse di default", async () => {
       // hover, non click: un click() di Playwright genera un vero
       // mousemove che fa scattare "mouseenter" sul trigger PRIMA del
       // click stesso — Sidebar.js apre il flyout all'hover (mouseenter
@@ -104,8 +105,12 @@ async function run() {
       await page.hover(".sl-sidebar__trigger");
       await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
       assert.equal(await page.locator(".sl-sidebar__trigger").getAttribute("aria-expanded"), "true");
-      const labels = await page.locator(".sl-sidebar__flyout .sl-sidebar__link").allTextContents();
-      assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi"]);
+      const groups = await page.locator(".sl-sidebar__group-trigger").allTextContents();
+      assert.deepEqual(groups.map((t) => t.trim()), ["Cybersecurity", "AI"]);
+      const states = await page
+        .locator(".sl-sidebar__group-trigger")
+        .evaluateAll((els) => els.map((el) => el.getAttribute("aria-expanded")));
+      assert.deepEqual(states, ["false", "false"]);
     });
 
     await suite.test("'Impostazioni' resta disabilitata, non raggiungibile con Tab", async () => {
@@ -295,7 +300,7 @@ async function run() {
     await loginAsDocente(page, server.url);
     await page.waitForSelector(".sl-sidebar__trigger");
 
-    await suite.test("navigazione Home -> flyout Moduli -> Oversharing -> Home: nessun componente duplicato", async () => {
+    await suite.test("navigazione Home -> flyout Scenari -> Cybersecurity -> Oversharing -> Home: nessun componente duplicato", async () => {
       // hover, non click: un click() di Playwright genera un vero
       // mousemove che fa scattare "mouseenter" sul trigger PRIMA del
       // click stesso — Sidebar.js apre il flyout all'hover (mouseenter
@@ -309,7 +314,8 @@ async function run() {
       // trigger).
       await page.hover(".sl-sidebar__trigger");
       await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
-      await page.click(".sl-sidebar__flyout .sl-sidebar__link >> nth=0");
+      await expandSidebarGroup(page, "Cybersecurity");
+      await page.click(".sl-sidebar__group-list .sl-sidebar__link >> nth=0");
       await page.waitForFunction(() => window.location.hash === "#/scenario/oversharing");
       await page.waitForSelector(".sl-profile-timeline");
       await page.click(".sl-sidebar__link[href='#/home']");

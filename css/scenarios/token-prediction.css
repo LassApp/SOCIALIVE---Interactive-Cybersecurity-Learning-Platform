@@ -1,0 +1,277 @@
+/**
+ * token-prediction.css
+ * -----------------------------------------------------------------------
+ * Stile del renderer "token-prediction" (scenario Tokenizzazione, modulo
+ * AI). Possiede il layout della pagina e le parti proprie di questo
+ * scenario (frase a chip, candidati con barre, vista token); superfici,
+ * pulsanti e badge sono i componenti già esistenti (Card, Button,
+ * Badge), non ridisegnati qui.
+ *
+ * PENSATO PER LA LIM: parole e percentuali in --sl-font-size-xl,
+ * risultato in 2xl, barre alte 12px — devono leggersi dall'ultimo banco.
+ *
+ * COLORI — nessun testo con accostamenti nuovi: text-primary,
+ * text-secondary e i token di Badge sono già verificati su bg-surface e
+ * bg-elevated (profile-menu.css/badge.css). L'UNICO accostamento
+ * genuinamente nuovo sono le barre, verificate numericamente (WCAG
+ * 1.4.11, elementi grafici ≥ 3:1) prima di scrivere questo file:
+ *   Light — riempimento primary-500 su binario border-subtle 3.41:1, su
+ *           surface 4.30:1; riempimento "perdente" border-strong su
+ *           binario 3.10:1, su surface 3.91:1.
+ *   Dark  — riempimento primary-500 su binario 4.05:1, su surface 5.21:1;
+ *           riempimento "perdente" su binario 3.38:1, su surface 4.36:1.
+ * Le barre non sono comunque l'unico veicolo dell'informazione: il
+ * valore è sempre scritto in testo, e il vincolo di leggibilità resta
+ * quello del testo.
+ *
+ * NESSUNA transizione CSS sulla larghezza delle barre: i fotogrammi
+ * arrivano da JavaScript (tokenMotion.js, ~60 al secondo) e una
+ * transizione li "ammorbidirebbe" in ritardo rispetto ai numeri.
+ *
+ * Vista token: un'unica classe sulla radice (--tokens) commuta, via CSS,
+ * parola ↔ pezzi nelle chip e mostra i pezzi sotto ogni candidato —
+ * entrambe le rappresentazioni esistono già nel DOM, nessun rebuild.
+ *
+ * Regola "[hidden]" ridichiarata per i Button: .sl-button impone
+ * display:inline-flex e batterebbe l'attributo nativo (stesso bug
+ * pattern già corretto più volte nel progetto).
+ */
+
+.sl-token-prediction {
+  max-width: 760px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-5);
+}
+
+.sl-token-prediction .sl-button[hidden] {
+  display: none;
+}
+
+/* --- Frase in costruzione ------------------------------------------- */
+
+.sl-token-prediction__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sl-space-3);
+  margin-bottom: var(--sl-space-4);
+}
+
+.sl-token-prediction__tokens-toggle {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Stato "premuto" dell'interruttore: Button non lo disegna (è compito di
+   chi lo usa, vedi Button.js). Sfondo di stato già esistente + contorno
+   funzionale border-strong (verificato ≥ 3:1 su bg-surface): un segnale
+   in più oltre ad aria-pressed, non il solo colore. */
+.sl-button.sl-token-prediction__tokens-toggle[aria-pressed="true"] {
+  background-color: var(--sl-color-bg-active);
+  box-shadow: inset 0 0 0 1px var(--sl-color-border-strong);
+}
+
+.sl-token-prediction__legend {
+  display: none;
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-sm);
+}
+
+.sl-token-prediction--tokens .sl-token-prediction__legend {
+  display: block;
+}
+
+.sl-token-prediction__sentence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--sl-space-2);
+}
+
+.sl-token-prediction__chip {
+  display: inline-flex;
+  padding: var(--sl-space-2) var(--sl-space-3);
+  background-color: var(--sl-color-bg-elevated);
+  border: 1px solid var(--sl-color-border-subtle);
+  border-radius: var(--sl-radius-md);
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-lg);
+  line-height: var(--sl-line-height-tight);
+}
+
+.sl-token-prediction__slot {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--sl-space-2) var(--sl-space-4);
+  border: 1px dashed var(--sl-color-border-strong);
+  border-radius: var(--sl-radius-md);
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-lg);
+  line-height: var(--sl-line-height-tight);
+}
+
+.sl-token-prediction__stats {
+  margin-top: var(--sl-space-4);
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-md);
+}
+
+/* --- Pezzi (token reali) --------------------------------------------- */
+
+.sl-token-prediction__pieces {
+  display: none;
+  flex-wrap: wrap;
+}
+
+.sl-token-prediction--tokens .sl-token-prediction__pieces {
+  display: inline-flex;
+}
+
+.sl-token-prediction--tokens .sl-token-prediction__chip-word {
+  display: none;
+}
+
+.sl-token-prediction__piece {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding-inline: var(--sl-space-2);
+}
+
+.sl-token-prediction__piece + .sl-token-prediction__piece {
+  border-left: 1px solid var(--sl-color-border-subtle);
+}
+
+.sl-token-prediction__piece:first-child {
+  padding-left: 0;
+}
+
+.sl-token-prediction__piece:last-child {
+  padding-right: 0;
+}
+
+.sl-token-prediction__piece-text {
+  white-space: pre;
+}
+
+.sl-token-prediction__piece-id {
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Candidati --------------------------------------------------------- */
+
+.sl-token-prediction__candidates {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-5);
+}
+
+.sl-token-prediction__candidate {
+  padding-left: var(--sl-space-3);
+  border-left: 3px solid transparent;
+  transition: border-color var(--sl-duration-base) var(--sl-ease-standard);
+}
+
+.sl-token-prediction__candidate--winner {
+  border-left-color: var(--sl-color-primary-500);
+}
+
+.sl-token-prediction__candidate-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sl-space-3);
+}
+
+.sl-token-prediction__candidate-label {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sl-space-1) var(--sl-space-3);
+  min-width: 0;
+}
+
+.sl-token-prediction__candidate-word {
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-xl);
+  font-weight: var(--sl-font-weight-semibold);
+  line-height: var(--sl-line-height-tight);
+}
+
+.sl-token-prediction__candidate-note {
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-sm);
+}
+
+.sl-token-prediction__candidate .sl-token-prediction__piece-text {
+  font-size: var(--sl-font-size-sm);
+}
+
+.sl-token-prediction__candidate-badge {
+  display: inline-flex;
+  align-self: center;
+}
+
+.sl-token-prediction__percent {
+  min-width: 8ch;
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-xl);
+  font-weight: var(--sl-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--sl-line-height-tight);
+  text-align: right;
+}
+
+.sl-token-prediction__track {
+  display: block;
+  height: 12px;
+  margin-top: var(--sl-space-2);
+  overflow: hidden;
+  border-radius: var(--sl-radius-full);
+  background-color: var(--sl-color-border-subtle);
+}
+
+/* min-width: anche 0,001% resta una scheggia visibile — "quasi zero" non
+   deve sembrare "assente". */
+.sl-token-prediction__fill {
+  display: block;
+  width: 0;
+  min-width: 3px;
+  height: 100%;
+  border-radius: var(--sl-radius-full);
+  background-color: var(--sl-color-primary-500);
+}
+
+.sl-token-prediction__candidate--loser .sl-token-prediction__candidate-word,
+.sl-token-prediction__candidate--loser .sl-token-prediction__percent {
+  color: var(--sl-color-text-secondary);
+}
+
+.sl-token-prediction__candidate--loser .sl-token-prediction__fill {
+  background-color: var(--sl-color-border-strong);
+}
+
+/* --- Risultato e comandi ---------------------------------------------- */
+
+.sl-token-prediction__result-text {
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-2xl);
+  font-weight: var(--sl-font-weight-semibold);
+  line-height: var(--sl-line-height-tight);
+}
+
+.sl-token-prediction__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sl-space-3);
+}
+
+.sl-button.sl-token-prediction__proceed,
+.sl-button.sl-token-prediction__regenerate,
+.sl-button.sl-token-prediction__restart {
+  min-width: 140px;
+}

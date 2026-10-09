@@ -1,13 +1,17 @@
 /**
  * token.spec.js
  * -----------------------------------------------------------------------
- * Scenario "Tokenizzazione" (type "token-prediction") — STEP 1: dati e
- * logica pura. Nessun login e nessuna credenziale: non c'è ancora una
- * pagina da raggiungere, si verificano i DATI (albero, vocabolario) e le
- * utility (tokenProbability.js, tokenText.js). Le utility sono eseguite
- * nel browser reale (import dinamico dal server di test) e non in Node:
- * sono moduli ES pensati per il browser, e così il test non dipende
- * dalla versione di Node di chi lo esegue.
+ * Scenario "Tokenizzazione" (type "token-prediction"), in tre parti:
+ *   1. DATI (albero, vocabolario) e UTILITÀ PURE (tokenProbability.js,
+ *      tokenText.js, tokenMotion.js): eseguite nel browser reale
+ *      (import dinamico dal server di test) e non in Node — sono moduli
+ *      ES pensati per il browser, e così il test non dipende dalla
+ *      versione di Node di chi lo esegue.
+ *   2. RENDERER con movimento pieno: login reale, percorso dalla Sidebar
+ *      (Scenari → AI → Tokenizzazione), animazione, Rigenera, Prosegui.
+ *   3. RENDERER con "riduci animazioni", mobile 375px, vista token,
+ *      tastiera, degrado controllato (file mancanti) e smontaggio.
+ * Richiede SL_TEST_EMAIL / SL_TEST_PASSWORD come le altre suite.
  *
  * I controlli sui dati hanno uno scopo preciso, oltre alla correttezza:
  * sono la rete di sicurezza contro un albero modificato a mano che
@@ -15,8 +19,6 @@
  * senza tokenizzazione nel vocabolario (lo stesso principio già
  * applicato altrove: un test fallisce prima che lo scopra la LIM).
  *
- * Gli step successivi (renderer, animazione, sidebar) aggiungeranno qui
- * i propri blocchi, che useranno il login reale come le altre suite.
  */
 const assert = require("node:assert/strict");
 const path = require("node:path");
@@ -24,6 +26,9 @@ const fs = require("node:fs");
 const { chromium } = require("playwright");
 const { startServer } = require("./helpers/server");
 const { createSuite } = require("./helpers/testKit");
+const { loginAsDocente } = require("./helpers/auth");
+const { openScenarioViaSidebar } = require("./helpers/sidebar");
+const SCREENSHOT_DIR = path.join(__dirname, "screenshots");
 
 const APP_ROOT = path.join(__dirname, "..");
 const DATA_DIR = path.join(APP_ROOT, "data", "scenarios", "tokenizzazione");
@@ -331,6 +336,443 @@ async function run() {
       assert.ok(/[.!?]$/.test(text), `"${text}" non termina con punteggiatura finale`);
       assert.ok(!/ [.!?]/.test(text), `spazio prima della punteggiatura in "${text}"`);
     });
+  });
+
+  // =====================================================================
+  // STEP 2–3 — moto, renderer e flusso reale (login + Sidebar, Chromium)
+  // =====================================================================
+
+  await suite.test("tokenMotion: ogni fotogramma somma esattamente 100,000%; a progresso 1 è il target esatto", async () => {
+    const result = await page.evaluate(async () => {
+      const { generateDistribution, TOTAL_MILLI } = await import("/js/utils/tokenProbability.js");
+      const { createMotionSeed, distributionAtProgress } = await import("/js/utils/tokenMotion.js");
+      let bad = 0;
+      let finalMismatch = 0;
+      for (let i = 0; i < 3000; i += 1) {
+        const count = 2 + (i % 5);
+        const target = generateDistribution(count);
+        const seed = createMotionSeed(count);
+        [false, true].forEach((reducedMotion) => {
+          const progress = Math.random();
+          const frame = distributionAtProgress(target, progress, seed, { reducedMotion });
+          const ok =
+            frame.length === count &&
+            frame.every((v) => Number.isInteger(v) && v >= 0) &&
+            frame.reduce((a, b) => a + b, 0) === TOTAL_MILLI;
+          if (!ok) bad += 1;
+          const last = distributionAtProgress(target, 1, seed, { reducedMotion });
+          if (JSON.stringify(last) !== JSON.stringify(target)) finalMismatch += 1;
+        });
+      }
+      return { bad, finalMismatch };
+    });
+    assert.equal(result.bad, 0);
+    assert.equal(result.finalMismatch, 0);
+  });
+
+  await suite.test("tokenMotion: movimento ridotto parte da quote uguali e non oscilla; il movimento pieno sì", async () => {
+    const result = await page.evaluate(async () => {
+      const { createMotionSeed, distributionAtProgress } = await import("/js/utils/tokenMotion.js");
+      const target = [70000, 20000, 9000, 1000];
+      const seed = createMotionSeed(4, (() => { let s = 7; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })());
+      const reversals = (options) => {
+        let count = 0;
+        for (let i = 0; i < 4; i += 1) {
+          let previous = null;
+          let direction = 0;
+          for (let step = 0; step <= 100; step += 1) {
+            const value = distributionAtProgress(target, step / 100, seed, options)[i];
+            if (previous !== null && Math.abs(value - previous) > 2) {
+              const next = Math.sign(value - previous);
+              if (direction !== 0 && next !== direction) count += 1;
+              direction = next;
+            }
+            previous = value;
+          }
+        }
+        return count;
+      };
+      return {
+        start: distributionAtProgress(target, 0, seed, { reducedMotion: true }),
+        reducedReversals: reversals({ reducedMotion: true }),
+        fullReversals: reversals({ reducedMotion: false }),
+      };
+    });
+    result.start.forEach((value) => assert.ok(Math.abs(value - 25000) <= 1, `quota di partenza non uguale: ${value}`));
+    assert.equal(result.reducedReversals, 0, "con movimento ridotto le barre non devono oscillare");
+    assert.ok(result.fullReversals > 0, "con movimento pieno le barre devono contendersi la scelta (inversioni di direzione)");
+  });
+
+  // --- Renderer: percorso reale, movimento pieno --------------------------
+  const sentenceTexts = await page.evaluate(
+    async ({ allPaths }) => {
+      const { joinTokens } = await import("/js/utils/tokenText.js");
+      return allPaths.map(joinTokens);
+    },
+    { allPaths: paths }
+  );
+
+  const toMilli = (text) => Number(text.replace("%", "").replace(",", ""));
+  const waitPhase = (p, phase) =>
+    p.waitForFunction((expected) => document.querySelector(".sl-token-prediction")?.dataset.phase === expected, phase, {
+      timeout: 10000,
+    });
+  const readRows = (p) =>
+    p.locator(".sl-token-prediction__candidate").evaluateAll((rows) =>
+      rows.map((row) => ({
+        token: row.dataset.token,
+        percent: row.querySelector(".sl-token-prediction__percent").textContent.trim(),
+        winner: row.classList.contains("sl-token-prediction__candidate--winner"),
+        loser: row.classList.contains("sl-token-prediction__candidate--loser"),
+      }))
+    );
+  const readChips = (p) => p.locator(".sl-token-prediction__chip .sl-token-prediction__chip-word").allTextContents();
+  const childrenTokensAfter = (chosenTokens) => {
+    let node = { children: tree.children };
+    chosenTokens.forEach((token) => {
+      node = node.children.find((child) => child.token === token);
+    });
+    return node.children.map((child) => child.token);
+  };
+  const sampleCalculation = (p, triggerSelector) =>
+    p.evaluate(
+      (selector) =>
+        new Promise((resolve) => {
+          const root = document.querySelector(".sl-token-prediction");
+          const frames = [];
+          const read = () =>
+            Array.from(document.querySelectorAll(".sl-token-prediction__percent")).map((el) => el.textContent.trim());
+          if (selector) document.querySelector(selector).click();
+          const tick = () => {
+            frames.push(read());
+            if (root.dataset.phase === "revealed" || frames.length > 900) resolve(frames);
+            else requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }),
+      triggerSelector
+    );
+  async function playFullSentence(p) {
+    const picked = [];
+    for (let guard = 0; guard < 20; guard += 1) {
+      await waitPhase(p, "revealed");
+      const rows = await readRows(p);
+      const max = Math.max(...rows.map((row) => toMilli(row.percent)));
+      const winners = rows.filter((row) => row.winner);
+      assert.equal(winners.length, 1, "deve esserci un solo vincitore");
+      assert.equal(toMilli(winners[0].percent), max, "il vincitore non è il candidato con la percentuale più alta");
+      picked.push(winners[0].token);
+      await p.click(".sl-token-prediction__proceed");
+      await p.waitForFunction(() => document.querySelector(".sl-token-prediction").dataset.phase !== "revealed");
+      if ((await p.locator(".sl-token-prediction").getAttribute("data-phase")) === "complete") break;
+    }
+    return picked;
+  }
+
+  const requests = [];
+  const failedLocal = [];
+  const pageErrors = [];
+  const fullMotionContext = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const scenarioPage = await fullMotionContext.newPage();
+  scenarioPage.on("request", (request) => requests.push(request.url()));
+  scenarioPage.on("response", (response) => {
+    if (response.url().startsWith(server.url) && response.status() >= 400) failedLocal.push(`${response.status()} ${response.url()}`);
+  });
+  scenarioPage.on("pageerror", (error) => pageErrors.push(error.message));
+  await loginAsDocente(scenarioPage, server.url);
+  await openScenarioViaSidebar(scenarioPage, "AI", "Tokenizzazione");
+  await scenarioPage.waitForSelector(".sl-token-prediction");
+
+  await suite.test("apertura: titolo h1 unico, frase = [Oggi] + segnaposto, 5 candidati, comandi disattivi durante il calcolo", async () => {
+    assert.equal(await scenarioPage.locator("main h1").count(), 1);
+    assert.equal((await scenarioPage.locator("main h1").textContent()).trim(), "Tokenizzazione");
+    assert.equal(await scenarioPage.locator(".sl-token-prediction").getAttribute("data-phase"), "calculating");
+    assert.deepEqual(await readChips(scenarioPage), ["Oggi"]);
+    assert.equal(await scenarioPage.locator(".sl-token-prediction__slot").count(), 1);
+    assert.deepEqual((await readRows(scenarioPage)).map((row) => row.token), tree.children.map((child) => child.token));
+    assert.equal(await scenarioPage.locator(".sl-token-prediction__proceed").isDisabled(), true);
+    assert.equal(await scenarioPage.locator(".sl-token-prediction__regenerate").isDisabled(), true);
+    assert.equal(await scenarioPage.locator(".sl-sidebar__link--active").count(), 0);
+  });
+
+  await suite.test("calcolo: poi 'rivelato' con un solo vincitore = percentuale più alta, badge 'Scelto', tre decimali, somma 100,000%", async () => {
+    await waitPhase(scenarioPage, "revealed");
+    const rows = await readRows(scenarioPage);
+    rows.forEach((row) => assert.match(row.percent, /^\d{1,3},\d{3}%$/, `formato percentuale errato: ${row.percent}`));
+    assert.equal(rows.reduce((sum, row) => sum + toMilli(row.percent), 0), 100000);
+    const winners = rows.filter((row) => row.winner);
+    assert.equal(winners.length, 1);
+    assert.equal(toMilli(winners[0].percent), Math.max(...rows.map((row) => toMilli(row.percent))));
+    assert.equal(rows.filter((row) => row.loser).length, rows.length - 1);
+    assert.equal((await scenarioPage.locator(".sl-token-prediction__candidate--winner .sl-badge").textContent()).trim(), "Scelto");
+    assert.equal(await scenarioPage.locator(".sl-token-prediction__proceed").isDisabled(), false);
+    assert.equal(await scenarioPage.locator(".sl-token-prediction__regenerate").isDisabled(), false);
+    const announced = await scenarioPage.locator(".sl-token-prediction__status").textContent();
+    assert.ok(announced.includes("Percentuali calcolate") && announced.includes("Il più probabile"), `annuncio aria-live: ${announced}`);
+  });
+
+  await suite.test("animazione live (movimento pieno): ogni fotogramma somma 100,000%, i valori cambiano e le barre si contendono la scelta", async () => {
+    const frames = await sampleCalculation(scenarioPage, ".sl-token-prediction__regenerate");
+    assert.ok(frames.length >= 20, `solo ${frames.length} fotogrammi osservati in ~2 secondi`);
+    frames.forEach((frame) => {
+      assert.equal(frame.reduce((sum, text) => sum + toMilli(text), 0), 100000, `fotogramma che non somma a 100%: ${frame.join(" ")}`);
+      frame.forEach((text) => assert.match(text, /^\d{1,3},\d{3}%$/));
+    });
+    assert.ok(new Set(frames.map((frame) => frame.join("|"))).size >= 10, "i valori non cambiano abbastanza durante il calcolo");
+    let reversals = 0;
+    for (let i = 0; i < frames[0].length; i += 1) {
+      let direction = 0;
+      for (let f = 1; f < frames.length; f += 1) {
+        const delta = toMilli(frames[f][i]) - toMilli(frames[f - 1][i]);
+        if (Math.abs(delta) > 2) {
+          if (direction !== 0 && Math.sign(delta) !== direction) reversals += 1;
+          direction = Math.sign(delta);
+        }
+      }
+    }
+    assert.ok(reversals > 0, "nessuna inversione di direzione: le barre non si 'contendono' la scelta");
+    await waitPhase(scenarioPage, "revealed");
+  });
+
+  await suite.test("Rigenera: rifà solo il calcolo di questo passo (frase e candidati invariati, percentuali diverse)", async () => {
+    await waitPhase(scenarioPage, "revealed");
+    const before = await readRows(scenarioPage);
+    await scenarioPage.click(".sl-token-prediction__regenerate");
+    assert.equal(await scenarioPage.locator(".sl-token-prediction").getAttribute("data-phase"), "calculating");
+    assert.equal(await scenarioPage.locator(".sl-token-prediction__proceed").isDisabled(), true);
+    assert.equal(await scenarioPage.locator(".sl-token-prediction__regenerate").isDisabled(), true);
+    assert.equal(await scenarioPage.locator(".sl-token-prediction__candidate--winner").count(), 0);
+    await waitPhase(scenarioPage, "revealed");
+    const after = await readRows(scenarioPage);
+    assert.deepEqual(after.map((row) => row.token), before.map((row) => row.token));
+    assert.deepEqual(await readChips(scenarioPage), ["Oggi"]);
+    const differs = after.some((row, i) => Math.abs(toMilli(row.percent) - toMilli(before[i].percent)) >= 1000);
+    assert.ok(differs, "le percentuali rigenerate sono praticamente uguali alle precedenti");
+  });
+
+  await suite.test("Prosegui: il vincitore entra nella frase e i nuovi candidati sono i figli di quel nodo dell'albero", async () => {
+    const rows = await readRows(scenarioPage);
+    const winner = rows.find((row) => row.winner).token;
+    await scenarioPage.click(".sl-token-prediction__proceed");
+    assert.equal(await scenarioPage.locator(".sl-token-prediction").getAttribute("data-phase"), "calculating");
+    assert.deepEqual(await readChips(scenarioPage), ["Oggi", winner]);
+    assert.deepEqual((await readRows(scenarioPage)).map((row) => row.token), childrenTokensAfter([winner]));
+    await waitPhase(scenarioPage, "revealed");
+  });
+
+  await suite.test("screenshot — calcolo in corso, risultato del passo, vista token (Light e Dark)", async () => {
+    await scenarioPage.click(".sl-token-prediction__regenerate");
+    await scenarioPage.waitForTimeout(1100); // a metà animazione
+    await scenarioPage.screenshot({ path: path.join(SCREENSHOT_DIR, "token-calculating-light.png") });
+    await waitPhase(scenarioPage, "revealed");
+    await scenarioPage.screenshot({ path: path.join(SCREENSHOT_DIR, "token-revealed-light.png") });
+    await scenarioPage.click(".sl-token-prediction__tokens-toggle");
+    await scenarioPage.screenshot({ path: path.join(SCREENSHOT_DIR, "token-tokens-view-light.png") });
+    await scenarioPage.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+    await scenarioPage.waitForTimeout(400); // il cambio tema ha transizioni (body, pulsanti): attendi che si assestino
+    await scenarioPage.screenshot({ path: path.join(SCREENSHOT_DIR, "token-tokens-view-dark.png") });
+    await scenarioPage.evaluate(() => document.documentElement.setAttribute("data-theme", "light"));
+    await scenarioPage.click(".sl-token-prediction__tokens-toggle");
+  });
+
+  await suite.test("rete: nessuna richiesta fuori dal server locale, nessun errore HTTP locale, nessun errore JavaScript", async () => {
+    assert.ok(requests.some((url) => url.endsWith("token-tree.json")) && requests.some((url) => url.endsWith("token-vocab.json")));
+    const external = requests.filter((url) => !url.startsWith(server.url) && !url.startsWith("data:") && !url.startsWith("blob:"));
+    assert.deepEqual(external, [], `richieste esterne: ${external.join(", ")}`);
+    assert.deepEqual(failedLocal, [], `risposte HTTP in errore: ${failedLocal.join(", ")}`);
+    assert.deepEqual(pageErrors, []);
+  });
+
+  await fullMotionContext.close();
+
+  // --- Renderer: movimento ridotto (rapido) per i percorsi lunghi ---------
+  const reducedContext = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce" });
+  const reducedPage = await reducedContext.newPage();
+  await loginAsDocente(reducedPage, server.url);
+  await openScenarioViaSidebar(reducedPage, "AI", "Tokenizzazione");
+  await reducedPage.waitForSelector(".sl-token-prediction");
+
+  await suite.test("movimento ridotto: calcolo breve (< 1,5 s), somma sempre 100,000%, nessuna oscillazione", async () => {
+    await waitPhase(reducedPage, "revealed");
+    const startedAt = Date.now();
+    const frames = await sampleCalculation(reducedPage, ".sl-token-prediction__regenerate");
+    assert.ok(Date.now() - startedAt < 1500, `il calcolo ha richiesto ${Date.now() - startedAt} ms`);
+    frames.forEach((frame) => assert.equal(frame.reduce((sum, text) => sum + toMilli(text), 0), 100000));
+    for (let i = 0; i < frames[0].length; i += 1) {
+      let direction = 0;
+      for (let f = 1; f < frames.length; f += 1) {
+        const delta = toMilli(frames[f][i]) - toMilli(frames[f - 1][i]);
+        if (Math.abs(delta) > 2) {
+          assert.ok(direction === 0 || Math.sign(delta) === direction, "oscillazione con movimento ridotto");
+          direction = Math.sign(delta);
+        }
+      }
+    }
+  });
+
+  await suite.test("tastiera: il focus segue il ciclo Invio → calcolo → Invio (Prosegui, poi gruppo candidati, poi di nuovo Prosegui)", async () => {
+    await waitPhase(reducedPage, "revealed");
+    await reducedPage.locator(".sl-token-prediction__proceed").focus();
+    await reducedPage.keyboard.press("Enter");
+    await reducedPage.waitForFunction(() => document.querySelector(".sl-token-prediction").dataset.phase === "calculating");
+    const duringCalc = await reducedPage.evaluate(() => document.activeElement.classList.contains("sl-token-prediction__step"));
+    assert.ok(duringCalc, "durante il calcolo il focus dovrebbe stare sul gruppo dei candidati");
+    await waitPhase(reducedPage, "revealed");
+    const afterReveal = await reducedPage.evaluate(() => document.activeElement.classList.contains("sl-token-prediction__proceed"));
+    assert.ok(afterReveal, "a calcolo concluso il focus dovrebbe tornare su Prosegui");
+  });
+
+  await suite.test("Rigenera ripetuto (fino a 15 volte sul primo passo): stessi candidati, percentuali sempre diverse, a volte vince un altro candidato", async () => {
+    await playFullSentence(reducedPage); // porta a "complete" per poi ricominciare dal primo passo
+    await reducedPage.click(".sl-token-prediction__restart");
+    await waitPhase(reducedPage, "revealed");
+    const tokens = (await readRows(reducedPage)).map((row) => row.token);
+    const winners = new Set();
+    let previous = await readRows(reducedPage);
+    winners.add(previous.find((row) => row.winner).token);
+    for (let i = 0; i < 15; i += 1) {
+      await reducedPage.click(".sl-token-prediction__regenerate");
+      await waitPhase(reducedPage, "revealed");
+      const current = await readRows(reducedPage);
+      assert.deepEqual(current.map((row) => row.token), tokens);
+      assert.ok(current.some((row, index) => Math.abs(toMilli(row.percent) - toMilli(previous[index].percent)) >= 1000));
+      winners.add(current.find((row) => row.winner).token);
+      previous = current;
+    }
+    assert.ok(winners.size >= 2, "in 15 rigenerazioni il vincitore non è mai cambiato: il contesto non avrebbe alcun effetto visibile");
+    assert.deepEqual(await readChips(reducedPage), ["Oggi"]);
+  });
+
+  await suite.test("frase completa: ogni passo sceglie il più probabile, il risultato è una frase dell'albero, chiusa da un token finale", async () => {
+    const picked = await playFullSentence(reducedPage);
+    assert.equal(await reducedPage.locator(".sl-token-prediction").getAttribute("data-phase"), "complete");
+    assert.deepEqual(await readChips(reducedPage), ["Oggi", ...picked]);
+    assert.ok(END_TOKENS.includes(picked[picked.length - 1]));
+    const result = (await reducedPage.locator(".sl-token-prediction__result-text").textContent()).trim();
+    assert.ok(sentenceTexts.includes(result), `la frase "${result}" non è tra quelle generabili dall'albero`);
+    assert.match((await reducedPage.locator(".sl-token-prediction__stats").textContent()).trim(), /^\d+ parole · \d+ token reali$/);
+    assert.equal(await reducedPage.locator(".sl-token-prediction__slot").count(), 0);
+    assert.equal(await reducedPage.locator(".sl-token-prediction__step").isVisible(), false);
+    assert.equal(await reducedPage.locator(".sl-token-prediction__result-text").isVisible(), true);
+    assert.equal(await reducedPage.locator(".sl-token-prediction__proceed").isVisible(), false);
+    assert.equal(await reducedPage.locator(".sl-token-prediction__regenerate").isVisible(), false);
+    assert.equal(await reducedPage.locator(".sl-token-prediction__restart").isVisible(), true);
+    assert.ok((await reducedPage.locator(".sl-token-prediction__status").textContent()).startsWith("Frase completa"));
+    await reducedPage.screenshot({ path: path.join(SCREENSHOT_DIR, "token-complete-light.png") });
+  });
+
+  await suite.test("Ricomincia: torna al primo passo (Oggi + 5 candidati), nasconde il risultato, ridà Prosegui/Rigenera", async () => {
+    await reducedPage.click(".sl-token-prediction__restart");
+    assert.equal(await reducedPage.locator(".sl-token-prediction").getAttribute("data-phase"), "calculating");
+    assert.deepEqual(await readChips(reducedPage), ["Oggi"]);
+    assert.equal(await reducedPage.locator(".sl-token-prediction__slot").count(), 1);
+    assert.deepEqual((await readRows(reducedPage)).map((row) => row.token), tree.children.map((child) => child.token));
+    assert.equal(await reducedPage.locator(".sl-token-prediction__result-text").isVisible(), false);
+    assert.equal(await reducedPage.locator(".sl-token-prediction__stats").isVisible(), false);
+    assert.equal(await reducedPage.locator(".sl-token-prediction__proceed").isVisible(), true);
+    assert.equal(await reducedPage.locator(".sl-token-prediction__regenerate").isVisible(), true);
+    assert.equal(await reducedPage.locator(".sl-token-prediction__restart").isVisible(), false);
+    await waitPhase(reducedPage, "revealed");
+  });
+
+  await suite.test("vista token: i pezzi e gli ID mostrati coincidono con token-vocab.json (chip e candidati)", async () => {
+    const toggle = reducedPage.locator(".sl-token-prediction__tokens-toggle");
+    assert.equal(await toggle.getAttribute("aria-pressed"), "false");
+    assert.equal(await reducedPage.locator(".sl-token-prediction__chip .sl-token-prediction__pieces").first().isVisible(), false);
+    await toggle.click();
+    assert.equal(await toggle.getAttribute("aria-pressed"), "true");
+    assert.equal(await reducedPage.locator(".sl-token-prediction__legend").isVisible(), true);
+    assert.equal(await reducedPage.locator(".sl-token-prediction__chip .sl-token-prediction__chip-word").first().isVisible(), false);
+
+    const chipIds = await reducedPage
+      .locator(".sl-token-prediction__chip")
+      .first()
+      .locator(".sl-token-prediction__piece-id")
+      .allTextContents();
+    assert.deepEqual(chipIds.map(Number), vocab.tokens["Oggi"].plain.ids);
+
+    const rows = await reducedPage.locator(".sl-token-prediction__candidate").evaluateAll((items) =>
+      items.map((item) => ({
+        token: item.dataset.token,
+        ids: Array.from(item.querySelectorAll(".sl-token-prediction__piece-id")).map((el) => Number(el.textContent)),
+        visible: item.querySelector(".sl-token-prediction__pieces").getClientRects().length > 0,
+      }))
+    );
+    rows.forEach((row) => {
+      assert.ok(row.visible, `pezzi non visibili per "${row.token}"`);
+      assert.deepEqual(row.ids, vocab.tokens[row.token].spaced.ids, `ID diversi dal vocabolario per "${row.token}"`);
+    });
+    await toggle.click();
+    assert.equal(await toggle.getAttribute("aria-pressed"), "false");
+    assert.equal(await reducedPage.locator(".sl-token-prediction__legend").isVisible(), false);
+  });
+
+  await reducedContext.close();
+
+  // --- Mobile 375px ----------------------------------------------------------
+  const mobileContext = await browser.newContext({ viewport: { width: 375, height: 800 }, reducedMotion: "reduce" });
+  const mobilePage = await mobileContext.newPage();
+  await loginAsDocente(mobilePage, server.url);
+  await mobilePage.goto(`${server.url}/#/scenario/tokenizzazione`);
+  await mobilePage.waitForSelector(".sl-token-prediction");
+
+  await suite.test("mobile 375px: nessun overflow orizzontale, né a risultato del passo né con la vista token (caso peggiore)", async () => {
+    await waitPhase(mobilePage, "revealed");
+    const overflows = () => mobilePage.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    assert.equal(await overflows(), false, "overflow orizzontale a 375px");
+    await mobilePage.click(".sl-token-prediction__tokens-toggle");
+    await mobilePage.screenshot({ path: path.join(SCREENSHOT_DIR, "token-tokens-view-mobile-375.png"), fullPage: true });
+    assert.equal(await overflows(), false, "overflow orizzontale a 375px con la vista token");
+    await playFullSentence(mobilePage);
+    await mobilePage.screenshot({ path: path.join(SCREENSHOT_DIR, "token-complete-mobile-375.png"), fullPage: true });
+    assert.equal(await overflows(), false, "overflow orizzontale a 375px a frase completa");
+  });
+
+  await mobileContext.close();
+
+  // --- Degrado controllato --------------------------------------------------------
+  async function openWithBlocked(blockedSuffix) {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce" });
+    const p = await context.newPage();
+    await loginAsDocente(p, server.url);
+    await p.route(`**/${blockedSuffix}`, (route) => route.fulfill({ status: 404, body: "not found" }));
+    await p.goto(`${server.url}/#/scenario/tokenizzazione`);
+    return { context, p };
+  }
+
+  await suite.test("albero non raggiungibile: messaggio di fallback, nessuna interfaccia a metà", async () => {
+    const { context, p } = await openWithBlocked("token-tree.json");
+    await p.waitForSelector(".sl-scenario-viewport p");
+    assert.equal((await p.locator(".sl-scenario-viewport p").textContent()).trim(), "Questo scenario non è disponibile al momento.");
+    assert.equal(await p.locator(".sl-token-prediction").count(), 0);
+    await context.close();
+  });
+
+  await suite.test("vocabolario non raggiungibile: lo scenario funziona e l'interruttore 'Mostra token' non compare", async () => {
+    const { context, p } = await openWithBlocked("token-vocab.json");
+    await p.waitForSelector(".sl-token-prediction");
+    await waitPhase(p, "revealed");
+    assert.equal(await p.locator(".sl-token-prediction__tokens-toggle").isVisible(), false);
+    await p.click(".sl-token-prediction__proceed");
+    await waitPhase(p, "revealed");
+    assert.equal((await readChips(p)).length, 2);
+    await context.close();
+  });
+
+  await suite.test("smontaggio: lasciare la pagina durante il calcolo non lascia errori né animazioni orfane", async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const p = await context.newPage();
+    const errors = [];
+    p.on("pageerror", (error) => errors.push(error.message));
+    await loginAsDocente(p, server.url);
+    await openScenarioViaSidebar(p, "AI", "Tokenizzazione");
+    await p.waitForSelector(".sl-token-prediction");
+    await p.click(".sl-sidebar__link[href='#/home']");
+    await p.waitForSelector(".sl-home-page__content");
+    await p.waitForTimeout(2600); // oltre la durata dell'animazione interrotta
+    assert.equal(await p.locator(".sl-token-prediction").count(), 0);
+    assert.deepEqual(errors, []);
+    await context.close();
   });
 
   await browser.close();

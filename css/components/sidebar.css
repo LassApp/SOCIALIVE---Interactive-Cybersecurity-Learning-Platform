@@ -112,7 +112,8 @@
    inherit — qui serve solo spingere il chevron sul bordo destro, cosa
    che le voci semplici (icona+label, nessun terzo figlio) non
    richiedono mai. */
-.sl-sidebar__trigger {
+.sl-sidebar__trigger,
+.sl-sidebar__group-trigger {
   justify-content: space-between;
 }
 
@@ -136,8 +137,17 @@
   transition: transform var(--sl-duration-fast) var(--sl-ease-standard);
 }
 
-.sl-sidebar__trigger[aria-expanded="true"] .sl-sidebar__chevron {
+.sl-sidebar__trigger[aria-expanded="true"] .sl-sidebar__chevron,
+.sl-sidebar__group-trigger[aria-expanded="true"] .sl-sidebar__chevron {
   transform: rotate(90deg);
+}
+
+/* Categorie del flyout: stessa convenzione del trigger principale (il
+   disegno base del chevron punta a destra: chiusa = ">", aperta = "v",
+   verso gli scenari che compaiono sotto). Voce un po' più marcata degli
+   scenari per distinguere il livello superiore. */
+.sl-sidebar__group-trigger {
+  font-weight: var(--sl-font-weight-semibold);
 }
 
 .sl-sidebar__link:hover {
@@ -175,6 +185,23 @@
 }
 
 .sl-sidebar__flyout[hidden] {
+  display: none;
+}
+
+/* Secondo livello del flyout (gruppi a disclosure, es. "Cybersecurity" →
+   i suoi scenari). Nessun nuovo colore: stesse voci/stati già verificati
+   del resto della Sidebar, solo un rientro che comunica "sotto di". */
+.sl-sidebar__group-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-1);
+  margin-top: var(--sl-space-1);
+  padding-left: var(--sl-space-4);
+}
+
+/* Stesso bug pattern già corretto più volte nel progetto: una regola
+   d'autore con "display" batte lo stile UA di [hidden]. */
+.sl-sidebar__group-list[hidden] {
   display: none;
 }
 

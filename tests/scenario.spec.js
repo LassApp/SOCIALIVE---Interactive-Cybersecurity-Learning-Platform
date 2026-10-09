@@ -99,6 +99,7 @@ const { chromium } = require("playwright");
 const { startServer } = require("./helpers/server");
 const { createSuite } = require("./helpers/testKit");
 const { loginAsDocente } = require("./helpers/auth");
+const { expandSidebarGroup } = require("./helpers/sidebar");
 
 const APP_ROOT = path.join(__dirname, "..");
 const SCREENSHOT_DIR = path.join(__dirname, "screenshots");
@@ -674,7 +675,7 @@ async function run() {
     await loginAsDocente(page, server.url);
     await page.waitForSelector(".sl-sidebar__trigger");
 
-    await suite.test("Sidebar: il flyout 'Moduli' elenca 4 scenari (Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi)", async () => {
+    await suite.test("Sidebar: il flyout 'Scenari' elenca, aprendo Cybersecurity, Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi e Tokenizzazione (AI)", async () => {
       // hover, non click: un click() di Playwright genera un vero
       // mousemove che fa scattare "mouseenter" sul trigger PRIMA del
       // click stesso — Sidebar.js apre il flyout all'hover (mouseenter
@@ -688,14 +689,15 @@ async function run() {
       // trigger).
       await page.hover(".sl-sidebar__trigger");
       await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
-      const labels = await page.locator(".sl-sidebar__flyout .sl-sidebar__link").allTextContents();
-      assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi"]);
+      await expandSidebarGroup(page, "Cybersecurity");
+      const labels = await page.locator(".sl-sidebar__group-list .sl-sidebar__link").allTextContents();
+      assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi", "Tokenizzazione"]);
     });
 
     await suite.test("click su Evil Twin Wi-Fi -> #/scenario/evil-twin-wifi, chrome:none rispettato", async () => {
       // Ordine reale in data/modules.json: oversharing(0), keylogger(1),
       // phishing(2), evil-twin-wifi(3).
-      await page.click(".sl-sidebar__flyout .sl-sidebar__link >> nth=3");
+      await page.click(".sl-sidebar__group-list .sl-sidebar__link >> nth=3");
       await page.waitForFunction(() => window.location.hash === "#/scenario/evil-twin-wifi");
       await page.waitForSelector(".sl-fake-captive-portal");
       assert.equal(await page.locator(".sl-app-header").count(), 0);
@@ -883,20 +885,27 @@ async function run() {
     // che monta contenuto asincrono).
     await page.waitForSelector(".sl-sidebar__trigger");
 
-    await suite.test("flusso da tastiera: Sidebar -> trigger 'Moduli' (Invio) apre il flyout", async () => {
+    await suite.test("flusso da tastiera: Sidebar -> trigger 'Scenari' (Invio) apre il flyout", async () => {
       let focused = null;
       for (let i = 0; i < 15; i += 1) {
         await page.keyboard.press("Tab");
         focused = await page.evaluate(() => document.activeElement.classList.contains("sl-sidebar__trigger"));
         if (focused) break;
       }
-      assert.ok(focused, "il focus non ha raggiunto il trigger 'Moduli' entro 15 Tab");
+      assert.ok(focused, "il focus non ha raggiunto il trigger 'Scenari' entro 15 Tab");
 
       await page.keyboard.press("Enter");
       await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
     });
 
-    await suite.test("flusso da tastiera: dal flyout raggiunge Oversharing (Invio)", async () => {
+    await suite.test("flusso da tastiera: dal flyout apre Cybersecurity (Invio) e raggiunge Oversharing (Invio)", async () => {
+      // Il flyout contiene ora le categorie: il primo Tab porta al gruppo
+      // "Cybersecurity", che si espande con Invio (come un <button> nativo).
+      await page.keyboard.press("Tab");
+      const group = await page.evaluate(() => document.activeElement.textContent.trim());
+      assert.equal(group, "Cybersecurity", "il primo Tab nel flyout non ha raggiunto la categoria Cybersecurity");
+      await page.keyboard.press("Enter");
+
       let focused = null;
       for (let i = 0; i < 6; i += 1) {
         await page.keyboard.press("Tab");

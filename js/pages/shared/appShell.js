@@ -5,9 +5,9 @@
  * comune a ogni rotta protetta che usa PageContainer (#/home,
  * #/scenario/:scenarioId).
  *
- * SIDEBAR — "Moduli" ora INTERATTIVA (nuovo): fino a questo intervento
- * era una voce statica disabilitata ("nessuna rotta reale la
- * raggiungeva direttamente"). Ora diventa una voce con sottomenu
+ * SIDEBAR — "Scenari" (ex "Moduli", rinominata con l'arrivo del secondo
+ * modulo, AI): era una voce statica disabilitata ("nessuna rotta reale
+ * la raggiungeva direttamente"), poi una voce con sottomenu
  * (Sidebar.js, prop "children") che elenca direttamente gli scenari
  * disponibili — niente più passaggio da una pagina selettore dedicata
  * per raggiungerli (quella pagina, #/modules/:moduleId, è stata
@@ -20,20 +20,19 @@
  *
  * DATA-DRIVEN, non hardcoded: i sottomenu vengono letti da
  * data/modules.json — coerente col principio di progetto "i contenuti
- * non devono essere scritti nel codice". Vengono appiattite le
- * "scenarios" di OGNI modulo con "available: true" in un'unica lista sotto "Moduli": con un solo
- * modulo reale oggi (Cybersecurity) il risultato è una lista piatta dei
- * suoi scenari — se in futuro un secondo modulo diventasse disponibile,
- * questa stessa lista si allungherebbe con i suoi scenari accodati.
- * Una struttura a due livelli (Modulo -> propri scenari) sarebbe più
- * corretta con più moduli reali, ma introdurla oggi per un solo modulo
- * sarebbe un'astrazione senza un secondo caso reale che la giustifichi
- * (YAGNI, stesso criterio già seguito ovunque nel progetto) — da
- * rivalutare quando un secondo modulo passerà a "available: true".
+ * non devono essere scritti nel codice". DUE LIVELLI: ogni modulo con
+ * "available: true" e degli "scenarios" diventa un gruppo del flyout
+ * "Scenari" (oggi Cybersecurity e AI, nell'ordine del file), con i
+ * propri scenari sotto di sé. La struttura a due livelli — rimandata
+ * finché c'era un solo modulo reale (YAGNI) — è stata introdotta nel
+ * momento in cui è arrivato il secondo (AI), come questo stesso
+ * commento anticipava. Il gruppo che contiene lo scenario della pagina
+ * corrente (hash #/scenario/:id) nasce aperto; nessuna voce risulta
+ * comunque "attiva" su quella pagina (invariato).
  *
  * ASINCRONO, ma la Sidebar nasce subito: appShell resta sincrono verso
  * chi lo chiama (nessun controller deve attendere una Promise per
- * montare la pagina) — Sidebar viene creata SUBITO con "Moduli" senza
+ * montare la pagina) — Sidebar viene creata SUBITO con "Scenari" senza
  * figli (quindi voce foglia interattiva ma senza sottomenu finché i
  * dati non arrivano; scelta preferita a "disabled" perché è comunque
  * onesto: appena i dati risolvono, l'utente vede il sottomenu apparire,
@@ -74,20 +73,35 @@ const modulesRepository = createLocalJsonRepository({
   idField: "id",
 });
 
-// Appiattisce le "scenarios" di ogni modulo disponibile in un'unica
-// lista di voci per il sottomenu — vedi rationale "DATA-DRIVEN" in testa
-// al file sul perché non c'è (ancora) un secondo livello di annidamento.
-function buildModuleChildren(modules) {
+// Scenario della pagina corrente, letto dall'hash (#/scenario/:id): serve
+// solo a far nascere aperta, nel flyout, la categoria che lo contiene.
+// Nessuna voce risulta "attiva" su quella pagina (invariato: vedi
+// activeSidebarId) — qui si decide soltanto quale gruppo mostrare aperto.
+function getCurrentScenarioId() {
+  const match = /^#\/scenario\/([^/]+)$/.exec(window.location.hash);
+  return match ? match[1] : null;
+}
+
+// Una categoria (modulo disponibile con scenari) per ogni gruppo del
+// flyout "Scenari", ciascuna con i propri scenari — l'ordine è quello di
+// data/modules.json. Il secondo livello annunciato come "da rivalutare
+// quando un secondo modulo passerà a available:true" è questo: oggi
+// Cybersecurity e AI.
+function buildScenarioGroups(modules) {
+  const currentScenarioId = getCurrentScenarioId();
   return modules
     .filter((moduleRecord) => moduleRecord.available && Array.isArray(moduleRecord.scenarios))
-    .flatMap((moduleRecord) =>
-      moduleRecord.scenarios.map((scenario) => ({
+    .map((moduleRecord) => ({
+      id: moduleRecord.id,
+      label: moduleRecord.title,
+      expanded: moduleRecord.scenarios.some((scenario) => scenario.id === currentScenarioId),
+      children: moduleRecord.scenarios.map((scenario) => ({
         id: scenario.id,
         label: scenario.title,
         route: `#/scenario/${scenario.id}`,
         disabled: !scenario.available,
-      }))
-    );
+      })),
+    }));
 }
 
 export function createAppShell({ activeSidebarId } = {}) {
@@ -130,7 +144,7 @@ export function createAppShell({ activeSidebarId } = {}) {
   const sidebar = createSidebar({
     items: [
       { id: "home", label: "Home", route: "#/home" },
-      { id: "modules", label: "Moduli", children: [] },
+      { id: "scenarios", label: "Scenari", children: [] },
       { id: "settings", label: "Impostazioni", disabled: true },
     ],
     activeId: activeSidebarId,
@@ -143,14 +157,14 @@ export function createAppShell({ activeSidebarId } = {}) {
       sidebar.update({
         items: [
           { id: "home", label: "Home", route: "#/home" },
-          { id: "modules", label: "Moduli", children: buildModuleChildren(modules) },
+          { id: "scenarios", label: "Scenari", children: buildScenarioGroups(modules) },
           { id: "settings", label: "Impostazioni", disabled: true },
         ],
       });
     })
     .catch((error) => {
       // Nessun blocco della pagina per un fallimento sul solo sottomenu:
-      // "Moduli" resta semplicemente senza figli (nessun sottomenu si
+      // "Scenari" resta semplicemente senza figli (nessun sottomenu si
       // apre) — stesso criterio di tolleranza già seguito altrove nel
       // progetto per problemi non critici (es. sessione non persistita
       // in authService.js). buildFallbackMessage non serve qui: non c'è

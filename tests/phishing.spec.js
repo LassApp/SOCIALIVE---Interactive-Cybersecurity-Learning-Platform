@@ -46,6 +46,7 @@ const { chromium } = require("playwright");
 const { startServer } = require("./helpers/server");
 const { createSuite } = require("./helpers/testKit");
 const { loginAsDocente } = require("./helpers/auth");
+const { expandSidebarGroup } = require("./helpers/sidebar");
 
 const APP_ROOT = path.join(__dirname, "..");
 const SCREENSHOT_DIR = path.join(__dirname, "screenshots");
@@ -63,7 +64,7 @@ async function run() {
     await loginAsDocente(page, server.url);
     await page.waitForSelector(".sl-sidebar__trigger");
 
-    await suite.test("click su 'Moduli' apre il flyout con 4 scenari, nell'ordine reale di data/modules.json", async () => {
+    await suite.test("il flyout 'Scenari' elenca, aprendo Cybersecurity, 4 scenari + Tokenizzazione (AI), nell'ordine reale di data/modules.json", async () => {
       // hover, non click: un click() di Playwright genera un vero
       // mousemove che fa scattare "mouseenter" sul trigger PRIMA del
       // click stesso — Sidebar.js apre il flyout all'hover (mouseenter
@@ -77,12 +78,13 @@ async function run() {
       // trigger).
       await page.hover(".sl-sidebar__trigger");
       await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
-      const labels = await page.locator(".sl-sidebar__flyout .sl-sidebar__link").allTextContents();
-      assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi"]);
+      await expandSidebarGroup(page, "Cybersecurity");
+      const labels = await page.locator(".sl-sidebar__group-list .sl-sidebar__link").allTextContents();
+      assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi", "Tokenizzazione"]);
     });
 
     await suite.test("terza voce è 'Phishing' e naviga a #/scenario/phishing", async () => {
-      await page.click(".sl-sidebar__flyout .sl-sidebar__link >> nth=2");
+      await page.click(".sl-sidebar__group-list .sl-sidebar__link >> nth=2");
       await page.waitForFunction(() => window.location.hash === "#/scenario/phishing");
       await page.waitForSelector(".sl-phishing");
     });

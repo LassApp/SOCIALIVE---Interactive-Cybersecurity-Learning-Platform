@@ -2,6 +2,7 @@ const login = require("./login.spec.js");
 const home = require("./home.spec.js");
 const scenario = require("./scenario.spec.js");
 const phishing = require("./phishing.spec.js");
+const sidebar = require("./sidebar.spec.js");
 const token = require("./token.spec.js");
 
 async function main() {
@@ -10,6 +11,7 @@ async function main() {
   summaries.push(await home.run());
   summaries.push(await scenario.run());
   summaries.push(await phishing.run());
+  summaries.push(await sidebar.run());
   summaries.push(await token.run());
 
   const totalChecks = summaries.reduce((sum, s) => sum + s.total, 0);

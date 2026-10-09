@@ -40,7 +40,7 @@
  *
  * Un solo flyout aperto alla volta: un registro locale di "chiudi"
  * (Map id -> closeImmediately) permette a qualunque voce che si apre di
- * chiudere prima le altre — oggi un solo consumer reale ("Moduli"), ma
+ * chiudere prima le altre — oggi un solo consumer reale ("Scenari"), ma
  * corretto anche se in futuro se ne aggiungesse un secondo.
  *
  * Stato locale (quale flyout è aperto), MAI esposto via props: stessa
@@ -50,7 +50,7 @@
  *
  * Chevron: a differenza del trigger di AppHeader (dove aria-haspopup/
  * aria-expanded bastavano, nessun'altra voce dell'header suggerisce
- * interattività extra), qui la voce "Moduli" convive in una lista di
+ * interattività extra), qui la voce "Scenari" convive in una lista di
  * semplici link — senza un indizio visivo un utente vedente non ha modo
  * di distinguerla come "voce che si espande". Icona inline via
  * svgNode(), stesso pattern già usato ovunque nel progetto in assenza
@@ -62,12 +62,32 @@
  * riceve lo stesso trattamento (utile quando si è su una pagina di
  * scenario raggiunta dal flyout).
  *
+ * SECONDO LIVELLO NEL FLYOUT (nuovo, additivo): un figlio del flyout può
+ * a sua volta avere "children" (array non vuoto) e diventa allora un
+ * GRUPPO a disclosure — un <button> con aria-expanded/aria-controls che
+ * mostra o nasconde, SOTTO di sé, l'elenco dei propri link. Serve alla
+ * voce "Scenari": il flyout contiene le categorie (Cybersecurity, AI) e
+ * ciascuna raccoglie i propri scenari. Un figlio senza "children"
+ * resta un normale link, identico a prima.
+ *
+ * Il gruppo si apre con click/Invio/Spazio (è un <button> nativo), NON
+ * con l'hover: il flyout principale si apre già al passaggio del mouse,
+ * ma una lista che si allunga sotto il puntatore mentre ci si sposta
+ * verso la voce successiva farebbe "scappare" i bersagli. "expanded:
+ * true" sul gruppo lo fa nascere aperto (lo decide chi costruisce i
+ * dati, non Sidebar: oggi appShell, per la categoria della pagina in
+ * cui ci si trova). Profondità massima: due livelli — un terzo non ha
+ * alcun consumer reale (YAGNI).
+ *
  * Interfaccia: create(props) → { element, update(props), destroy() }
  *
  * Props:
  *   - items {Array<{
  *       id, label, route?, icon?: Node, disabled?: boolean,
- *       children?: Array<{ id, label, route, disabled?: boolean }>
+ *       children?: Array<
+ *         { id, label, route, disabled?: boolean } |
+ *         { id, label, expanded?: boolean, children: Array<{ id, label, route, disabled?: boolean }> }
+ *       >
  *     }>}
  *   - activeId {string} opzionale
  *
@@ -137,9 +157,72 @@ function buildLeaf(item, activeId, onNavigate) {
   return link;
 }
 
-// Voce con sottomenu ("Moduli"): bottone disclosure + pannello flyout
-// con i figli come veri <a>. Vedi rationale completo in testa al file
-// per apertura hover+click, chiusura ritardata, un solo flyout aperto.
+// Gruppo del flyout (secondo livello): bottone disclosure + lista dei
+// link sotto di esso. Si apre solo per click/tastiera (vedi rationale in
+// testa al file). Riusa le classi del link e del chevron del trigger
+// principale: stessa resa visiva, nessuna regola CSS duplicata.
+function buildGroup(group, activeId, onNavigate) {
+  const listId = `sl-sidebar-group-${group.id}`;
+  const expanded = Boolean(group.expanded);
+
+  const trigger = createElement(
+    "button",
+    {
+      classNames: ["sl-sidebar__link", "sl-sidebar__group-trigger"],
+      attrs: { type: "button", "aria-expanded": String(expanded), "aria-controls": listId },
+    },
+    [...buildItemContent(group), buildChevronIcon()]
+  );
+
+  const entries = group.children.map((child) => buildFlyoutLeafEntry(child, activeId, onNavigate));
+  const list = createElement(
+    "ul",
+    { classNames: "sl-sidebar__group-list", attrs: { id: listId } },
+    entries
+  );
+  list.hidden = !expanded;
+
+  function handleToggle() {
+    const nextExpanded = list.hidden;
+    list.hidden = !nextExpanded;
+    trigger.setAttribute("aria-expanded", String(nextExpanded));
+  }
+  trigger.addEventListener("click", handleToggle);
+
+  const element = createElement(
+    "li",
+    { classNames: ["sl-sidebar__flyout-item", "sl-sidebar__flyout-item--group"] },
+    [trigger, list]
+  );
+
+  return {
+    element,
+    destroy() {
+      trigger.removeEventListener("click", handleToggle);
+    },
+  };
+}
+
+// Link foglia dentro un <li>: una lista (<ul>) deve contenere solo <li>,
+// altrimenti gli screen reader non la annunciano come lista.
+function buildFlyoutLeafEntry(child, activeId, onNavigate) {
+  return createElement("li", { classNames: "sl-sidebar__flyout-item" }, [
+    buildLeaf(child, activeId, onNavigate),
+  ]);
+}
+
+// Una voce del flyout è un gruppo (ha dei figli) o un link semplice.
+function buildFlyoutEntry(child, activeId, onNavigate) {
+  if (Array.isArray(child.children) && child.children.length > 0) {
+    return buildGroup(child, activeId, onNavigate);
+  }
+  return { element: buildFlyoutLeafEntry(child, activeId, onNavigate), destroy() {} };
+}
+
+// Voce con sottomenu ("Scenari"): bottone disclosure + pannello flyout
+// con i figli (link, oppure gruppi a loro volta apribili). Vedi
+// rationale completo in testa al file per apertura hover+click,
+// chiusura ritardata, un solo flyout aperto.
 function buildExpandableItem(item, activeId, onNavigate, closers, closeAllExcept) {
   const trigger = createElement(
     "button",
@@ -150,8 +233,12 @@ function buildExpandableItem(item, activeId, onNavigate, closers, closeAllExcept
     [...buildItemContent(item), buildChevronIcon()]
   );
 
-  const childLinks = (item.children || []).map((child) => buildLeaf(child, activeId, onNavigate));
-  const flyout = createElement("ul", { classNames: "sl-sidebar__flyout" }, childLinks);
+  const flyoutEntries = (item.children || []).map((child) => buildFlyoutEntry(child, activeId, onNavigate));
+  const flyout = createElement(
+    "ul",
+    { classNames: "sl-sidebar__flyout" },
+    flyoutEntries.map((entry) => entry.element)
+  );
   flyout.hidden = true;
 
   const listItem = createElement(
@@ -236,6 +323,7 @@ function buildExpandableItem(item, activeId, onNavigate, closers, closeAllExcept
     destroy() {
       closers.delete(item.id);
       cancelPendingClose();
+      flyoutEntries.forEach((entry) => entry.destroy());
       trigger.removeEventListener("click", handleTriggerClick);
       listItem.removeEventListener("mouseenter", handleMouseEnter);
       listItem.removeEventListener("mouseleave", handleMouseLeave);

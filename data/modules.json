@@ -15,6 +15,14 @@
         { "id": "evil-twin-wifi", "title": "Evil Twin Wi-Fi", "available": true }
       ]
     },
+    {
+      "id": "ai",
+      "title": "AI",
+      "available": true,
+      "scenarios": [
+        { "id": "tokenizzazione", "title": "Tokenizzazione", "available": true }
+      ]
+    },
     { "id": "ricette", "title": "Ricette", "available": false }
   ]
 }
