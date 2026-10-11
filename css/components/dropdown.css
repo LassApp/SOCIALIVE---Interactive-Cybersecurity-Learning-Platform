@@ -1,0 +1,154 @@
+/**
+ * dropdown.css
+ * -----------------------------------------------------------------------
+ * Trigger: stessa ricetta di input.css (border-strong, radius-md,
+ * bg-surface, text-primary — accostamenti già verificati ≥3:1 per il
+ * bordo funzionale e AA per il testo), alto almeno 48px per una LIM.
+ * Pannello: stessa ricetta già verificata per i popover del progetto
+ * (profile-menu.css): bg-elevated + shadow-2 + radius-lg; testo
+ * text-primary su bg-elevated, verificato numericamente allora (17.05:1
+ * Light / 12.45:1 Dark). NESSUN nuovo accostamento di colore.
+ *
+ * Opzione scelta: sfondo bg-active + peso semibold + spunta — tre
+ * segnali, mai il solo colore (la spunta è anche aria-selected nel
+ * DOM). Opzione "attiva" da tastiera: contorno del focus ring globale,
+ * disegnato sull'opzione perché il focus vero è sulla lista (pattern
+ * aria-activedescendant); l'outline della lista stessa è quindi
+ * azzerato, altrimenti si vedrebbero due anelli.
+ *
+ * z-index: 5 — sotto AppHeader (10, sticky): scorrendo, il pannello
+ * passa SOTTO l'header invece di coprirlo. La lista non ha bisogno di
+ * stare sopra altro: si apre dentro l'area di contenuto.
+ *
+ * Regola "[hidden]" ridichiarata: .sl-dropdown__list impone un proprio
+ * "display" e batterebbe l'attributo nativo (stesso bug pattern già
+ * corretto più volte nel progetto).
+ */
+
+.sl-dropdown {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-1);
+}
+
+.sl-dropdown__label {
+  font-size: var(--sl-font-size-sm);
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-secondary);
+}
+
+.sl-dropdown__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sl-space-3);
+  min-height: 48px;
+  padding: var(--sl-space-2) var(--sl-space-4);
+  background-color: var(--sl-color-bg-surface);
+  border: 1px solid var(--sl-color-border-strong);
+  border-radius: var(--sl-radius-md);
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-md);
+  text-align: left;
+  transition: border-color var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-dropdown__trigger:hover,
+.sl-dropdown--open .sl-dropdown__trigger,
+.sl-dropdown__trigger:focus-visible {
+  border-color: var(--sl-color-primary-600);
+}
+
+.sl-dropdown__trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sl-dropdown__value {
+  min-width: 0;
+}
+
+.sl-dropdown__chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  transition: transform var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-dropdown__chevron svg {
+  width: 100%;
+  height: 100%;
+}
+
+.sl-dropdown--open .sl-dropdown__chevron {
+  transform: rotate(180deg);
+}
+
+.sl-dropdown__list {
+  position: absolute;
+  z-index: 5;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: var(--sl-space-2);
+  padding: var(--sl-space-2);
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+  background-color: var(--sl-color-bg-elevated);
+  border-radius: var(--sl-radius-lg);
+  box-shadow: var(--sl-shadow-2);
+}
+
+.sl-dropdown__list[hidden] {
+  display: none;
+}
+
+.sl-dropdown__list:focus-visible {
+  outline: none;
+}
+
+.sl-dropdown__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sl-space-3);
+  min-height: 48px;
+  padding: var(--sl-space-2) var(--sl-space-4);
+  border-radius: var(--sl-radius-md);
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-base);
+  cursor: pointer;
+}
+
+.sl-dropdown__option--active {
+  background-color: var(--sl-color-bg-hover);
+}
+
+.sl-dropdown__list:focus-visible .sl-dropdown__option--active {
+  outline: 2px solid var(--sl-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.sl-dropdown__option[aria-selected="true"] {
+  background-color: var(--sl-color-bg-active);
+  font-weight: var(--sl-font-weight-semibold);
+}
+
+.sl-dropdown__check {
+  display: none;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--sl-color-primary-500);
+}
+
+.sl-dropdown__check svg {
+  width: 100%;
+  height: 100%;
+}
+
+.sl-dropdown__option[aria-selected="true"] .sl-dropdown__check {
+  display: inline-flex;
+}

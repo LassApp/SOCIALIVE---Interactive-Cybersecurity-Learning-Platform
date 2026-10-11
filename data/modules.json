@@ -20,7 +20,8 @@
       "title": "AI",
       "available": true,
       "scenarios": [
-        { "id": "tokenizzazione", "title": "Tokenizzazione", "available": true }
+        { "id": "tokenizzazione", "title": "Tokenizzazione", "available": true },
+        { "id": "allucinazioni", "title": "Allucinazioni", "available": true }
       ]
     },
     { "id": "ricette", "title": "Ricette", "available": false }

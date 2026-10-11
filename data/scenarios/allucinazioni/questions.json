@@ -1,0 +1,64 @@
+{
+  "questions": [
+    {
+      "id": "gerry-scotti",
+      "text": "Quando è nato Gerry Scotti?",
+      "exact": "Gerry Scotti è nato nel 1956.",
+      "hallucinated": "Gerry Scotti è nato nel 1920."
+    },
+    {
+      "id": "promessi-sposi",
+      "text": "Chi ha scritto «I promessi sposi»?",
+      "exact": "«I promessi sposi» è stato scritto da Alessandro Manzoni.",
+      "hallucinated": "«I promessi sposi» è stato scritto da Ugo Foscolo."
+    },
+    {
+      "id": "capitale-australia",
+      "text": "Qual è la capitale dell'Australia?",
+      "exact": "La capitale dell'Australia è Canberra.",
+      "hallucinated": "La capitale dell'Australia è Sydney."
+    },
+    {
+      "id": "mondiali-calcio",
+      "text": "In che anno l'Italia ha vinto l'ultimo Mondiale di calcio?",
+      "exact": "L'Italia ha vinto l'ultimo Mondiale di calcio nel 2006.",
+      "hallucinated": "L'Italia ha vinto l'ultimo Mondiale di calcio nel 2014."
+    },
+    {
+      "id": "gioconda",
+      "text": "Chi ha dipinto la Gioconda?",
+      "exact": "La Gioconda è stata dipinta da Leonardo da Vinci.",
+      "hallucinated": "La Gioconda è stata dipinta da Raffaello Sanzio."
+    },
+    {
+      "id": "muro-di-berlino",
+      "text": "In che anno è caduto il muro di Berlino?",
+      "exact": "Il muro di Berlino è caduto nel 1989.",
+      "hallucinated": "Il muro di Berlino è caduto nel 1991."
+    },
+    {
+      "id": "simbolo-oro",
+      "text": "Qual è il simbolo chimico dell'oro?",
+      "exact": "Il simbolo chimico dell'oro è Au.",
+      "hallucinated": "Il simbolo chimico dell'oro è Ag."
+    },
+    {
+      "id": "fiume-italia",
+      "text": "Qual è il fiume più lungo d'Italia?",
+      "exact": "Il fiume più lungo d'Italia è il Po.",
+      "hallucinated": "Il fiume più lungo d'Italia è il Tevere."
+    },
+    {
+      "id": "world-wide-web",
+      "text": "Chi ha inventato il World Wide Web?",
+      "exact": "Il World Wide Web è stato inventato da Tim Berners-Lee.",
+      "hallucinated": "Il World Wide Web è stato inventato da Bill Gates."
+    },
+    {
+      "id": "pianeti",
+      "text": "Quanti sono i pianeti del sistema solare?",
+      "exact": "Il sistema solare ha 8 pianeti.",
+      "hallucinated": "Il sistema solare ha 9 pianeti."
+    }
+  ]
+}

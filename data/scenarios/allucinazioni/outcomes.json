@@ -1,0 +1,19 @@
+{
+  "modes": [
+    {
+      "id": "exact",
+      "label": "Risposta esatta",
+      "explanation": "Un LLM riceve una richiesta, la elabora e infine restituisce una risposta: come un cerchio che si chiude."
+    },
+    {
+      "id": "silence",
+      "label": "Nessuna risposta",
+      "explanation": "Un LLM riceve una richiesta, la elabora ed è impossibile che non generi una risposta: un LLM è stato progettato per generare una risposta e deve portare a termine il suo compito. Il cerchio si deve sempre chiudere."
+    },
+    {
+      "id": "hallucination",
+      "label": "Risposta allucinata",
+      "explanation": "Un LLM riceve una richiesta, la elabora e genera una risposta. Un LLM è stato progettato per generare una risposta. A un LLM non importa che sia vera o falsa (allucinata, inventata): quello che importa è che porti a termine il suo compito, cioè generare una risposta. Sta all'utente verificare l'autenticità dei fatti. Il cerchio si deve sempre chiudere."
+    }
+  ]
+}

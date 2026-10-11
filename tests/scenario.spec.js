@@ -675,7 +675,7 @@ async function run() {
     await loginAsDocente(page, server.url);
     await page.waitForSelector(".sl-sidebar__trigger");
 
-    await suite.test("Sidebar: il flyout 'Scenari' elenca, aprendo Cybersecurity, Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi e Tokenizzazione (AI)", async () => {
+    await suite.test("Sidebar: il flyout 'Scenari' elenca, aprendo Cybersecurity, Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi, Tokenizzazione e Allucinazioni (AI)", async () => {
       // hover, non click: un click() di Playwright genera un vero
       // mousemove che fa scattare "mouseenter" sul trigger PRIMA del
       // click stesso — Sidebar.js apre il flyout all'hover (mouseenter
@@ -691,7 +691,7 @@ async function run() {
       await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
       await expandSidebarGroup(page, "Cybersecurity");
       const labels = await page.locator(".sl-sidebar__group-list .sl-sidebar__link").allTextContents();
-      assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi", "Tokenizzazione"]);
+      assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi", "Tokenizzazione", "Allucinazioni"]);
     });
 
     await suite.test("click su Evil Twin Wi-Fi -> #/scenario/evil-twin-wifi, chrome:none rispettato", async () => {

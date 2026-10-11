@@ -64,7 +64,7 @@ async function run() {
     await loginAsDocente(page, server.url);
     await page.waitForSelector(".sl-sidebar__trigger");
 
-    await suite.test("il flyout 'Scenari' elenca, aprendo Cybersecurity, 4 scenari + Tokenizzazione (AI), nell'ordine reale di data/modules.json", async () => {
+    await suite.test("il flyout 'Scenari' elenca, aprendo Cybersecurity, 4 scenari + Tokenizzazione e Allucinazioni (AI), nell'ordine reale di data/modules.json", async () => {
       // hover, non click: un click() di Playwright genera un vero
       // mousemove che fa scattare "mouseenter" sul trigger PRIMA del
       // click stesso — Sidebar.js apre il flyout all'hover (mouseenter
@@ -80,7 +80,7 @@ async function run() {
       await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
       await expandSidebarGroup(page, "Cybersecurity");
       const labels = await page.locator(".sl-sidebar__group-list .sl-sidebar__link").allTextContents();
-      assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi", "Tokenizzazione"]);
+      assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi", "Tokenizzazione", "Allucinazioni"]);
     });
 
     await suite.test("terza voce è 'Phishing' e naviga a #/scenario/phishing", async () => {

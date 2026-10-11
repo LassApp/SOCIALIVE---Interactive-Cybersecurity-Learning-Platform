@@ -1,0 +1,11 @@
+{
+  "id": "allucinazioni",
+  "type": "llm-response-cycle",
+  "title": "Allucinazioni",
+  "description": "Il ciclo richiesta → elaborazione → risposta di un LLM, in tre varianti (esatta, nessuna risposta, allucinata), per capire che un LLM è progettato per generare sempre una risposta, vera o inventata che sia.",
+  "stepMs": 2000,
+  "dataRefs": {
+    "questions": "data/scenarios/allucinazioni/questions.json",
+    "outcomes": "data/scenarios/allucinazioni/outcomes.json"
+  }
+}

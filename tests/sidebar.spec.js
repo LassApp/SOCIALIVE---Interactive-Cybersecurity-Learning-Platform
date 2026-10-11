@@ -106,13 +106,14 @@ async function run() {
       assert.equal(await page.locator("#sl-sidebar-group-ai").isVisible(), false);
     });
 
-    await suite.test("le categorie sono indipendenti: aprire AI non chiude Cybersecurity; AI ha 1 sola voce, Tokenizzazione", async () => {
+    await suite.test("le categorie sono indipendenti: aprire AI non chiude Cybersecurity; AI ha 2 voci, Tokenizzazione e Allucinazioni", async () => {
       await page.locator(".sl-sidebar__group-trigger", { hasText: /^\s*AI\s*$/ }).click();
       assert.deepEqual(await groupStates(page), ["true", "true"]);
       const aiLinks = page.locator("#sl-sidebar-group-ai a.sl-sidebar__link");
-      assert.equal(await aiLinks.count(), 1);
-      assert.equal((await aiLinks.textContent()).trim(), "Tokenizzazione");
-      assert.equal(await aiLinks.getAttribute("href"), "#/scenario/tokenizzazione");
+      assert.equal(await aiLinks.count(), 2);
+      assert.deepEqual((await aiLinks.allTextContents()).map((t) => t.trim()), ["Tokenizzazione", "Allucinazioni"]);
+      assert.equal(await aiLinks.nth(0).getAttribute("href"), "#/scenario/tokenizzazione");
+      assert.equal(await aiLinks.nth(1).getAttribute("href"), "#/scenario/allucinazioni");
     });
 
     await suite.test("un secondo click richiude la categoria", async () => {
@@ -181,7 +182,7 @@ async function run() {
 
     await suite.test("dalla Sidebar: Scenari → AI → Tokenizzazione porta a #/scenario/tokenizzazione, con AI già aperta", async () => {
       await expandSidebarGroup(page, "AI");
-      await page.locator("#sl-sidebar-group-ai a.sl-sidebar__link").click();
+      await page.locator("#sl-sidebar-group-ai a.sl-sidebar__link", { hasText: /^\s*Tokenizzazione\s*$/ }).click();
       await page.waitForFunction(() => window.location.hash === "#/scenario/tokenizzazione");
       await page.waitForSelector(".sl-token-prediction");
       await waitForSidebar(page);

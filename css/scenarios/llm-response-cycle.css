@@ -1,0 +1,372 @@
+/**
+ * llm-response-cycle.css
+ * -----------------------------------------------------------------------
+ * Stile del renderer "llm-response-cycle" (scenario Allucinazioni,
+ * modulo AI). Possiede il layout della pagina e il disegno del cerchio;
+ * superfici, pulsanti, menu a tendina e card sono i componenti già
+ * esistenti (Card, Button, Dropdown), non ridisegnati qui.
+ *
+ * PENSATO PER LA LIM: testo dei nodi in --sl-font-size-md, etichette
+ * delle frecce in -sm, spiegazione in -md.
+ *
+ * IL CERCHIO è una griglia a tre colonne (freccia di ritorno | nodi |
+ * freccia di andata) e tre righe (Richiesta, spazio, Risposta). Ogni
+ * freccia è un arco disegnato con i soli bordi di un <div> (angoli
+ * arrotondati ellittici) più una punta triangolare ricavata dai bordi di
+ * ::after: si ridimensiona con la pagina senza deformarsi, a differenza
+ * di un SVG stirato. La freccia va dal CENTRO di un nodo al CENTRO
+ * dell'altro (margin-block = metà altezza del nodo), per questo i nodi
+ * hanno altezza FISSA (--llm-card-h): il testo più lungo dell'elenco
+ * deve starci, ed è verificato da un test su più larghezze.
+ *
+ * LARGHEZZA STRETTA: la pagina può essere stretta anche su schermi
+ * larghi (la Sidebar occupa 240px), quindi la scelta non si basa sulla
+ * viewport ma sulla larghezza del contenitore (@container): sotto 720px
+ * le etichette delle frecce si dispongono in verticale e le frecce
+ * stringono, lasciando più spazio ai nodi.
+ *
+ * STATI (data-state, impostato da llmResponseCycleRenderer.js):
+ *   off     — a riposo
+ *   lit     — il passo corrente: bordo primary-500, alone, sfondo con una
+ *             punta di primary-500 (10% su bg-surface), etichetta in
+ *             primary-text
+ *   done    — cerchio chiuso: bordo/frecce primary-500, nessun alone
+ *   empty   — Risposta senza output: contorno tratteggiato
+ *   broken  — freccia di ritorno interrotta: tratteggiata
+ *
+ * COLORI — gli accostamenti già verificati altrove sono riusati: testo
+ * text-primary/-secondary su bg-surface e bg-elevated, primary-text su
+ * bg-surface (6.13:1 Light / 5.21:1 Dark), primary-500 e border-strong
+ * come elementi grafici su bg-surface (4.30 / 3.91 Light, 5.21 / 4.36
+ * Dark, soglia 3:1), info-text su info-bg-subtle (6.03 / 8.65).
+ * L'UNICO accostamento nuovo è la tinta del nodo acceso (primary-500 al
+ * 10% su bg-surface), verificato numericamente (WCAG, luminanza
+ * relativa) prima di scrivere questo file:
+ *   Light — tinta #edf0ff: text-primary 15.02:1, primary-text 5.40:1,
+ *           bordo primary-500 (grafico) 3.79:1.
+ *   Dark  — tinta #222637: text-primary 14.11:1, primary-text 4.59:1,
+ *           bordo primary-500 (grafico) 4.59:1.
+ * L'alone è puramente decorativo: lo stato è sempre anche nel testo
+ * (etichetta della freccia, "—" / "Nessun output" nella Risposta) e
+ * nell'annuncio aria-live, mai nel solo colore.
+ *
+ * Le transizioni usano i token --sl-duration-*, azzerati da motion.css e
+ * dalla rete di sicurezza di global.css con "riduci animazioni".
+ *
+ * Regola "[hidden]" ridichiarata per la spiegazione: impone un proprio
+ * "display: flex" e batterebbe l'attributo nativo (stesso bug pattern
+ * già corretto più volte nel progetto).
+ */
+
+.sl-llm-cycle {
+  max-width: 880px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-5);
+}
+
+.sl-llm-cycle__title {
+  font-size: var(--sl-font-size-xl);
+  font-weight: var(--sl-font-weight-bold);
+  color: var(--sl-color-text-primary);
+}
+
+/* --- Scelta della domanda ------------------------------------------- */
+
+.sl-llm-cycle__picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sl-space-3);
+}
+
+.sl-llm-cycle__dropdown {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.sl-button.sl-llm-cycle__random {
+  flex: 0 0 auto;
+  min-height: 48px;
+}
+
+/* Su telefono "Casuale" va a capo e occupa tutta la riga: il menu non
+   si riduce a una colonna stretta in cui la domanda andrebbe su 4 righe. */
+@media (max-width: 560px) {
+  .sl-button.sl-llm-cycle__random {
+    flex: 1 1 100%;
+  }
+}
+
+/* --- Switch dell'esito ----------------------------------------------- */
+
+.sl-llm-cycle__modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sl-space-2);
+}
+
+.sl-button.sl-llm-cycle__mode {
+  flex: 1 1 160px;
+  min-height: 48px;
+}
+
+/* --- Il cerchio ------------------------------------------------------- */
+
+.sl-llm-cycle__stage {
+  container-type: inline-size;
+  container-name: llm-cycle;
+}
+
+.sl-llm-cycle__ring {
+  --llm-card-h: 136px;
+  --llm-gap: 96px;
+  --llm-arrow-w: 56px;
+  --llm-head-w: 11px;
+  --llm-head-h: 7px;
+  --llm-line: 2px;
+  /* Ingombro minimo di un lato: punta + arco + etichetta. Va dichiarato:
+     con "1fr" soltanto, la colonna centrale (max 320px) si prenderebbe
+     tutto lo spazio disponibile su un contenitore stretto e i lati
+     collasserebbero a zero, tagliando frecce ed etichette. */
+  --llm-side-min: 195px;
+
+  display: grid;
+  grid-template-columns:
+    minmax(var(--llm-side-min), 1fr)
+    minmax(0, 320px)
+    minmax(var(--llm-side-min), 1fr);
+  grid-template-rows: var(--llm-card-h) var(--llm-gap) var(--llm-card-h);
+}
+
+.sl-card.sl-llm-cycle__node {
+  grid-column: 2;
+  box-sizing: border-box;
+  height: var(--llm-card-h);
+  padding: var(--sl-space-3) var(--sl-space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sl-space-1);
+  text-align: center;
+  transition: background-color var(--sl-duration-base) var(--sl-ease-standard),
+    border-color var(--sl-duration-base) var(--sl-ease-standard),
+    box-shadow var(--sl-duration-base) var(--sl-ease-standard);
+}
+
+.sl-llm-cycle__node--request {
+  grid-row: 1;
+}
+
+.sl-llm-cycle__node--answer {
+  grid-row: 3;
+}
+
+.sl-llm-cycle__node-label {
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-xs);
+  font-weight: var(--sl-font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sl-llm-cycle__node-text {
+  color: var(--sl-color-text-primary);
+  font-size: var(--sl-font-size-md);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* Stati dei nodi */
+
+.sl-card.sl-llm-cycle__node[data-state="lit"] {
+  border-color: var(--sl-color-primary-500);
+  background-color: color-mix(in srgb, var(--sl-color-primary-500) 10%, var(--sl-color-bg-surface));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sl-color-primary-500) 22%, transparent);
+}
+
+.sl-card.sl-llm-cycle__node[data-state="lit"] .sl-llm-cycle__node-label,
+.sl-card.sl-llm-cycle__node[data-state="done"] .sl-llm-cycle__node-label {
+  color: var(--sl-color-primary-text);
+}
+
+.sl-card.sl-llm-cycle__node[data-state="done"] {
+  border-color: var(--sl-color-primary-500);
+}
+
+.sl-card.sl-llm-cycle__node[data-state="empty"] {
+  border: 1px dashed var(--sl-color-border-strong);
+  background-color: var(--sl-color-bg-elevated);
+  box-shadow: none;
+}
+
+.sl-card.sl-llm-cycle__node[data-state="empty"] .sl-llm-cycle__node-text {
+  color: var(--sl-color-text-secondary);
+}
+
+/* --- Frecce ----------------------------------------------------------- */
+
+.sl-llm-cycle__side {
+  --llm-arrow-color: var(--sl-color-border-strong);
+
+  grid-row: 1 / 4;
+  display: flex;
+  align-items: stretch;
+  margin-block: calc(var(--llm-card-h) / 2);
+}
+
+.sl-llm-cycle__side--right {
+  grid-column: 3;
+  justify-content: flex-start;
+}
+
+.sl-llm-cycle__side--left {
+  grid-column: 1;
+  justify-content: flex-end;
+}
+
+.sl-llm-cycle__side[data-state="lit"],
+.sl-llm-cycle__side[data-state="done"] {
+  --llm-arrow-color: var(--sl-color-primary-500);
+}
+
+.sl-llm-cycle__arrow {
+  position: relative;
+  flex: 0 0 var(--llm-arrow-w);
+  box-sizing: border-box;
+  border: var(--llm-line) solid var(--llm-arrow-color);
+  transition: border-color var(--sl-duration-base) var(--sl-ease-standard),
+    filter var(--sl-duration-base) var(--sl-ease-standard);
+}
+
+.sl-llm-cycle__arrow::after {
+  content: "";
+  position: absolute;
+  border-style: solid;
+}
+
+/* Andata: da Richiesta (in alto) a Risposta (in basso), sul lato destro. */
+.sl-llm-cycle__arrow--process {
+  margin-left: var(--llm-head-w);
+  border-left: 0;
+  border-radius: 0 100% 100% 0 / 0 50% 50% 0;
+}
+
+.sl-llm-cycle__arrow--process::after {
+  left: calc(-1 * var(--llm-head-w));
+  bottom: calc(-1 * (var(--llm-head-h) + var(--llm-line) / 2));
+  border-width: var(--llm-head-h) var(--llm-head-w) var(--llm-head-h) 0;
+  border-color: transparent var(--llm-arrow-color) transparent transparent;
+}
+
+/* Ritorno: da Risposta a Richiesta, sul lato sinistro. */
+.sl-llm-cycle__arrow--generate {
+  margin-right: var(--llm-head-w);
+  border-right: 0;
+  border-radius: 100% 0 0 100% / 50% 0 0 50%;
+}
+
+.sl-llm-cycle__arrow--generate::after {
+  right: calc(-1 * var(--llm-head-w));
+  top: calc(-1 * (var(--llm-head-h) + var(--llm-line) / 2));
+  border-width: var(--llm-head-h) 0 var(--llm-head-h) var(--llm-head-w);
+  border-color: transparent transparent transparent var(--llm-arrow-color);
+}
+
+.sl-llm-cycle__arrow[data-state="lit"] {
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--sl-color-primary-500) 75%, transparent));
+}
+
+/* Ritorno interrotto: tratteggiato (la punta resta piena). */
+.sl-llm-cycle__arrow[data-state="broken"] {
+  border-style: dashed;
+}
+
+.sl-llm-cycle__arrow-label {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  align-self: center;
+  max-width: 128px;
+  min-height: calc(2 * 1.3em);
+  padding-inline: var(--sl-space-3);
+  color: var(--sl-color-text-secondary);
+  font-size: var(--sl-font-size-sm);
+  line-height: 1.3;
+}
+
+.sl-llm-cycle__side--left .sl-llm-cycle__arrow-label {
+  text-align: right;
+  justify-content: flex-end;
+}
+
+.sl-llm-cycle__side[data-state="lit"] .sl-llm-cycle__arrow-label,
+.sl-llm-cycle__side[data-state="done"] .sl-llm-cycle__arrow-label {
+  color: var(--sl-color-primary-text);
+  font-weight: var(--sl-font-weight-semibold);
+}
+
+/* Contenitore stretto: etichette in verticale, frecce più corte. */
+@container llm-cycle (max-width: 719px) {
+  .sl-llm-cycle__ring {
+    --llm-card-h: 152px;
+    --llm-gap: 72px;
+    --llm-arrow-w: 24px;
+    --llm-head-w: 8px;
+    --llm-head-h: 5px;
+    --llm-side-min: 56px;
+  }
+
+  .sl-llm-cycle__arrow-label {
+    writing-mode: vertical-rl;
+    max-width: none;
+    min-height: 0;
+    padding-inline: var(--sl-space-1);
+    font-size: var(--sl-font-size-xs);
+  }
+
+  .sl-llm-cycle__side--left .sl-llm-cycle__arrow-label {
+    transform: rotate(180deg);
+  }
+
+  .sl-card.sl-llm-cycle__node {
+    padding: var(--sl-space-2) var(--sl-space-3);
+  }
+
+  .sl-llm-cycle__node-text {
+    font-size: var(--sl-font-size-base);
+  }
+}
+
+/* --- Spiegazione ------------------------------------------------------ */
+
+.sl-llm-cycle__explanation {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sl-space-3);
+  padding: var(--sl-space-4) var(--sl-space-5);
+  background-color: var(--sl-color-info-bg-subtle);
+  border-radius: var(--sl-radius-lg);
+  color: var(--sl-color-info-text);
+  font-size: var(--sl-font-size-md);
+  line-height: var(--sl-line-height-relaxed);
+}
+
+.sl-llm-cycle__explanation[hidden] {
+  display: none;
+}
+
+.sl-llm-cycle__explanation-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin-top: var(--sl-space-1);
+}
+
+.sl-llm-cycle__explanation-icon svg {
+  width: 100%;
+  height: 100%;
+}
