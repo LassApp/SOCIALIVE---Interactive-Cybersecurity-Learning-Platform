@@ -8,6 +8,8 @@
       "id": "cybersecurity",
       "title": "Cybersecurity",
       "available": true,
+      "description": "Come i comportamenti di ogni giorno online mettono a rischio dati, credenziali e identità.",
+      "icon": "assets/icons/areas/cybersecurity.svg",
       "scenarios": [
         { "id": "oversharing", "title": "Oversharing", "available": true },
         { "id": "keylogger", "title": "Keylogger", "available": true },
@@ -19,6 +21,8 @@
       "id": "ai",
       "title": "AI",
       "available": true,
+      "description": "Come funzionano i modelli linguistici e quali limiti è importante conoscere.",
+      "icon": "assets/icons/areas/ai.svg",
       "scenarios": [
         { "id": "tokenizzazione", "title": "Tokenizzazione", "available": true },
         { "id": "allucinazioni", "title": "Allucinazioni", "available": true }

@@ -56,7 +56,8 @@ tests/
 │   ├── testKit.js      # micro-runner (createSuite/test/summary)
 │   └── auth.js         # login reale via UI, riusato da home/scenario
 ├── login.spec.js        # bootstrap, guardie di sessione, validazione, 404
-├── home.spec.js         # composizione Home, moduli, feed, skip-link, ProfileMenu
+├── home.spec.js         # Home a card per area, ricerca, raggiungibilità di ogni
+│                          scenario, mobile 375px, skip-link, ProfileMenu
 ├── scenario.spec.js     # profilo Oversharing, toggle Feed/Archivio, MediaViewer,
 │                          flusso completo da tastiera Home→Scenario→MediaViewer
 └── run-all.js            # esegue le tre suite in sequenza, riepilogo aggregato
@@ -70,12 +71,19 @@ tests/
   `#/login` già autenticato, logout, "Pagina non trovata" (incl. verifica dello
   stile — bug reale corretto in Fase 9), `document.title` per rotta, transizione
   di rotta, screenshot Light/Dark/mobile.
-- **home.spec.js**: struttura pagina, `<h1>` nascosto, 6 `ModuleCard` (solo
-  Cybersecurity disponibile), Feed con 3 post (autori reali, **mai** "Prof. Anna
-  Ferrari" — regressione esplicita), fallback avatar a iniziali, `aspect-ratio`/
-  `loading=lazy` sull'immagine del post, toggle "mi piace", skip-link (WCAG
-  2.4.1), ProfileMenu, screenshot incl. il range 768–1024px (mai chiuso con
-  screenshot reali nelle fasi precedenti), remount pulito Home→Scenario→Home.
+- **home.spec.js** (riscritta per il redesign della Home): struttura pagina,
+  `<h1>` visibile con saluto dalla sessione, gerarchia h1→h2→h3, assenza di
+  qualunque elemento da social network (feed/post/storie/profilo) e del nome
+  placeholder "Prof. Anna Ferrari", card per area lette da `data/modules.json`
+  (descrizione, badge, scenari come link, icone come maschera SVG realmente
+  servite), **raggiungibilità di ogni scenario** cliccandolo dalla Home, **ricerca**
+  (nome di area/scenario, maiuscole/accenti/punteggiatura, nessun risultato,
+  annuncio `aria-live`, ripristino, nessuna iniezione HTML), dati diversi →
+  Home diversa senza toccare il codice (area aggiunta, icona non sicura, scenario
+  non disponibile, parità con la Sidebar), errore di rete e race condition su
+  `modules.json`, tastiera, mobile 375px (la Home è l'unico accesso agli
+  scenari: Sidebar e ricerca nascoste), skip-link (WCAG 2.4.1), ProfileMenu,
+  screenshot incl. il range 768–1024px, remount pulito Home→Scenario→Home.
 - **scenario.spec.js**: profilo Oversharing (statistiche derivate, mai
   `scenario.title`/`description` renderizzati), StoriesBar, toggle Post/Archivio
   (incl. annuncio `aria-live` e fallback testuale di `post-004`), assenza
@@ -91,6 +99,3 @@ tests/
 - Fade-in delle immagini al caricamento e micro-transizione di apertura di
   `ProfileMenu` (interventi 🟢 a bassa priorità dell'audit di Fase 9, non ancora
   implementati nel codice sorgente — quindi non ancora testabili).
-- Un guasto di rete reale (404 forzato) su `data/modules.json`/`data/home/feed.json`
-  — non pertinente oggi: la Home in produzione usa ancora dati hardcoded (Fase 5),
-  non la riscrittura a JSON esterni descritta nell'handover di Fase 8.

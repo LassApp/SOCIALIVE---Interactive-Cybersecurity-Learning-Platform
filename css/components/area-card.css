@@ -1,0 +1,136 @@
+/**
+ * area-card.css
+ * -----------------------------------------------------------------------
+ * Estende .sl-card (card.css: sfondo, bordo, radius, ombra, padding) SOLO
+ * con il layout interno di un'area — stesso principio già seguito da
+ * post-card.css/module-card.css verso card.css.
+ *
+ * NESSUN nuovo accostamento colore, tutti già verificati numericamente
+ * (script WCAG in Fase 0 di questo intervento, Light/Dark):
+ *   - icona: text-inverse su primary-600 → 5.77:1 / 5.77:1 (la stessa
+ *     coppia di Avatar fallback e Button primary; per un'icona basterebbe
+ *     3:1, WCAG 1.4.11);
+ *   - titolo text-primary su bg-surface 17.05 / 16.04; descrizione e
+ *     chevron text-secondary su bg-surface 6.11 / 7.48; badge
+ *     text-secondary su bg-elevated 6.11 / 5.81 (badge.css, invariato);
+ *   - hover/active delle righe: bg-hover/bg-active, overlay decorativi
+ *     già usati da Sidebar/Button.
+ *
+ * Righe-scenario da 52px: target di tocco/puntamento ampi (WCAG 2.5.5 chiede
+ * 44px) e leggibili su LIM/proiettore — il corpo è a font-size md (18px).
+ * La separazione tra righe è un filetto border-subtle, puramente
+ * decorativo (la riga è già delimitata dal testo e dall'area cliccabile).
+ *
+ * Icona: la forma è la maschera (mask-image, impostata inline da
+ * AreaCard.js), il colore è currentColor → text-inverse, quindi segue il
+ * tema da sola. Dimensioni fisse in px (56 cerchio / 32 glifo): decisione
+ * di sizing del componente, come avatar.css.
+ *
+ * Il focus visibile NON è ridefinito: :focus-visible resta quello globale
+ * (global.css). Nessun override di prefers-reduced-motion: --sl-duration-*
+ * è già azzerato da motion.css.
+ */
+
+.sl-area-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-4);
+}
+
+/* Pattern ricorrente del progetto: una regola d'autore con "display"
+   batte lo stile UA di [hidden] — ridichiarato esplicitamente. */
+.sl-area-card[hidden] {
+  display: none;
+}
+
+.sl-area-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--sl-space-4);
+}
+
+.sl-area-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--sl-radius-full);
+  background-color: var(--sl-color-primary-600);
+  color: var(--sl-color-text-inverse);
+  font-size: var(--sl-font-size-sm);
+  font-weight: var(--sl-font-weight-semibold);
+  line-height: 1;
+}
+
+.sl-area-card__glyph {
+  width: 32px;
+  height: 32px;
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.sl-area-card__heading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sl-space-1);
+  min-width: 0;
+}
+
+.sl-area-card__title {
+  font-size: var(--sl-font-size-lg);
+  font-weight: var(--sl-font-weight-bold);
+  line-height: var(--sl-line-height-tight);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-area-card__description {
+  color: var(--sl-color-text-secondary);
+}
+
+.sl-area-card__scenario-item {
+  border-top: 1px solid var(--sl-color-border-subtle);
+}
+
+.sl-area-card__scenario {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sl-space-3);
+  min-height: 52px;
+  padding-inline: var(--sl-space-2);
+  border-radius: var(--sl-radius-md);
+  font-size: var(--sl-font-size-md);
+  font-weight: var(--sl-font-weight-medium);
+  color: var(--sl-color-text-primary);
+  transition: background-color var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+a.sl-area-card__scenario:hover {
+  background-color: var(--sl-color-bg-hover);
+}
+
+a.sl-area-card__scenario:active {
+  background-color: var(--sl-color-bg-active);
+}
+
+.sl-area-card__chevron {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--sl-color-text-secondary);
+}
+
+/* Stessa ricetta delle voci disabilitate di Sidebar: solo opacità. */
+.sl-area-card__scenario--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

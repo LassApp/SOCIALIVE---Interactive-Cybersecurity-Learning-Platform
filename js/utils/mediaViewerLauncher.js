@@ -2,14 +2,19 @@
  * mediaViewerLauncher.js
  * -----------------------------------------------------------------------
  * Helper condiviso per aprire/chiudere MediaViewer da qualunque page
- * controller o renderer di scenario. Estratto al SECONDO consumo reale:
- * profileTimelineRenderer.js gestiva già "a mano" un'istanza di
- * MediaViewer (Fase 7); homePageController.js, in questo stesso
- * intervento, ha bisogno esattamente della stessa identica logica per
- * aprire il post del feed della Home (Mario Bianchi) — stesso principio
- * "si estrae quando un secondo consumo reale lo richiede" già seguito
- * per focusTrap.js (Fase 2), dateFormat.js (Fase 6), svg.js/
+ * controller o renderer di scenario. Estratto al SECONDO consumo reale
+ * (allora: il feed della Home, accanto a profileTimelineRenderer.js che
+ * gestiva già "a mano" un'istanza di MediaViewer, Fase 7) — stesso
+ * principio "si estrae quando un secondo consumo reale lo richiede" già
+ * seguito per focusTrap.js (Fase 2), dateFormat.js (Fase 6), svg.js/
  * fallbackMessage.js (Fase 9), imageFadeIn.js (Fase 9/10).
+ *
+ * STATO ATTUALE: con il redesign della Home (aree e scenari, nessun feed
+ * di post) l'unico consumer rimasto è profileTimelineRenderer.js
+ * (Oversharing: post, avatar, copertina, storie). L'estrazione resta
+ * valida — separa la gestione dell'istanza singola dal renderer — e un
+ * nuovo scenario con gallerie la riuserebbe senza modifiche; non è
+ * codice morto, è un helper con un solo consumer.
  *
  * Possiede l'istanza SINGOLA di MediaViewer (mai due visualizzatori
  * aperti insieme — stesso limite già noto e accettato da Modal, Fase 2):
@@ -25,7 +30,7 @@
  *
  * "openById" è la forma di utilizzo più comune: un evento "sl:post-open"
  * porta solo un id, il chiamante ha già l'intero array in scope
- * (feedPosts, in Home come in Oversharing) e non deve fare un secondo
+ * (feedPosts/stories, nel renderer di Oversharing) e non deve fare un secondo
  * fetch — stesso principio "mai un secondo fetch" già stabilito da
  * profileTimelineRenderer.js. Nessuna azione se l'id non è presente
  * nell'array (difensivo, stesso criterio di tolleranza già seguito da

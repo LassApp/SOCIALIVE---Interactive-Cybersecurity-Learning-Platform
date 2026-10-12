@@ -161,6 +161,52 @@ async function run() {
       });
     });
 
+    // --- Migrati da home.spec.js (redesign della Home) ------------------
+    // Questi controlli verificavano comportamenti di PostCard/imageFadeIn
+    // attraverso il feed della Home. Con la Home diventata una pagina di
+    // aree e scenari il feed non esiste più lì, ma PostCard e imageFadeIn
+    // sono codice VIVO (feed di questo scenario): la loro copertura non
+    // doveva sparire insieme ai post demo — era presente SOLO in
+    // home.spec.js, nessun'altra suite li esercitava. Stessi controlli,
+    // ora sul feed reale di Oversharing (il primo post, post-012, ha
+    // un'immagine).
+    await suite.test("immagine del primo post del Feed: aspect-ratio riservato + loading=lazy (Fase 9)", async () => {
+      const img = page.locator(".sl-feed .sl-post-card").nth(0).locator(".sl-post-card__media-image");
+      assert.equal(await img.getAttribute("loading"), "lazy");
+      const aspectRatio = await img.evaluate((el) => getComputedStyle(el).aspectRatio);
+      assert.notEqual(aspectRatio, "auto", "aspect-ratio non applicato: rischio di layout shift");
+    });
+
+    await suite.test("Fase 9/#11: l'immagine del post riceve la classe di fade-in e la porta a 'loaded' a caricamento avvenuto", async () => {
+      const img = page.locator(".sl-feed .sl-post-card").nth(0).locator(".sl-post-card__media-image");
+      assert.ok(await img.evaluate((el) => el.classList.contains("sl-fade-in-image")));
+      await page.waitForFunction(
+        () => document.querySelector(".sl-feed .sl-post-card__media-image")?.classList.contains("sl-fade-in-image--loaded"),
+        null,
+        { timeout: 2000 }
+      );
+    });
+
+    await suite.test("Fase 9/#11: un update() per il solo 'mi piace' non fa ripartire il fade-in della stessa immagine", async () => {
+      const card = page.locator(".sl-feed .sl-post-card").nth(0);
+      await card.locator(".sl-post-card__action--like").click();
+      await page.waitForTimeout(50);
+      assert.ok(
+        await card.locator(".sl-post-card__media-image").evaluate((el) => el.classList.contains("sl-fade-in-image--loaded"))
+      );
+    });
+
+    await suite.test("Mi piace: click aggiorna aria-pressed, contatore e stato visivo del bottone", async () => {
+      const likeButton = page.locator(".sl-feed .sl-post-card").nth(1).locator(".sl-post-card__action--like");
+      const before = await likeButton.getAttribute("aria-pressed");
+      const labelBefore = await likeButton.locator(".sl-button__label").textContent();
+      await likeButton.click();
+      await page.waitForTimeout(50);
+      const after = await likeButton.getAttribute("aria-pressed");
+      assert.notEqual(before, after);
+      assert.notEqual(await likeButton.locator(".sl-button__label").textContent(), labelBefore, "il contatore non è cambiato");
+    });
+
     await context.close();
   }
 

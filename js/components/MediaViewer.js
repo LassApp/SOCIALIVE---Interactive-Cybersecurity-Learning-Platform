@@ -14,10 +14,10 @@
  * sempre trattato un elemento privo di immagine come testo centrato
  * (vedi "AMBITO DI NAVIGAZIONE" sotto): era già un visualizzatore
  * generico "di fatto", solo con un nome legato al suo primo consumer.
- * Oggi un secondo consumer reale (il feed della Home, non solo lo
- * scenario Oversharing) e un terzo tipo di contenuto (foto profilo,
- * copertina, storie in evidenza — non "post" in senso proprio) rendono
- * il nome "items" più onesto rispetto al contratto effettivo. Zero
+ * Oggi più tipi di contenuto (foto profilo, copertina, storie in
+ * evidenza — non "post" in senso proprio; in passato anche il feed della
+ * Home, poi sostituito dal redesign a card per area) rendono il nome
+ * "items" più onesto rispetto al contratto effettivo. Zero
  * cambi di comportamento: qualunque oggetto con la forma minima
  * `{ id, image?: {src, alt}, content?, author?, timestamp? }` funziona
  * esattamente come prima. La risoluzione "da un id a un item" resta,

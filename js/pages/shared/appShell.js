@@ -19,9 +19,11 @@
  * Home.
  *
  * DATA-DRIVEN, non hardcoded: i sottomenu vengono letti da
- * data/modules.json — coerente col principio di progetto "i contenuti
- * non devono essere scritti nel codice". DUE LIVELLI: ogni modulo con
- * "available: true" e degli "scenarios" diventa un gruppo del flyout
+ * data/modules.json (tramite js/utils/scenarioCatalog.js, lo stesso
+ * catalogo che alimenta le card per area della Home — una sola regola
+ * su quali aree sono visibili) — coerente col principio di progetto "i
+ * contenuti non devono essere scritti nel codice". DUE LIVELLI: ogni
+ * modulo con "available: true" e degli "scenarios" diventa un gruppo del flyout
  * "Scenari" (oggi Cybersecurity e AI, nell'ordine del file), con i
  * propri scenari sotto di sé. La struttura a due livelli — rimandata
  * finché c'era un solo modulo reale (YAGNI) — è stata introdotta nel
@@ -61,7 +63,7 @@ import { create as createProfileMenu } from "../../components/ProfileMenu.js";
 import { create as createSidebar } from "../../components/Sidebar.js";
 import { getCurrentUser, logout } from "../../services/authService.js";
 import { createLocalJsonRepository } from "../../repositories/localJsonRepository.js";
-import { buildFallbackMessage } from "../../utils/fallbackMessage.js";
+import { buildScenarioCatalog } from "../../utils/scenarioCatalog.js";
 
 // Unica fabbrica/URL per il sottomenu Sidebar: la cache di
 // localJsonRepository.js è per URL, non per istanza — nessuna richiesta
@@ -82,26 +84,24 @@ function getCurrentScenarioId() {
   return match ? match[1] : null;
 }
 
-// Una categoria (modulo disponibile con scenari) per ogni gruppo del
-// flyout "Scenari", ciascuna con i propri scenari — l'ordine è quello di
-// data/modules.json. Il secondo livello annunciato come "da rivalutare
-// quando un secondo modulo passerà a available:true" è questo: oggi
-// Cybersecurity e AI.
+// Una categoria (area disponibile con scenari) per ogni gruppo del flyout
+// "Scenari", ciascuna con i propri scenari — l'ordine è quello di
+// data/modules.json. QUALI aree/scenari esistono (e la loro rotta) lo
+// decide js/utils/scenarioCatalog.js, condiviso con la Home: qui resta
+// solo la forma che Sidebar.js si aspetta (id/label/expanded/children).
 function buildScenarioGroups(modules) {
   const currentScenarioId = getCurrentScenarioId();
-  return modules
-    .filter((moduleRecord) => moduleRecord.available && Array.isArray(moduleRecord.scenarios))
-    .map((moduleRecord) => ({
-      id: moduleRecord.id,
-      label: moduleRecord.title,
-      expanded: moduleRecord.scenarios.some((scenario) => scenario.id === currentScenarioId),
-      children: moduleRecord.scenarios.map((scenario) => ({
-        id: scenario.id,
-        label: scenario.title,
-        route: `#/scenario/${scenario.id}`,
-        disabled: !scenario.available,
-      })),
-    }));
+  return buildScenarioCatalog(modules).map((area) => ({
+    id: area.id,
+    label: area.title,
+    expanded: area.scenarios.some((scenario) => scenario.id === currentScenarioId),
+    children: area.scenarios.map((scenario) => ({
+      id: scenario.id,
+      label: scenario.title,
+      route: scenario.route,
+      disabled: !scenario.available,
+    })),
+  }));
 }
 
 export function createAppShell({ activeSidebarId } = {}) {

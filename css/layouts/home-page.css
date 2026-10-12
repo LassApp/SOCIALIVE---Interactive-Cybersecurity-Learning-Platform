@@ -1,33 +1,92 @@
 /**
  * home-page.css
  * -----------------------------------------------------------------------
- * Layout interno della rotta #/home reale. PageContainer possiede già
- * lo scheletro esterno (header/sidebar/main): questo file possiede SOLO
- * l'organizzazione del contenuto di #/home dentro l'area
- * .sl-page-container__main.
+ * Layout interno della rotta #/home. PageContainer possiede già lo
+ * scheletro esterno (header/sidebar/main): questo file possiede SOLO
+ * l'organizzazione del contenuto dentro .sl-page-container__main — stesso
+ * principio "componente vs layout di pagina" già seguito ovunque.
  *
- * RIMOSSE (nuovo): .sl-home-page__modules-grid e
- * .sl-home-page__section-title — dead code da quando
- * homePageController.js ha eliminato la sezione "Moduli" (ora
- * raggiungibili dal sottomenu della Sidebar, appShell.js). Nessun
- * consumer residuo le referenzia.
+ * Colonna centrata di 960px (era 640px quando conteneva il feed): le card
+ * delle aree stanno affiancate su desktop e la pagina resta leggibile su
+ * LIM/proiettore senza righe di testo troppo lunghe.
  *
- * Colonna unica centrata (max-width 640px) per il Feed: nessun nuovo
- * colore introdotto in questo file.
+ * Griglia delle aree: auto-fit con minmax(min(100%, 340px), 1fr) — il
+ * min(100%, …) è ciò che evita l'overflow orizzontale sotto i 340px di
+ * larghezza utile (a 375px la colonna utile è 335px: un minmax(340px, …)
+ * secco la farebbe sforare di 5px). Una colonna sotto ~700px, due sopra,
+ * senza media query dedicate. align-items:start: ogni card ha l'altezza
+ * del proprio contenuto (Cybersecurity ha più scenari di AI) invece di
+ * stirare la più corta con spazio vuoto.
+ *
+ * Nessun nuovo colore: text-primary per titoli, text-secondary per il
+ * sottotitolo — il secondo su bg-canvas (accostamento nuovo per questo
+ * token) è stato verificato numericamente: 5.75:1 Light / 8.23:1 Dark
+ * (soglia AA 4.5:1).
+ *
+ * .sl-home-page__content resta la classe radice di prima: le altre
+ * suite di test la usano per riconoscere "la Home è montata".
  */
 
 .sl-home-page__content {
-  max-width: 640px;
+  max-width: 960px;
   margin-inline: auto;
   display: flex;
   flex-direction: column;
   gap: var(--sl-space-8);
 }
 
-/* Wrapper dell'area popolata in modo asincrono (il Feed): stesso nodo su
-   cui il controller imposta aria-busy durante il caricamento. */
+.sl-home-page__intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-2);
+}
+
+.sl-home-page__title {
+  font-size: var(--sl-font-size-2xl);
+  font-weight: var(--sl-font-weight-bold);
+  line-height: var(--sl-line-height-tight);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-home-page__subtitle {
+  font-size: var(--sl-font-size-md);
+  color: var(--sl-color-text-secondary);
+}
+
+.sl-home-page__areas-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-4);
+}
+
+.sl-home-page__section-title {
+  font-size: var(--sl-font-size-lg);
+  font-weight: var(--sl-font-weight-semibold);
+  line-height: var(--sl-line-height-tight);
+  color: var(--sl-color-text-primary);
+}
+
 .sl-home-page__dynamic {
   display: flex;
   flex-direction: column;
-  gap: var(--sl-space-8);
+  gap: var(--sl-space-4);
+}
+
+.sl-home-page__areas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: var(--sl-space-6);
+  align-items: start;
+}
+
+/* Pattern ricorrente del progetto: una regola d'autore con "display"
+   batte lo stile UA di [hidden] — ridichiarato esplicitamente. */
+.sl-home-page__areas-grid[hidden] {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .sl-home-page__title {
+    font-size: var(--sl-font-size-xl);
+  }
 }

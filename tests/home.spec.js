@@ -1,37 +1,34 @@
 /**
  * home.spec.js
  * -----------------------------------------------------------------------
- * Copre la Home reale così com'è oggi nel codice sorgente DOPO la
- * riscrittura di Fase 10: homePageController.js legge realmente
- * data/modules.json e data/home/feed.json tramite localJsonRepository.js
- * (pattern asincrono identico a scenarioPageController.js). Include
- * anche le rifiniture di Fase 9/10 sulla Home: skip-link (WCAG 2.4.1),
- * <h1> nascosto, fade-in dell'immagine del post, micro-transizione di
+ * Copre la Home come PIATTAFORMA DIDATTICA (redesign): intestazione di
+ * benvenuto + una card per ogni area di data/modules.json (icona,
+ * descrizione, badge, scenari come link) e la ricerca che filtra aree e
+ * scenari. Include le regressioni sulle funzioni della shell che la Home
+ * monta: Sidebar con flyout "Scenari", skip-link (WCAG 2.4.1),
  * ProfileMenu.
  *
- * RIPRISTINATO (revert da Supabase Auth a sessione locale): rimossa la
- * deviazione { headless: false } — era necessaria solo contro un timeout
- * osservato in Chromium headless verso la rete di Supabase Auth, usata
- * qui tramite loginAsDocente(); nessuna chiamata di rete esterna resta
- * nel flusso di login, quindi la causa non si applica più (vedi
- * rationale completo in login.spec.js).
+ * RISCRITTO per il redesign: la Home non è più un finto feed social (il
+ * finto social vive solo nello scenario Oversharing). I controlli su
+ * post, "mi piace", fade-in dell'immagine e MediaViewer del feed della
+ * Home sono stati RIMOSSI perché quel comportamento non esiste più —
+ * cambio deliberato, non regressione. I quattro controlli che
+ * esercitavano codice ancora vivo (aspect-ratio/lazy, fade-in e sua
+ * idempotenza, "mi piace" di PostCard) sono stati MIGRATI in
+ * scenario.spec.js sul feed di Oversharing; l'apertura di MediaViewer è
+ * già coperta lì (post, avatar, copertina, storie).
  *
- * MODIFICATO (allineamento alla Sidebar con flyout "Moduli"): la griglia
- * di ModuleCard sopra il Feed è stata rimossa da homePageController.js
- * (i moduli sono ora raggiungibili dal sottomenu "Moduli" della Sidebar,
- * appShell.js/Sidebar.js, visibile su ogni rotta protetta) — ma questo
- * file continuava a referenziare ".sl-home-page__modules-grid" e la
- * pagina selettore "#/modules/:moduleId" come se fossero ancora il
- * percorso di navigazione reale: i test non erano mai stati riallineati
- * al nuovo codice (stessa classe di errore "handover/test che descrive
- * un comportamento non più reale" già documentata più volte nella
- * storia del progetto). Sostituiti con la copertura del flyout reale
- * (trigger aria-haspopup/aria-expanded, contenuto data-driven da
- * data/modules.json, navigazione diretta a #/scenario/:id) — mai
- * verificato prima d'ora in nessun file della suite.
+ * DATA-DRIVEN: le aree/scenari attesi si leggono da data/modules.json
+ * (stesso file della Home) — i test non ripetono i nomi, così
+ * aggiungere uno scenario al JSON non rompe la suite; i pochi test che
+ * usano query concrete ("phish", "tokeniz", ...) sono legati ai titoli
+ * attuali e lo dichiarano.
  *
- * ESTESO (post Fase 10, intervento "MediaViewer generico") con la
- * copertura dell'apertura del post di Mario Bianchi nel MediaViewer.
+ * "Raggiungibilità": ogni scenario disponibile viene aperto davvero
+ * cliccando il suo link in Home, e si verifica che il wrapper
+ * dell'engine non mostri stati di errore ("Impossibile caricare",
+ * "in preparazione") — criterio di accettazione "nessuno scenario
+ * escluso".
  */
 const assert = require("node:assert/strict");
 const path = require("node:path");
@@ -45,6 +42,34 @@ const { expandSidebarGroup } = require("./helpers/sidebar");
 const APP_ROOT = path.join(__dirname, "..");
 const SCREENSHOT_DIR = path.join(__dirname, "screenshots");
 
+// Fonte dei dati attesi: lo stesso data/modules.json letto dalla Home.
+const MODULES = JSON.parse(fs.readFileSync(path.join(APP_ROOT, "data", "modules.json"), "utf8")).modules;
+const isArea = (moduleRecord) => moduleRecord.available && Array.isArray(moduleRecord.scenarios);
+const AREAS = MODULES.filter(isArea);
+const PLACEHOLDER_MODULES = MODULES.filter((moduleRecord) => !isArea(moduleRecord));
+
+const SEARCH_INPUT = ".sl-app-header__search input";
+const VISIBLE_ITEM = ".sl-home-page__area-item:not([hidden])";
+
+async function visibleAreaTitles(page) {
+  return (await page.locator(`${VISIBLE_ITEM} .sl-area-card__title`).allTextContents()).map((t) => t.trim());
+}
+
+async function visibleScenarioTitles(page) {
+  return (await page.locator(`${VISIBLE_ITEM} .sl-area-card__scenario`).allTextContents()).map((t) => t.trim());
+}
+
+async function visibleBadges(page) {
+  return (await page.locator(`${VISIBLE_ITEM} .sl-badge`).allTextContents()).map((t) => t.trim());
+}
+
+async function goHome(page) {
+  await page.evaluate(() => {
+    window.location.hash = "#/home";
+  });
+  await page.waitForSelector(".sl-home-page__content .sl-area-card");
+}
+
 async function run() {
   const suite = createSuite("home.spec.js");
   const server = await startServer(APP_ROOT);
@@ -55,14 +80,21 @@ async function run() {
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
+    const consoleErrors = [];
+    const externalRequests = [];
+    page.on("console", (message) => {
+      if (message.type() === "error") consoleErrors.push(message.text());
+    });
+    page.on("pageerror", (error) => consoleErrors.push(`pageerror: ${error.message}`));
+    page.on("request", (request) => {
+      if (!request.url().startsWith(server.url) && !request.url().startsWith("data:")) {
+        externalRequests.push(request.url());
+      }
+    });
     await loginAsDocente(page, server.url);
-    // Due fetch asincrone indipendenti, non più una sola: il feed
-    // (data/home/feed.json, homePageController.js) e il sottomenu
-    // "Moduli" della Sidebar (data/modules.json, appShell.js) — la
-    // vecchia griglia moduli in Home è stata rimossa, i suoi contenuti
-    // vivono ora nel flyout della Sidebar (vedi rationale in
-    // appShell.js/Sidebar.js).
-    await page.waitForSelector(".sl-post-card");
+    // Due fetch indipendenti sullo stesso file (cache condivisa): le card
+    // della Home e il sottomenu "Scenari" della Sidebar (appShell.js).
+    await page.waitForSelector(".sl-area-card");
     await page.waitForSelector(".sl-sidebar__trigger");
 
     await suite.test("document.title corretto su #/home", async () => {
@@ -75,11 +107,18 @@ async function run() {
       assert.equal(await page.locator("main.sl-page-container__main").count(), 1);
     });
 
-    await suite.test("<h1> visivamente nascosto con testo 'Home' (Fase 9, WCAG 2.4.6/1.3.1)", async () => {
+    await suite.test("<h1> unico e VISIBILE: saluto con il nome dalla sessione (WCAG 2.4.6/1.3.1)", async () => {
       const h1 = page.locator("main h1");
       assert.equal(await h1.count(), 1);
-      assert.equal((await h1.textContent()).trim(), "Home");
-      assert.ok(await h1.evaluate((el) => el.classList.contains("sl-visually-hidden")));
+      assert.equal(await h1.isVisible(), true);
+      assert.equal((await h1.textContent()).trim(), "Benvenuto, Prof. Erasmo Lassandro");
+      assert.equal(await h1.evaluate((el) => el.classList.contains("sl-visually-hidden")), false);
+    });
+
+    await suite.test("gerarchia delle intestazioni: h1 → h2 'Aree di formazione' → un h3 per area", async () => {
+      const levels = await page.locator("main h1, main h2, main h3").evaluateAll((els) => els.map((el) => el.tagName));
+      assert.deepEqual(levels, ["H1", "H2", ...AREAS.map(() => "H3")]);
+      assert.equal((await page.locator("main h2").textContent()).trim(), "Aree di formazione");
     });
 
     await suite.test("Sidebar: 'Scenari' è un trigger con sottomenu, chiuso di default (aria-haspopup/aria-expanded)", async () => {
@@ -120,88 +159,467 @@ async function run() {
       assert.equal(await settingsItem.getAttribute("tabindex"), null);
     });
 
-    await suite.test("Feed: 3 post, autori corretti, nessun riferimento a 'Prof. Anna Ferrari'", async () => {
-      const authors = await page.locator(".sl-post-card__author").allTextContents();
-      assert.deepEqual(authors, ["Mario Bianchi", "Giulia Conti", "Laura Ferretti"]);
+
+    await suite.test("nessun contenuto da social network in Home: né feed, né post, né storie, né profilo", async () => {
+      for (const selector of [".sl-feed", ".sl-post-card", ".sl-stories-bar", ".sl-profile-timeline", ".sl-timeline", ".sl-media-viewer-overlay"]) {
+        assert.equal(await page.locator(selector).count(), 0, `trovato "${selector}" nella Home`);
+      }
       const bodyText = await page.evaluate(() => document.body.innerText);
       assert.ok(!bodyText.includes("Anna Ferrari"), "trovato il nome placeholder scartato 'Prof. Anna Ferrari'");
     });
 
-    await suite.test("nessun autore ha avatarSrc (feed.json): fallback a iniziali per tutti e tre", async () => {
-      const initials = await page.locator(".sl-post-card .sl-avatar__fallback").allTextContents();
-      assert.deepEqual(initials.map((t) => t.trim()), ["MB", "GC", "LF"]);
+    await suite.test("una card per ogni area di modules.json, nell'ordine del file; le aree segnaposto non compaiono", async () => {
+      assert.deepEqual(
+        (await page.locator(".sl-area-card__title").allTextContents()).map((t) => t.trim()),
+        AREAS.map((area) => area.title)
+      );
+      const shown = await page.locator(".sl-area-card__title").allTextContents();
+      PLACEHOLDER_MODULES.forEach((moduleRecord) => {
+        assert.ok(!shown.map((t) => t.trim()).includes(moduleRecord.title), `l'area segnaposto "${moduleRecord.title}" compare in Home`);
+      });
     });
 
-    await suite.test("immagine del primo post: aspect-ratio riservato + loading=lazy (Fase 9)", async () => {
-      const img = page.locator(".sl-post-card").nth(0).locator(".sl-post-card__media-image");
-      assert.equal(await img.getAttribute("loading"), "lazy");
-      const aspectRatio = await img.evaluate((el) => getComputedStyle(el).aspectRatio);
-      assert.notEqual(aspectRatio, "auto", "aspect-ratio non applicato: rischio di layout shift");
+    await suite.test("ogni card: descrizione e badge con il numero di scenari letti dal JSON", async () => {
+      for (const area of AREAS) {
+        const item = page.locator(`.sl-home-page__area-item[data-area-id="${area.id}"]`);
+        const description = item.locator(".sl-area-card__description");
+        if (area.description) {
+          assert.equal((await description.textContent()).trim(), area.description);
+        } else {
+          assert.equal(await description.isHidden(), true);
+        }
+        const noun = area.scenarios.length === 1 ? "scenario" : "scenari";
+        assert.equal((await item.locator(".sl-badge").textContent()).trim(), `${area.scenarios.length} ${noun}`);
+      }
     });
 
-    await suite.test("Fase 9/#11: l'immagine del post riceve la classe di fade-in al caricamento", async () => {
-      const img = page.locator(".sl-post-card").nth(0).locator(".sl-post-card__media-image");
-      await img.evaluate((el) => el.classList.contains("sl-fade-in-image"));
-      await page.waitForFunction(
-        (selector) => document.querySelector(selector)?.classList.contains("sl-fade-in-image--loaded"),
-        ".sl-post-card__media-image",
-        { timeout: 2000 }
+    await suite.test("ogni scenario è un vero link <a href='#/scenario/:id'> con il titolo come nome accessibile, nell'ordine del JSON", async () => {
+      for (const area of AREAS) {
+        const links = page.locator(`.sl-home-page__area-item[data-area-id="${area.id}"] a.sl-area-card__scenario`);
+        const expected = area.scenarios.filter((scenario) => scenario.available);
+        assert.equal(await links.count(), expected.length);
+        for (let i = 0; i < expected.length; i += 1) {
+          assert.equal(await links.nth(i).getAttribute("href"), `#/scenario/${expected[i].id}`);
+          assert.equal((await links.nth(i).textContent()).trim(), expected[i].title);
+        }
+        const list = page.locator(`.sl-home-page__area-item[data-area-id="${area.id}"] .sl-area-card__scenarios`);
+        assert.equal(await list.getAttribute("aria-label"), `Scenari di ${area.title}`);
+      }
+    });
+
+    await suite.test("icone: ogni area con 'icon' mostra il glifo come maschera (file SVG realmente servito, 32x32)", async () => {
+      for (const area of AREAS.filter((a) => a.icon)) {
+        const glyph = page.locator(`.sl-home-page__area-item[data-area-id="${area.id}"] .sl-area-card__glyph`);
+        assert.equal(await glyph.count(), 1, `nessun glifo per "${area.title}"`);
+        const mask = await glyph.evaluate((el) => getComputedStyle(el).maskImage || getComputedStyle(el).webkitMaskImage);
+        assert.ok(mask.includes(area.icon), `mask-image non punta a ${area.icon}: ${mask}`);
+        const response = await page.request.get(`${server.url}/${area.icon}`);
+        assert.equal(response.status(), 200, `${area.icon} non raggiungibile`);
+        const box = await glyph.boundingBox();
+        assert.equal(Math.round(box.width), 32);
+        assert.equal(Math.round(box.height), 32);
+      }
+    });
+
+    await suite.test("l'icona è decorativa (aria-hidden) e ha colore diverso dallo sfondo del cerchio", async () => {
+      const icon = page.locator(".sl-area-card__icon").first();
+      assert.equal(await icon.getAttribute("aria-hidden"), "true");
+      const colors = await icon.evaluate((el) => ({
+        background: getComputedStyle(el).backgroundColor,
+        glyph: getComputedStyle(el.querySelector(".sl-area-card__glyph")).backgroundColor,
+      }));
+      assert.notEqual(colors.background, colors.glyph);
+    });
+
+    await suite.test("nessun overflow orizzontale a 1280px", async () => {
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth),
+        false
       );
     });
 
-    await suite.test("Fase 9/#11: un update() per il solo 'mi piace' non fa ripartire il fade-in della stessa immagine", async () => {
-      const img = page.locator(".sl-post-card").nth(0).locator(".sl-post-card__media-image");
-      const likeButton = page.locator(".sl-post-card").nth(0).locator(".sl-post-card__action--like");
-      await likeButton.click();
-      await page.waitForTimeout(50);
-      assert.ok(await img.evaluate((el) => el.classList.contains("sl-fade-in-image--loaded")));
+    await suite.test("etica: nessuna richiesta di rete verso host esterni durante il caricamento della Home", async () => {
+      assert.deepEqual(externalRequests, []);
     });
 
-    await suite.test("Mi piace: click aggiorna aria-pressed e contatore", async () => {
-      const likeButton = page.locator(".sl-post-card").nth(1).locator(".sl-post-card__action--like");
-      const before = await likeButton.getAttribute("aria-pressed");
-      await likeButton.click();
-      await page.waitForTimeout(50);
-      const after = await likeButton.getAttribute("aria-pressed");
-      assert.notEqual(before, after);
+    await suite.test("console priva di errori durante il caricamento della Home", async () => {
+      assert.deepEqual(consoleErrors, []);
     });
 
     await context.close();
   }
 
-  // --- MediaViewer sul feed della Home (nuovo, post Fase 10) ----------
+  // --- Raggiungibilità: ogni scenario di ogni area si apre dalla Home ------
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
-    await page.waitForSelector(".sl-post-card");
+    await page.waitForSelector(".sl-area-card");
 
-    await suite.test("click sull'immagine del post di Mario Bianchi -> MediaViewer si apre", async () => {
-      await page.click(".sl-post-card >> nth=0 >> .sl-post-card__media");
-      await page.waitForSelector(".sl-media-viewer-overlay");
-      const author = await page.locator(".sl-media-viewer__author-name").textContent();
-      assert.equal(author.trim(), "Mario Bianchi");
-      const position = await page.locator(".sl-media-viewer__position").textContent();
-      assert.equal(position.trim(), "1 di 3");
+    for (const area of AREAS) {
+      for (const scenario of area.scenarios.filter((s) => s.available)) {
+        await suite.test(`scenario "${scenario.title}" (${area.title}): raggiungibile dalla Home e si apre senza stati di errore`, async () => {
+          await goHome(page);
+          await page.click(`.sl-area-card__scenario[href="#/scenario/${scenario.id}"]`);
+          await page.waitForFunction((id) => window.location.hash === `#/scenario/${id}`, scenario.id);
+          const wrapper = `.sl-scenario-viewport[data-scenario-id="${scenario.id}"]:not([aria-busy])`;
+          // "attached", non "visible": gli scenari immersivi (es. Phishing)
+          // posizionano il proprio contenuto fuori dal flusso, quindi il
+          // wrapper dell'engine ha dimensioni nulle pur essendo montato.
+          await page.waitForSelector(wrapper, { state: "attached" });
+          const state = await page.locator(wrapper).evaluate((el) => ({ children: el.childElementCount, text: el.innerText }));
+          assert.ok(state.children > 0, "il wrapper dello scenario è vuoto");
+          assert.ok(
+            !/Impossibile caricare|in preparazione|non è disponibile/i.test(state.text),
+            `lo scenario mostra uno stato di errore: ${state.text.slice(0, 80)}`
+          );
+        });
+      }
+    }
+
+    await context.close();
+  }
+
+  // --- Ricerca: filtro per nome di area o di scenario -----------------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await loginAsDocente(page, server.url);
+    await page.waitForSelector(".sl-area-card");
+    const status = page.locator(".sl-home-page__areas-section p[role='status']");
+    const emptyMessage = page.locator(".sl-home-page__dynamic > p");
+
+    // Le query concrete di questo blocco sono legate ai titoli attuali di
+    // data/modules.json (Cybersecurity/AI e i loro scenari).
+    await suite.test("stato iniziale: tutte le aree e tutti gli scenari visibili, nessun messaggio", async () => {
+      assert.deepEqual(await visibleAreaTitles(page), AREAS.map((a) => a.title));
+      assert.equal(await page.locator(`${VISIBLE_ITEM} .sl-area-card__scenario`).count(), AREAS.reduce((n, a) => n + a.scenarios.length, 0));
+      assert.equal(await emptyMessage.isHidden(), true);
+      assert.equal(((await status.textContent()) || "").trim(), "", "l'annuncio non deve parlare prima di una ricerca");
     });
 
-    await suite.test("navigazione successiva: post di Giulia Conti, senza immagine -> testo centrato", async () => {
-      await page.click(".sl-media-viewer__nav--next");
-      const author = await page.locator(".sl-media-viewer__author-name").textContent();
-      assert.equal(author.trim(), "Giulia Conti");
-      assert.equal(await page.locator(".sl-media-viewer__text-content").count(), 1);
+    await suite.test("nome di scenario: 'phish' mostra solo l'area che lo contiene, con il solo scenario, badge '1 di 4 scenari'", async () => {
+      await page.fill(SEARCH_INPUT, "phish");
+      assert.deepEqual(await visibleAreaTitles(page), ["Cybersecurity"]);
+      assert.deepEqual(await visibleScenarioTitles(page), ["Phishing"]);
+      assert.deepEqual(await visibleBadges(page), ["1 di 4 scenari"]);
+      assert.equal(await page.locator(".sl-home-page__area-item[data-area-id='ai']").isHidden(), true);
     });
 
-    await suite.test("chiusura con Escape -> Home intatta, nessun residuo", async () => {
-      await page.keyboard.press("Escape");
-      await page.waitForSelector(".sl-media-viewer-overlay", { state: "detached" });
-      assert.equal(await page.evaluate(() => window.location.hash), "#/home");
-      assert.equal(await page.locator(".sl-post-card").count(), 3);
+    await suite.test("scenario di un'altra area: 'tokeniz' porta all'area AI, badge '1 di 2 scenari'", async () => {
+      await page.fill(SEARCH_INPUT, "tokeniz");
+      assert.deepEqual(await visibleAreaTitles(page), ["AI"]);
+      assert.deepEqual(await visibleScenarioTitles(page), ["Tokenizzazione"]);
+      assert.deepEqual(await visibleBadges(page), ["1 di 2 scenari"]);
+    });
+
+    await suite.test("nome di area: 'cyber' mostra Cybersecurity con TUTTI i suoi scenari, badge '4 scenari'", async () => {
+      await page.fill(SEARCH_INPUT, "cyber");
+      assert.deepEqual(await visibleAreaTitles(page), ["Cybersecurity"]);
+      assert.equal((await visibleScenarioTitles(page)).length, 4);
+      assert.deepEqual(await visibleBadges(page), ["4 scenari"]);
+    });
+
+    await suite.test("nome d'area corto: 'AI' mostra l'area AI con i suoi 2 scenari", async () => {
+      await page.fill(SEARCH_INPUT, "AI");
+      assert.deepEqual(await visibleAreaTitles(page), ["AI"]);
+      assert.deepEqual(await visibleScenarioTitles(page), ["Tokenizzazione", "Allucinazioni"]);
+    });
+
+    await suite.test("ignora maiuscole, accenti, spazi e punteggiatura: 'WIFI', 'wi-fi', 'Evil  Twin' → Evil Twin Wi-Fi", async () => {
+      for (const query of ["WIFI", "wi-fi", "Evil  Twin"]) {
+        await page.fill(SEARCH_INPUT, query);
+        const scenarios = await visibleScenarioTitles(page);
+        assert.equal(scenarios.length, 1, `la query "${query}" ha prodotto ${scenarios.length} scenari`);
+      }
+      await page.fill(SEARCH_INPUT, "wi-fi");
+      assert.deepEqual(await visibleScenarioTitles(page), ["Evil Twin Wi-Fi"]);
+      await page.fill(SEARCH_INPUT, "àllucinazioni");
+      assert.deepEqual(await visibleScenarioTitles(page), ["Allucinazioni"], "un accento in più nella query non deve impedire la corrispondenza");
+    });
+
+    await suite.test("più scenari della stessa area: 'ing' mostra Oversharing e Phishing sotto Cybersecurity", async () => {
+      await page.fill(SEARCH_INPUT, "ing");
+      assert.deepEqual(await visibleAreaTitles(page), ["Cybersecurity"]);
+      assert.deepEqual(await visibleScenarioTitles(page), ["Oversharing", "Phishing"]);
+      assert.deepEqual(await visibleBadges(page), ["2 di 4 scenari"]);
+    });
+
+    await suite.test("annuncio aria-live: area/i e scenario/i trovati, con singolari e plurali corretti", async () => {
+      await page.fill(SEARCH_INPUT, "phish");
+      assert.equal((await status.textContent()).trim(), "1 area e 1 scenario trovati");
+      await page.fill(SEARCH_INPUT, "cyber");
+      assert.equal((await status.textContent()).trim(), "1 area e 4 scenari trovati");
+    });
+
+    await suite.test("nessun risultato: messaggio visibile col testo cercato, griglia nascosta, annuncio coerente", async () => {
+      await page.fill(SEARCH_INPUT, "zzzz");
+      assert.deepEqual(await visibleAreaTitles(page), []);
+      assert.equal(await emptyMessage.isVisible(), true);
+      assert.equal((await emptyMessage.textContent()).trim(), "Nessun risultato per \u00abzzzz\u00bb.");
+      assert.equal(await page.locator(".sl-home-page__areas-grid").isHidden(), true);
+      assert.equal((await status.textContent()).trim(), "Nessun risultato per \u00abzzzz\u00bb.");
+    });
+
+    await suite.test("il testo cercato è inserito come testo, mai come HTML (nessuna iniezione dal campo di ricerca)", async () => {
+      await page.fill(SEARCH_INPUT, "<img src=x onerror=window.__xss=1>");
+      assert.equal(await emptyMessage.locator("img").count(), 0);
+      assert.equal(await page.evaluate(() => window.__xss), undefined);
+    });
+
+    await suite.test("le aree segnaposto (non disponibili) non sono cercabili", async () => {
+      assert.ok(PLACEHOLDER_MODULES.length > 0, "il test presuppone almeno un modulo segnaposto in modules.json");
+      await page.fill(SEARCH_INPUT, PLACEHOLDER_MODULES[0].title);
+      assert.deepEqual(await visibleAreaTitles(page), []);
+    });
+
+    await suite.test("svuotare la ricerca ripristina aree, scenari e badge; messaggio nascosto; annuncio 'Tutte le aree mostrate'", async () => {
+      await page.fill(SEARCH_INPUT, "");
+      assert.deepEqual(await visibleAreaTitles(page), AREAS.map((a) => a.title));
+      assert.equal(await page.locator(`${VISIBLE_ITEM} .sl-area-card__scenario`).count(), AREAS.reduce((n, a) => n + a.scenarios.length, 0));
+      assert.deepEqual(await visibleBadges(page), AREAS.map((a) => `${a.scenarios.length} scenari`));
+      assert.equal(await emptyMessage.isHidden(), true);
+      assert.equal(await page.locator(".sl-home-page__areas-grid").isVisible(), true);
+      assert.equal((await status.textContent()).trim(), "Tutte le aree mostrate");
+    });
+
+    await suite.test("digitare non sposta il focus dalla barra di ricerca", async () => {
+      await page.fill(SEARCH_INPUT, "phish");
+      assert.equal(await page.evaluate(() => document.activeElement.type), "search");
+    });
+
+    await suite.test("un risultato filtrato è cliccabile: 'phish' → Phishing → #/scenario/phishing", async () => {
+      await page.click(`${VISIBLE_ITEM} a.sl-area-card__scenario`);
+      await page.waitForFunction(() => window.location.hash === "#/scenario/phishing");
+      await page.waitForSelector(".sl-scenario-viewport[data-scenario-id='phishing']:not([aria-busy])", { state: "attached" });
+    });
+
+    await suite.test("tornando alla Home la ricerca riparte da zero (barra vuota, tutte le aree)", async () => {
+      await goHome(page);
+      assert.equal(await page.inputValue(SEARCH_INPUT), "");
+      assert.deepEqual(await visibleAreaTitles(page), AREAS.map((a) => a.title));
     });
 
     await context.close();
   }
 
+  // --- Ricerca digitata PRIMA che modules.json risolva ----------------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    await context.route("**/data/modules.json", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      await route.continue();
+    });
+    const page = await context.newPage();
+    await loginAsDocente(page, server.url);
+
+    await suite.test("una ricerca digitata prima del caricamento si applica al primo render delle card", async () => {
+      assert.equal(await page.locator(".sl-area-card").count(), 0, "le card non dovrebbero esistere prima della risposta");
+      assert.equal(await page.locator(".sl-home-page__dynamic").getAttribute("aria-busy"), "true");
+      await page.fill(SEARCH_INPUT, "tokeniz");
+      await page.waitForSelector(".sl-home-page__dynamic:not([aria-busy])");
+      assert.deepEqual(await visibleAreaTitles(page), ["AI"]);
+      assert.equal(await page.locator(".sl-home-page__dynamic").getAttribute("aria-busy"), null);
+    });
+
+    await context.close();
+  }
+
+  // --- Dati diversi → Home diversa, senza toccare il codice -----------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const requested = [];
+    const customModules = {
+      modules: [
+        ...MODULES,
+        {
+          id: "cyberbullismo",
+          title: "Cyberbullismo",
+          available: true,
+          scenarios: [
+            { id: "chat-demo", title: "Chat di classe", available: true },
+            { id: "prossimo", title: "Prossimo scenario", available: false },
+          ],
+        },
+        {
+          id: "icona-esterna",
+          title: "Esterna",
+          available: true,
+          description: "Area con icona non valida",
+          icon: "https://evil.example/x.svg",
+          scenarios: [{ id: "s-esterno", title: "Scenario esterno", available: true }],
+        },
+      ],
+    };
+    await context.route("**/data/modules.json", (route) =>
+      route.fulfill({ contentType: "application/json", body: JSON.stringify(customModules) })
+    );
+    const page = await context.newPage();
+    page.on("request", (request) => requested.push(request.url()));
+    await loginAsDocente(page, server.url);
+    await page.waitForSelector(".sl-area-card");
+
+    await suite.test("un'area aggiunta al JSON compare in Home senza modifiche al codice (4 card)", async () => {
+      assert.deepEqual(await visibleAreaTitles(page), [...AREAS.map((a) => a.title), "Cyberbullismo", "Esterna"]);
+    });
+
+    await suite.test("area senza icona né descrizione: ripiega sulle iniziali, descrizione nascosta, scenari corretti", async () => {
+      const item = page.locator(".sl-home-page__area-item[data-area-id='cyberbullismo']");
+      assert.equal((await item.locator(".sl-area-card__icon").textContent()).trim(), "CY");
+      assert.equal(await item.locator(".sl-area-card__glyph").count(), 0);
+      assert.equal(await item.locator(".sl-area-card__description").isHidden(), true);
+      assert.equal((await item.locator(".sl-badge").textContent()).trim(), "2 scenari");
+    });
+
+    await suite.test("scenario non disponibile: riga non cliccabile (aria-disabled, nessun href), mai un link", async () => {
+      const item = page.locator(".sl-home-page__area-item[data-area-id='cyberbullismo']");
+      assert.equal(await item.locator("a.sl-area-card__scenario").count(), 1);
+      assert.equal(await item.locator("a.sl-area-card__scenario").getAttribute("href"), "#/scenario/chat-demo");
+      const disabled = item.locator(".sl-area-card__scenario--disabled");
+      assert.equal(await disabled.count(), 1);
+      assert.equal(await disabled.getAttribute("aria-disabled"), "true");
+      assert.equal(await disabled.getAttribute("href"), null);
+      assert.equal(await disabled.getAttribute("tabindex"), null);
+    });
+
+    await suite.test("percorso icona non sicuro (URL esterno): ignorato, nessuna richiesta verso quell'host, iniziali al suo posto", async () => {
+      const item = page.locator(".sl-home-page__area-item[data-area-id='icona-esterna']");
+      assert.equal((await item.locator(".sl-area-card__icon").textContent()).trim(), "ES");
+      assert.equal(await item.locator(".sl-area-card__glyph").count(), 0);
+      assert.deepEqual(requested.filter((url) => url.includes("evil.example")), []);
+    });
+
+    await suite.test("Sidebar e Home condividono lo stesso catalogo: il flyout elenca le stesse aree (stesso ordine)", async () => {
+      await page.hover(".sl-sidebar__trigger");
+      await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
+      const groups = (await page.locator(".sl-sidebar__group-trigger").allTextContents()).map((t) => t.trim());
+      assert.deepEqual(groups, [...AREAS.map((a) => a.title), "Cyberbullismo", "Esterna"]);
+    });
+
+    await suite.test("la ricerca trova anche scenari di aree aggiunte: 'chat' → Cyberbullismo, badge '1 di 2 scenari'", async () => {
+      await page.fill(SEARCH_INPUT, "chat");
+      assert.deepEqual(await visibleAreaTitles(page), ["Cyberbullismo"]);
+      assert.deepEqual(await visibleBadges(page), ["1 di 2 scenari"]);
+    });
+
+    await context.close();
+  }
+
+  // --- Errore di rete su modules.json ---------------------------------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    await context.route("**/data/modules.json", (route) => route.fulfill({ status: 500, body: "errore" }));
+    const page = await context.newPage();
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await loginAsDocente(page, server.url);
+    await page.waitForSelector(".sl-home-page__dynamic:not([aria-busy])");
+
+    await suite.test("modules.json non raggiungibile: saluto presente, messaggio di errore condiviso, nessun crash", async () => {
+      assert.equal((await page.locator("main h1").textContent()).trim(), "Benvenuto, Prof. Erasmo Lassandro");
+      assert.equal(await page.locator(".sl-area-card").count(), 0);
+      assert.equal(
+        (await page.locator(".sl-home-page__dynamic").innerText()).trim(),
+        "Impossibile caricare le aree. Riprova più tardi."
+      );
+      assert.deepEqual(errors, []);
+    });
+
+    await context.close();
+  }
+
+  // --- Navigazione via prima che modules.json risolva (race condition) -----
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    await context.route("**/data/modules.json", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      await route.continue();
+    });
+    const page = await context.newPage();
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await loginAsDocente(page, server.url);
+
+    await suite.test("navigare via prima della risposta: nessun componente orfano, nessun errore, un solo AppHeader", async () => {
+      await page.evaluate(() => {
+        window.location.hash = "#/scenario/oversharing";
+      });
+      await page.waitForSelector(".sl-profile-timeline", { timeout: 8000 });
+      await page.waitForTimeout(1500); // oltre il ritardo: la risposta tardiva non deve costruire nulla
+      assert.equal(await page.locator(".sl-area-card").count(), 0);
+      assert.equal(await page.locator(".sl-app-header").count(), 1);
+      assert.deepEqual(errors, []);
+    });
+
+    await context.close();
+  }
+
+  // --- Tastiera ---------------------------------------------------------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await loginAsDocente(page, server.url);
+    await page.waitForSelector(".sl-area-card");
+
+    await suite.test("tastiera: il primo scenario della prima area è raggiungibile con Tab, ha il focus visibile e Invio lo apre", async () => {
+      const firstScenario = AREAS[0].scenarios.find((s) => s.available);
+      let focusedHref = null;
+      for (let i = 0; i < 20; i += 1) {
+        await page.keyboard.press("Tab");
+        focusedHref = await page.evaluate(() => document.activeElement.getAttribute("href"));
+        if (focusedHref && focusedHref.startsWith("#/scenario/")) break;
+      }
+      assert.equal(focusedHref, `#/scenario/${firstScenario.id}`, "il Tab non ha raggiunto il primo scenario entro 20 pressioni");
+      const outline = await page.evaluate(() => {
+        const style = getComputedStyle(document.activeElement);
+        return { style: style.outlineStyle, width: parseFloat(style.outlineWidth) };
+      });
+      assert.notEqual(outline.style, "none", "nessun outline sul link focalizzato");
+      assert.ok(outline.width > 0);
+      await page.keyboard.press("Enter");
+      await page.waitForFunction((id) => window.location.hash === `#/scenario/${id}`, firstScenario.id);
+    });
+
+    await context.close();
+  }
+
+  // --- Mobile 375px: la Home è l'UNICO accesso agli scenari ------------------
+  {
+    const context = await browser.newContext({ viewport: { width: 375, height: 800 } });
+    const page = await context.newPage();
+    await loginAsDocente(page, server.url);
+    await page.waitForSelector(".sl-area-card");
+
+    await suite.test("375px: Sidebar e ricerca sono nascoste ma ogni scenario resta raggiungibile dalle card", async () => {
+      assert.equal(await page.locator(".sl-sidebar").isVisible(), false);
+      assert.equal(await page.locator(".sl-app-header__search").isVisible(), false);
+      const visibleLinks = await page.locator("a.sl-area-card__scenario").evaluateAll(
+        (els) => els.filter((el) => el.offsetParent !== null).length
+      );
+      assert.equal(visibleLinks, AREAS.flatMap((a) => a.scenarios).filter((s) => s.available).length);
+    });
+
+    await suite.test("375px: nessun overflow orizzontale, card a colonna unica a tutta larghezza", async () => {
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth),
+        false
+      );
+      const lefts = await page.locator(".sl-area-card").evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().left)));
+      assert.equal(new Set(lefts).size, 1, "le card non sono incolonnate");
+    });
+
+    await suite.test("375px: target di tocco degli scenari ≥ 44px (WCAG 2.5.5)", async () => {
+      const heights = await page.locator("a.sl-area-card__scenario").evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height));
+      heights.forEach((h) => assert.ok(h >= 44, `target alto solo ${h}px`));
+    });
+
+    await suite.test("375px: toccare uno scenario apre lo scenario", async () => {
+      await page.click("a.sl-area-card__scenario >> nth=0");
+      await page.waitForFunction(() => window.location.hash.startsWith("#/scenario/"));
+    });
+
+    await context.close();
+  }
 
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -259,7 +677,7 @@ async function run() {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
-    await page.waitForSelector(".sl-post-card");
+    await page.waitForSelector(".sl-area-card");
     await page.waitForSelector(".sl-sidebar__trigger");
 
     await suite.test("screenshot Home — desktop Light", async () => {
@@ -268,8 +686,16 @@ async function run() {
 
     await suite.test("screenshot Home — desktop Dark", async () => {
       await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+      await page.waitForTimeout(350); // body ha una transizione di 200ms sul cambio tema: evita screenshot a metà
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, "home-desktop-dark.png"), fullPage: true });
       await page.evaluate(() => document.documentElement.setAttribute("data-theme", "light"));
+      await page.waitForTimeout(350);
+    });
+
+    await suite.test("screenshot Home — desktop Light con ricerca attiva ('phish')", async () => {
+      await page.fill(SEARCH_INPUT, "phish");
+      await page.screenshot({ path: path.join(SCREENSHOT_DIR, "home-search-light.png"), fullPage: true });
+      await page.fill(SEARCH_INPUT, "");
     });
 
     for (const width of [768, 900, 1024]) {
@@ -283,9 +709,13 @@ async function run() {
       });
     }
 
-    await suite.test("screenshot Home — mobile 375px, Sidebar/ricerca nascoste", async () => {
+    await suite.test("screenshot Home — mobile 375px (Light e Dark), Sidebar/ricerca nascoste", async () => {
       await page.setViewportSize({ width: 375, height: 800 });
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, "home-mobile-375.png"), fullPage: true });
+      await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+      await page.waitForTimeout(350);
+      await page.screenshot({ path: path.join(SCREENSHOT_DIR, "home-mobile-375-dark.png"), fullPage: true });
+      await page.evaluate(() => document.documentElement.setAttribute("data-theme", "light"));
       assert.equal(await page.locator(".sl-sidebar").isVisible(), false);
       assert.equal(await page.locator(".sl-app-header__search").isVisible(), false);
     });
@@ -299,19 +729,11 @@ async function run() {
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
     await page.waitForSelector(".sl-sidebar__trigger");
+    await page.waitForSelector(".sl-area-card");
 
-    await suite.test("navigazione Home -> flyout Scenari -> Cybersecurity -> Oversharing -> Home: nessun componente duplicato", async () => {
-      // hover, non click: un click() di Playwright genera un vero
-      // mousemove che fa scattare "mouseenter" sul trigger PRIMA del
-      // click stesso — Sidebar.js apre il flyout all'hover (mouseenter
-      // sull'intera <li>) e poi handleTriggerClick(), vedendo isOpen
-      // già true, lo richiuderebbe subito dopo (stesso comportamento
-      // per un utente reale con mouse: hover apre, un click successivo
-      // sul trigger già aperto lo toggla chiuso — per questo il codice
-      // riserva esplicitamente il click al caso tastiera/touch, dove
-      // l'hover non esiste). hover() riproduce fedelmente il percorso
-      // mouse reale (apre via mouseenter, nessun secondo click sul
-      // trigger).
+    await suite.test("Home -> flyout Scenari -> Cybersecurity -> Oversharing -> Home: nessun componente duplicato, nessun feed", async () => {
+      // hover, non click: vedi helpers/sidebar.js (un click() apre il
+      // flyout via mouseenter e lo richiude subito col proprio toggle).
       await page.hover(".sl-sidebar__trigger");
       await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
       await expandSidebarGroup(page, "Cybersecurity");
@@ -320,16 +742,21 @@ async function run() {
       await page.waitForSelector(".sl-profile-timeline");
       await page.click(".sl-sidebar__link[href='#/home']");
       await page.waitForFunction(() => window.location.hash === "#/home");
-      // ".sl-post-card" da solo è ambiguo qui: appena l'hash cambia
-      // (sincrono) ma prima che l'evento "hashchange" async di router.js
-      // abbia sostituito il DOM, i 12 post-card di Oversharing sono
-      // ancora presenti — un semplice waitForSelector(".sl-post-card")
-      // li intercetterebbe come falso positivo. ".sl-home-page__content"
-      // esiste SOLO su Home: aspettarlo garantisce che lo swap sia già
-      // avvenuto prima di contare i post-card al suo interno.
-      await page.waitForSelector(".sl-home-page__content .sl-post-card");
+      // ".sl-home-page__content" esiste SOLO su Home: aspettarlo
+      // garantisce che lo swap async di router.js sia avvenuto prima di
+      // contare le card (l'hash cambia in modo sincrono, il DOM no).
+      await page.waitForSelector(".sl-home-page__content .sl-area-card");
       assert.equal(await page.locator(".sl-app-header").count(), 1);
-      assert.equal(await page.locator(".sl-post-card").count(), 3);
+      assert.equal(await page.locator(".sl-area-card").count(), AREAS.length);
+      assert.equal(await page.locator(".sl-post-card").count(), 0, "il feed di Oversharing non deve restare in Home");
+    });
+
+    await suite.test("Home -> card (link diretto) -> scenario -> Home: ancora una card per area, nessun duplicato", async () => {
+      await page.click("a.sl-area-card__scenario >> nth=0");
+      await page.waitForFunction(() => window.location.hash.startsWith("#/scenario/"));
+      await goHome(page);
+      assert.equal(await page.locator(".sl-app-header").count(), 1);
+      assert.equal(await page.locator(".sl-area-card").count(), AREAS.length);
     });
 
     await context.close();
