@@ -562,7 +562,7 @@ async function run() {
       assert.equal(await homeButton.getAttribute("href"), "#/home");
       assert.equal(await homeButton.getAttribute("aria-label"), "Vai alla Home");
       const order = await page.locator(".sl-app-header__brand-group").evaluate((el) => Array.from(el.children).map((c) => c.className));
-      assert.deepEqual(order, ["sl-app-header__brand", "sl-app-header__home"]);
+      assert.deepEqual(order, ["sl-app-header__sidebar-toggle", "sl-app-header__brand", "sl-app-header__home"]);
       const brand = await page.locator(".sl-app-header__brand").boundingBox();
       const home = await homeButton.boundingBox();
       assert.ok(home.x >= brand.x + brand.width - 1, "il tasto Home non sta a destra del marchio");
@@ -578,8 +578,22 @@ async function run() {
       assert.equal(await homeButton.getAttribute("aria-current"), "page");
     });
 
-    await suite.test("tastiera: dopo lo skip-link il tasto Home è il primo elemento focalizzabile, con focus visibile", async () => {
+    await suite.test("il tasto Home è SOLO icona: nessuno sfondo a riposo (neanche da pagina corrente) né al passaggio del mouse; cambia solo il colore", async () => {
+      const readStyle = () => homeButton.evaluate((el) => ({ background: getComputedStyle(el).backgroundColor, color: getComputedStyle(el).color }));
+      const rest = await readStyle();
+      assert.equal(rest.background, "rgba(0, 0, 0, 0)", "sfondo a riposo");
+      await homeButton.hover();
+      await page.waitForTimeout(300); // transizione di colore (--sl-duration-fast) conclusa
+      const hover = await readStyle();
+      assert.equal(hover.background, "rgba(0, 0, 0, 0)", "sfondo all'hover");
+      assert.notEqual(hover.color, rest.color, "l'hover deve almeno cambiare il colore dell'icona");
+      await page.mouse.move(700, 600);
+    });
+
+    await suite.test("tastiera: dopo lo skip-link vengono il tasto Menu laterale e poi il tasto Home, con focus visibile", async () => {
       await page.keyboard.press("Tab"); // skip-link
+      await page.keyboard.press("Tab");
+      assert.equal(await page.evaluate(() => document.activeElement.className), "sl-app-header__sidebar-toggle");
       await page.keyboard.press("Tab");
       assert.equal(await page.evaluate(() => document.activeElement.className), "sl-app-header__home");
       const outline = await page.evaluate(() => getComputedStyle(document.activeElement).outlineStyle);

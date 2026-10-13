@@ -12,6 +12,11 @@
  * Include la voce esterna PixelProf (nuova scheda, rel noopener) letta da
  * data/external-links.json.
  *
+ * COLONNA RICHIUDIBILE: oltre alla fisarmonica del sottomenu, l'intera
+ * Sidebar si chiude e si riapre con il tasto "Menu laterale" della barra
+ * superiore (per dare più spazio al contenuto su LIM/proiettore); lo
+ * stato è ricordato tra pagine e ricaricamenti.
+ *
  * Cambi deliberati rispetto alla versione a flyout (non regressioni): non
  * esiste più l'apertura all'hover né la chiusura con Escape/perdita di
  * focus; le aree non sono più indipendenti ma esclusive.
@@ -364,6 +369,142 @@ async function run() {
       assert.equal(await page.locator(".sl-sidebar__trigger").getAttribute("aria-expanded"), "false");
       await openScenariosMenu(page);
       assert.deepEqual(await groupStates(page), ["false", "true"]);
+    });
+
+    await context.close();
+  }
+
+  // --- Menu laterale richiudibile (l'intera colonna) ---------------------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await loginAsDocente(page, server.url);
+    await waitForSidebar(page);
+    const toggle = page.locator(".sl-app-header__sidebar-toggle");
+    const sidebar = page.locator(".sl-sidebar");
+    const mainWidth = async () => (await page.locator("main.sl-page-container__main").boundingBox()).width;
+    const storedState = () => page.evaluate(() => window.localStorage.getItem("sl-sidebar-collapsed"));
+
+    await suite.test("tastiera: subito dopo lo skip-link arriva il tasto 'Menu laterale'", async () => {
+      await page.keyboard.press("Tab"); // skip-link
+      await page.keyboard.press("Tab");
+      assert.equal(await page.evaluate(() => document.activeElement.className), "sl-app-header__sidebar-toggle");
+    });
+
+    await suite.test("tasto 'Menu laterale': a sinistra del marchio, aria-expanded=true, aria-controls verso la Sidebar, icona decorativa, bersaglio ≥ 44px", async () => {
+      assert.equal(await toggle.count(), 1);
+      assert.equal(await toggle.getAttribute("aria-label"), "Menu laterale");
+      assert.equal(await toggle.getAttribute("aria-expanded"), "true");
+      const controlled = await toggle.getAttribute("aria-controls");
+      assert.equal(await page.locator(`#${controlled}`).evaluate((el) => el.classList.contains("sl-sidebar")), true);
+      assert.equal(await toggle.locator("svg").getAttribute("aria-hidden"), "true");
+      const box = await toggle.boundingBox();
+      const brand = await page.locator(".sl-app-header__brand").boundingBox();
+      assert.ok(box.width >= 44 && box.height >= 44);
+      assert.ok(box.x + box.width <= brand.x + 1, "il tasto non sta a sinistra del marchio");
+    });
+
+    await suite.test("senza sfondo: trasparente a riposo e al passaggio del mouse (cambia solo il colore dell'icona)", async () => {
+      const read = () => toggle.evaluate((el) => ({ background: getComputedStyle(el).backgroundColor, color: getComputedStyle(el).color }));
+      const rest = await read();
+      assert.equal(rest.background, "rgba(0, 0, 0, 0)");
+      await toggle.hover();
+      await page.waitForTimeout(300);
+      const hover = await read();
+      assert.equal(hover.background, "rgba(0, 0, 0, 0)");
+      assert.notEqual(hover.color, rest.color);
+      await page.mouse.move(900, 700);
+    });
+
+    await suite.test("per la prova successiva: apro 'Scenari' e Cybersecurity, poi chiudo l'intera colonna", async () => {
+      await openScenariosMenu(page);
+      await expandSidebarGroup(page, "Cybersecurity");
+      assert.equal(await sidebar.isVisible(), true);
+      assert.equal(await toggle.getAttribute("aria-expanded"), "true");
+    });
+
+    const widthOpen = await mainWidth();
+
+    await suite.test("click: la colonna si chiude (non visibile), aria-expanded=false, il contenuto guadagna lo spazio della Sidebar (≥ 230px)", async () => {
+      await toggle.click();
+      assert.equal(await sidebar.isHidden(), true);
+      assert.equal(await toggle.getAttribute("aria-expanded"), "false");
+      assert.ok((await mainWidth()) >= widthOpen + 230, "il contenuto non si è allargato");
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), false);
+    });
+
+    await suite.test("a colonna chiusa nessun elemento della Sidebar è raggiungibile con Tab", async () => {
+      await toggle.focus();
+      const visited = [];
+      for (let i = 0; i < 8; i += 1) {
+        await page.keyboard.press("Tab");
+        visited.push(await page.evaluate(() => !!document.activeElement.closest(".sl-sidebar")));
+      }
+      assert.ok(visited.every((insideSidebar) => !insideSidebar), "il focus è entrato nella Sidebar chiusa");
+    });
+
+    await suite.test("lo stato è ricordato: la chiave 'sl-sidebar-collapsed' vale 'true' e il tasto resta in primo piano", async () => {
+      assert.equal(await storedState(), "true");
+      assert.equal(await toggle.isVisible(), true);
+    });
+
+    await suite.test("riaprendo la colonna, la fisarmonica è com'era (Scenari e Cybersecurity ancora aperte): nessuna ricostruzione", async () => {
+      await toggle.click();
+      assert.equal(await sidebar.isVisible(), true);
+      assert.equal(await toggle.getAttribute("aria-expanded"), "true");
+      assert.equal(await page.locator(".sl-sidebar__trigger").getAttribute("aria-expanded"), "true");
+      assert.deepEqual(await groupStates(page), ["true", "false"]);
+      assert.equal(await storedState(), "false");
+    });
+
+    await suite.test("tastiera: Invio e Spazio sul tasto chiudono e riaprono, e il focus resta sul tasto", async () => {
+      await toggle.focus();
+      await page.keyboard.press("Enter");
+      assert.equal(await sidebar.isHidden(), true);
+      assert.equal(await page.evaluate(() => document.activeElement.className), "sl-app-header__sidebar-toggle");
+      await page.keyboard.press("Space");
+      assert.equal(await sidebar.isVisible(), true);
+      assert.equal(await page.evaluate(() => document.activeElement.className), "sl-app-header__sidebar-toggle");
+    });
+
+    await suite.test("chiusa, resta chiusa passando a uno scenario (la shell si ricostruisce) e dopo un ricaricamento", async () => {
+      await toggle.click();
+      assert.equal(await sidebar.isHidden(), true);
+      await page.evaluate(() => {
+        window.location.hash = "#/scenario/oversharing";
+      });
+      await page.waitForSelector(".sl-profile-timeline");
+      assert.equal(await page.locator(".sl-app-header__sidebar-toggle").getAttribute("aria-expanded"), "false");
+      assert.equal(await page.locator(".sl-sidebar").isHidden(), true);
+      await page.reload();
+      await page.waitForSelector(".sl-profile-timeline");
+      assert.equal(await page.locator(".sl-sidebar").isHidden(), true);
+      assert.equal(await page.locator(".sl-app-header__sidebar-toggle").getAttribute("aria-expanded"), "false");
+    });
+
+    await suite.test("riaperta dallo scenario, resta aperta anche dopo il ricaricamento", async () => {
+      await page.locator(".sl-app-header__sidebar-toggle").click();
+      assert.equal(await page.locator(".sl-sidebar").isVisible(), true);
+      await page.reload();
+      await page.waitForSelector(".sl-profile-timeline");
+      await page.waitForSelector(".sl-sidebar__trigger");
+      assert.equal(await page.locator(".sl-sidebar").isVisible(), true);
+      assert.equal(await storedState(), "false");
+    });
+
+    await context.close();
+  }
+
+  {
+    const context = await browser.newContext({ viewport: { width: 375, height: 800 } });
+    const page = await context.newPage();
+    await loginAsDocente(page, server.url);
+    await page.waitForSelector(".sl-area-card");
+
+    await suite.test("375px: Sidebar già nascosta, quindi il tasto 'Menu laterale' non compare (nulla da chiudere)", async () => {
+      assert.equal(await page.locator(".sl-sidebar").isVisible(), false);
+      assert.equal(await page.locator(".sl-app-header__sidebar-toggle").isVisible(), false);
+      assert.equal(await page.locator(".sl-app-header__home").isVisible(), true);
     });
 
     await context.close();

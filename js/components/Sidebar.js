@@ -60,12 +60,25 @@
  * tabulazione né generare click. activeId → aria-current="page" sulla
  * voce corrispondente (non solo una classe CSS).
  *
+ * COLONNA RICHIUDIBILE (prop "collapsed"): l'intera Sidebar si può
+ * chiudere per liberare spazio al contenuto (utile su LIM/proiettore) e
+ * riaprire. Il comando vive in AppHeader (tasto "Menu laterale"), non
+ * qui: la Sidebar riceve solo lo stato e lo applica con l'attributo
+ * nativo [hidden] — fuori dall'ordine di tabulazione e dall'albero di
+ * accessibilità, senza codice in più. Cambiare "collapsed" NON ricostruisce
+ * le voci: lo stato aperto/chiuso della fisarmonica sopravvive a un
+ * chiudi/riapri della colonna. Chi decide e ricorda lo stato (tra una
+ * pagina e l'altra) è appShell.js.
+ *
  * Nascosta sotto il breakpoint "md" (768px, sidebar.css): sul telefono
  * l'accesso agli scenari passa dalle card della Home.
  *
  * Interfaccia: create(props) → { element, update(props), destroy() }
  *
  * Props:
+ *   - id        {string}  opzionale, id dell'elemento <nav> (serve ad
+ *     AppHeader per l'aria-controls del tasto "Menu laterale")
+ *   - collapsed {boolean} default: false — colonna chiusa (nascosta)
  *   - items    {Array<Item>} Item = voce semplice
  *       { id, label, route, icon?: Node, disabled?: boolean }
  *     | voce esterna { id, label, href, external: true }
@@ -341,9 +354,10 @@ export function create(props = {}) {
   const list = createElement("ul", { classNames: "sl-sidebar__list" });
   const element = createElement(
     "nav",
-    { classNames: "sl-sidebar", attrs: { "aria-label": "Navigazione principale" } },
+    { classNames: "sl-sidebar", attrs: { id: props.id, "aria-label": "Navigazione principale" } },
     [list]
   );
+  element.hidden = Boolean(props.collapsed);
 
   function onNavigate(item) {
     element.dispatchEvent(
@@ -357,8 +371,12 @@ export function create(props = {}) {
   let instances = render(list, props, onNavigate, []);
 
   function update(nextProps = {}) {
+    // Le voci si ricostruiscono solo se cambiano davvero (items/activeId):
+    // un cambio del solo "collapsed" non deve azzerare la fisarmonica.
+    const needsRender = nextProps.items !== undefined || nextProps.activeId !== undefined;
     props = { ...props, ...nextProps };
-    instances = render(list, props, onNavigate, instances);
+    if (nextProps.collapsed !== undefined) element.hidden = Boolean(props.collapsed);
+    if (needsRender) instances = render(list, props, onNavigate, instances);
   }
 
   function destroy() {

@@ -78,11 +78,17 @@
   gap: var(--sl-space-2);
 }
 
-/* Tasto Home: 44px (WCAG 2.5.5), text-primary su bg-surface (17.05:1
-   Light / 16.04:1 Dark — accostamento già in uso); hover/attivo con gli
-   stessi overlay bg-hover/bg-active del trigger profilo e della Sidebar.
-   Il focus visibile resta quello globale. */
-.sl-app-header__home {
+/* Tasti-icona della barra (Home, Menu laterale): SOLO l'icona, nessuno
+   sfondo — né a riposo, né sulla pagina corrente, né al passaggio del
+   mouse (su richiesta: lo sfondo grigio tondo era rumore). Il feedback
+   all'hover è il cambio di colore dell'icona, da text-primary a
+   primary-text (il colore di marchio per il TESTO, già usato dal
+   wordmark): su bg-surface 6.13:1 Light / 5.21:1 Dark, oltre la soglia
+   4.5:1 (e oltre il 3:1 richiesto a un'icona); a riposo text-primary
+   17.05:1 / 16.04:1. Bersaglio 44x44 (WCAG 2.5.5); il focus visibile
+   resta quello globale (outline). */
+.sl-app-header__home,
+.sl-app-header__sidebar-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -90,21 +96,20 @@
   height: 44px;
   border-radius: var(--sl-radius-full);
   color: var(--sl-color-text-primary);
-  transition: background-color var(--sl-duration-fast) var(--sl-ease-standard);
+  transition: color var(--sl-duration-fast) var(--sl-ease-standard);
 }
 
-.sl-app-header__home svg {
+.sl-app-header__home svg,
+.sl-app-header__sidebar-toggle svg {
   width: 24px;
   height: 24px;
 }
 
-.sl-app-header__home:hover {
-  background-color: var(--sl-color-bg-hover);
-}
-
+.sl-app-header__home:hover,
 .sl-app-header__home:active,
-.sl-app-header__home[aria-current="page"] {
-  background-color: var(--sl-color-bg-active);
+.sl-app-header__sidebar-toggle:hover,
+.sl-app-header__sidebar-toggle:active {
+  color: var(--sl-color-primary-text);
 }
 
 .sl-app-header__brand {
@@ -155,6 +160,12 @@
 
 @media (max-width: 767px) {
   .sl-app-header__search {
+    display: none;
+  }
+
+  /* La Sidebar è già nascosta a questa soglia (sidebar.css): un tasto che
+     la chiude non avrebbe nulla da chiudere. */
+  .sl-app-header__sidebar-toggle {
     display: none;
   }
 }

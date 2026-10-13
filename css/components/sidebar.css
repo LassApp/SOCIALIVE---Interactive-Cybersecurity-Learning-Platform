@@ -205,6 +205,13 @@
   }
 }
 
+/* Colonna chiusa (prop "collapsed"): pattern ricorrente del progetto — una
+   regola d'autore con "display" (qui: quella del breakpoint sotto, o una
+   futura) batte lo stile UA di [hidden]; ridichiarato esplicitamente. */
+.sl-sidebar[hidden] {
+  display: none;
+}
+
 @media (max-width: 767px) {
   .sl-sidebar {
     display: none;

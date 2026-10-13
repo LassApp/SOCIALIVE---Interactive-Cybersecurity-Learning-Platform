@@ -66,10 +66,14 @@
  *   - homeRoute          {string}  opzionale (es. "#/home"): se presente, mostra
  *     accanto al marchio un tasto con l'icona di una casa che porta a quella
  *     rotta — sempre visibile da qualunque pagina che monti l'header
+ *   - sidebarControlsId  {string}  opzionale: se presente, mostra a sinistra del marchio
+ *     il tasto "Menu laterale" (chiude/riapre la Sidebar con quell'id)
+ *   - sidebarCollapsed   {boolean} opzionale, stato iniziale del menu laterale (default: aperto)
  *   - homeActive         {boolean} opzionale, true quando la pagina corrente è la Home
  *     (aria-current="page" sul tasto)
  *
  * Eventi emessi (su element, bubbling):
+ *   - sl:sidebar-toggle       detail: { collapsed }  (nuovo stato richiesto)
  *   - sl:search               detail: { value }
  *   - sl:profile-menu-toggle  detail: { open, anchorElement }
  *     (anchorElement = il nodo <button> del trigger, incluso per
@@ -95,12 +99,30 @@ function buildHomeIcon() {
   return svg;
 }
 
+// Icona "menu" (tre linee, outline 24px, stroke 1.5px) — il simbolo più
+// riconoscibile per aprire/chiudere un menu laterale.
+function buildMenuIcon() {
+  const svg = svgNode("svg", { viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true" });
+  svg.appendChild(
+    svgNode("path", {
+      d: "M4 7h16M4 12h16M4 17h16",
+      stroke: "currentColor",
+      "stroke-width": "1.5",
+      "stroke-linecap": "round",
+    })
+  );
+  return svg;
+}
+
 function accessibleTriggerLabel(name) {
   return name ? `Apri menu profilo di ${name}` : "Apri menu profilo";
 }
 
 export function create(props = {}) {
-  const state = { profileMenuOpen: Boolean(props.profileMenuOpen) };
+  const state = {
+    profileMenuOpen: Boolean(props.profileMenuOpen),
+    sidebarCollapsed: Boolean(props.sidebarCollapsed),
+  };
 
   const brand = createElement("span", {
     classNames: "sl-app-header__brand",
@@ -125,7 +147,35 @@ export function create(props = {}) {
     : null;
   if (homeLink && props.homeActive) homeLink.setAttribute("aria-current", "page");
 
-  const brandGroup = createElement("div", { classNames: "sl-app-header__brand-group" }, [brand, homeLink]);
+  // Tasto "Menu laterale": chiude/riapre la Sidebar. Compare solo se il
+  // consumer fornisce "sidebarControlsId" (default: assente — la style
+  // guide e ogni consumer che non lo passa restano identici). Nome
+  // accessibile COSTANTE + aria-expanded: il cambio di stato lo comunica
+  // aria-expanded, cambiare anche l'etichetta lo annuncerebbe due volte.
+  // Come il trigger del profilo, tiene da sé il proprio aria-expanded e
+  // comunica l'intento con un evento; chi applica lo stato alla Sidebar e
+  // lo ricorda è il consumer (appShell.js).
+  const sidebarToggle = props.sidebarControlsId
+    ? createElement(
+        "button",
+        {
+          classNames: "sl-app-header__sidebar-toggle",
+          attrs: { type: "button", "aria-label": "Menu laterale", "aria-controls": props.sidebarControlsId },
+        },
+        [buildMenuIcon()]
+      )
+    : null;
+
+  function renderSidebarToggleState() {
+    if (sidebarToggle) sidebarToggle.setAttribute("aria-expanded", String(!state.sidebarCollapsed));
+  }
+  renderSidebarToggleState();
+
+  const brandGroup = createElement("div", { classNames: "sl-app-header__brand-group" }, [
+    sidebarToggle,
+    brand,
+    homeLink,
+  ]);
 
   const searchInput = createInput({
     type: "search",
@@ -169,6 +219,14 @@ export function create(props = {}) {
     );
   }
 
+  function handleSidebarToggleClick() {
+    state.sidebarCollapsed = !state.sidebarCollapsed;
+    renderSidebarToggleState();
+    element.dispatchEvent(
+      new CustomEvent("sl:sidebar-toggle", { bubbles: true, detail: { collapsed: state.sidebarCollapsed } })
+    );
+  }
+
   function handleTriggerClick() {
     state.profileMenuOpen = !state.profileMenuOpen;
     trigger.setAttribute("aria-expanded", String(state.profileMenuOpen));
@@ -182,6 +240,7 @@ export function create(props = {}) {
 
   searchInput.element.addEventListener("sl:input", handleSearchInput);
   trigger.addEventListener("click", handleTriggerClick);
+  if (sidebarToggle) sidebarToggle.addEventListener("click", handleSidebarToggleClick);
 
   function update(nextProps = {}) {
     props = { ...props, ...nextProps };
@@ -200,6 +259,11 @@ export function create(props = {}) {
       trigger.setAttribute("aria-expanded", String(state.profileMenuOpen));
     }
 
+    if (typeof nextProps.sidebarCollapsed === "boolean") {
+      state.sidebarCollapsed = nextProps.sidebarCollapsed;
+      renderSidebarToggleState();
+    }
+
     if (homeLink && typeof nextProps.homeActive === "boolean") {
       if (nextProps.homeActive) homeLink.setAttribute("aria-current", "page");
       else homeLink.removeAttribute("aria-current");
@@ -209,6 +273,7 @@ export function create(props = {}) {
   function destroy() {
     searchInput.element.removeEventListener("sl:input", handleSearchInput);
     trigger.removeEventListener("click", handleTriggerClick);
+    if (sidebarToggle) sidebarToggle.removeEventListener("click", handleSidebarToggleClick);
     searchInput.destroy();
     avatar.destroy();
     element.remove();

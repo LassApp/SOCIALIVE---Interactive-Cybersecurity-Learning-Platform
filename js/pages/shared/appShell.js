@@ -62,6 +62,7 @@ import { create as createAppHeader } from "../../components/AppHeader.js";
 import { create as createProfileMenu } from "../../components/ProfileMenu.js";
 import { create as createSidebar } from "../../components/Sidebar.js";
 import { getCurrentUser, logout } from "../../services/authService.js";
+import { getItem, setItem } from "../../utils/storage.js";
 import { createLocalJsonRepository } from "../../repositories/localJsonRepository.js";
 import { buildScenarioCatalog } from "../../utils/scenarioCatalog.js";
 
@@ -83,6 +84,14 @@ const externalLinksRepository = createLocalJsonRepository({
   collectionKey: "links",
   idField: "id",
 });
+
+// Menu laterale richiudibile: lo stato (chiuso/aperto) è una preferenza
+// d'uso — se il docente chiude la colonna per dare più spazio a uno
+// scenario, deve restare chiusa passando da una pagina all'altra (la
+// shell si ricostruisce ad ogni rotta) e ricaricando. Salvato con
+// storage.js come le altre preferenze (tema, sessione); default aperto.
+const SIDEBAR_COLLAPSED_KEY = "sl-sidebar-collapsed";
+const SIDEBAR_ELEMENT_ID = "sl-sidebar";
 
 // Solo https: un file di dati non va mai trattato come fidato fino
 // all'href di un link ("javascript:" o "data:" verrebbero eseguiti al
@@ -141,10 +150,14 @@ export function createAppShell({ activeSidebarId } = {}) {
   // monta la shell (Home inclusa, dove risulta "pagina corrente"). Le
   // pagine immersive (chrome:"none") non montano la shell: lì l'uscita
   // verso la Home è il bottone "×" di scenarioPageController.js.
+  const isSidebarCollapsed = getItem(SIDEBAR_COLLAPSED_KEY) === "true";
+
   const appHeader = createAppHeader({
     user: { name: user?.displayName, avatarSrc: user?.avatar || undefined },
     homeRoute: "#/home",
     homeActive: activeSidebarId === "home",
+    sidebarControlsId: SIDEBAR_ELEMENT_ID,
+    sidebarCollapsed: isSidebarCollapsed,
   });
 
   let profileMenu = null;
@@ -177,9 +190,21 @@ export function createAppShell({ activeSidebarId } = {}) {
   appHeader.element.addEventListener("sl:profile-menu-toggle", handleProfileMenuToggle);
 
   const sidebar = createSidebar({
+    id: SIDEBAR_ELEMENT_ID,
+    collapsed: isSidebarCollapsed,
     items: buildSidebarItems([], []),
     activeId: activeSidebarId,
   });
+
+  // Tasto "Menu laterale" di AppHeader → chiude/riapre la Sidebar e ne
+  // ricorda lo stato. AppHeader e Sidebar restano reciprocamente ignari:
+  // la shell è il collante, come per ProfileMenu.
+  function handleSidebarToggle(event) {
+    const { collapsed } = event.detail;
+    sidebar.update({ collapsed });
+    setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
+  }
+  appHeader.element.addEventListener("sl:sidebar-toggle", handleSidebarToggle);
 
   // Due fetch indipendenti: il fallimento di una non impedisce all'altra
   // di popolare la Sidebar. Nessun blocco della pagina per un problema sul
@@ -205,6 +230,7 @@ export function createAppShell({ activeSidebarId } = {}) {
   function destroy() {
     destroyed = true;
     appHeader.element.removeEventListener("sl:profile-menu-toggle", handleProfileMenuToggle);
+    appHeader.element.removeEventListener("sl:sidebar-toggle", handleSidebarToggle);
     closeProfileMenu();
     sidebar.destroy();
     appHeader.destroy();
