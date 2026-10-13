@@ -3,7 +3,7 @@
  * -----------------------------------------------------------------------
  * Catalogo "aree → scenari" derivato da data/modules.json. Unica fonte di
  * verità su QUALI aree/scenari la piattaforma espone e con quale rotta:
- * la Sidebar (flyout "Scenari", appShell.js) e la Home (card per area,
+ * la Sidebar (sottomenu a fisarmonica "Scenari", appShell.js) e la Home (card per area,
  * homePageController.js) lo consumano entrambe — estratto al SECONDO
  * consumo reale (stesso principio già seguito per focusTrap.js,
  * dateFormat.js, svg.js, mediaViewerLauncher.js). Senza questa utility la
@@ -17,9 +17,10 @@
  *
  * Regola di visibilità (invariata rispetto a quella che appShell.js
  * applicava da solo prima di questa estrazione): un modulo è un'AREA solo
- * se "available" è true E ha un array "scenarios". I moduli segnaposto
- * ("available": false, senza scenari — Yoga, Nissan GT-R, ecc.) restano
- * in modules.json ma non compaiono né in Sidebar né in Home.
+ * se "available" è true E ha un array "scenarios". Un modulo che non
+ * soddisfa entrambe le condizioni (per esempio un'area annunciata ma non
+ * ancora pronta) può stare in modules.json senza comparire né in Sidebar
+ * né in Home.
  *
  * Campi aggiuntivi di modules.json, tutti OPZIONALI (additivi: nessun
  * consumer esistente ne dipende):

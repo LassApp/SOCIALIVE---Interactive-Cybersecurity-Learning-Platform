@@ -1,9 +1,5 @@
 {
   "modules": [
-    { "id": "yoga", "title": "Yoga", "available": false },
-    { "id": "nissan-gtr", "title": "Nissan GT-R R34/R35", "available": false },
-    { "id": "beatbox", "title": "Beatbox", "available": false },
-    { "id": "fotografia", "title": "Fotografia", "available": false },
     {
       "id": "cybersecurity",
       "title": "Cybersecurity",
@@ -27,7 +23,6 @@
         { "id": "tokenizzazione", "title": "Tokenizzazione", "available": true },
         { "id": "allucinazioni", "title": "Allucinazioni", "available": true }
       ]
-    },
-    { "id": "ricette", "title": "Ricette", "available": false }
+    }
   ]
 }

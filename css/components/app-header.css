@@ -69,6 +69,44 @@
   border-bottom: 1px solid var(--sl-color-border-subtle);
 }
 
+/* Marchio + tasto Home sempre affiancati, a sinistra: un solo figlio flex
+   dell'header (la disposizione a tre zone brand/ricerca/azioni resta). */
+.sl-app-header__brand-group {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--sl-space-2);
+}
+
+/* Tasto Home: 44px (WCAG 2.5.5), text-primary su bg-surface (17.05:1
+   Light / 16.04:1 Dark — accostamento già in uso); hover/attivo con gli
+   stessi overlay bg-hover/bg-active del trigger profilo e della Sidebar.
+   Il focus visibile resta quello globale. */
+.sl-app-header__home {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--sl-radius-full);
+  color: var(--sl-color-text-primary);
+  transition: background-color var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-app-header__home svg {
+  width: 24px;
+  height: 24px;
+}
+
+.sl-app-header__home:hover {
+  background-color: var(--sl-color-bg-hover);
+}
+
+.sl-app-header__home:active,
+.sl-app-header__home[aria-current="page"] {
+  background-color: var(--sl-color-bg-active);
+}
+
 .sl-app-header__brand {
   flex-shrink: 0;
   font-size: var(--sl-font-size-lg);

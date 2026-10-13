@@ -46,7 +46,7 @@ const { chromium } = require("playwright");
 const { startServer } = require("./helpers/server");
 const { createSuite } = require("./helpers/testKit");
 const { loginAsDocente } = require("./helpers/auth");
-const { expandSidebarGroup } = require("./helpers/sidebar");
+const { openScenariosMenu, expandSidebarGroup } = require("./helpers/sidebar");
 
 const APP_ROOT = path.join(__dirname, "..");
 const SCREENSHOT_DIR = path.join(__dirname, "screenshots");
@@ -57,27 +57,18 @@ async function run() {
   const browser = await chromium.launch();
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
-  // --- Sidebar: flyout "Moduli" con 4 scenari (dopo Evil Twin Wi-Fi) ----
+  // --- Sidebar: fisarmonica "Scenari" con 4 scenari (dopo Evil Twin Wi-Fi) ---
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await loginAsDocente(page, server.url);
     await page.waitForSelector(".sl-sidebar__trigger");
 
-    await suite.test("il flyout 'Scenari' elenca, aprendo Cybersecurity, 4 scenari + Tokenizzazione e Allucinazioni (AI), nell'ordine reale di data/modules.json", async () => {
-      // hover, non click: un click() di Playwright genera un vero
-      // mousemove che fa scattare "mouseenter" sul trigger PRIMA del
-      // click stesso — Sidebar.js apre il flyout all'hover (mouseenter
-      // sull'intera <li>) e poi handleTriggerClick(), vedendo isOpen
-      // già true, lo richiuderebbe subito dopo (stesso comportamento
-      // per un utente reale con mouse: hover apre, un click successivo
-      // sul trigger già aperto lo toggla chiuso — per questo il codice
-      // riserva esplicitamente il click al caso tastiera/touch, dove
-      // l'hover non esiste). hover() riproduce fedelmente il percorso
-      // mouse reale (apre via mouseenter, nessun secondo click sul
-      // trigger).
-      await page.hover(".sl-sidebar__trigger");
-      await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
+    await suite.test("la fisarmonica 'Scenari' elenca, aprendo Cybersecurity, 4 scenari + Tokenizzazione e Allucinazioni (AI), nell'ordine reale di data/modules.json", async () => {
+      // La Sidebar è una fisarmonica che si apre solo per click/Invio/Spazio
+      // (nessuna apertura all'hover): l'helper clicca il trigger solo se la voce
+      // non è già aperta — vedi helpers/sidebar.js.
+      await openScenariosMenu(page);
       await expandSidebarGroup(page, "Cybersecurity");
       const labels = await page.locator(".sl-sidebar__group-list .sl-sidebar__link").allTextContents();
       assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi", "Tokenizzazione", "Allucinazioni"]);

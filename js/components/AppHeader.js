@@ -63,6 +63,12 @@
  *   - profileMenuOpen    {boolean} opzionale, per risincronizzare aria-expanded
  *     dall'esterno (vedi sopra)
  *
+ *   - homeRoute          {string}  opzionale (es. "#/home"): se presente, mostra
+ *     accanto al marchio un tasto con l'icona di una casa che porta a quella
+ *     rotta — sempre visibile da qualunque pagina che monti l'header
+ *   - homeActive         {boolean} opzionale, true quando la pagina corrente è la Home
+ *     (aria-current="page" sul tasto)
+ *
  * Eventi emessi (su element, bubbling):
  *   - sl:search               detail: { value }
  *   - sl:profile-menu-toggle  detail: { open, anchorElement }
@@ -76,6 +82,18 @@
 import { createElement } from "../utils/dom.js";
 import { create as createInput } from "./Input.js";
 import { create as createAvatar } from "./Avatar.js";
+import { svgNode } from "../utils/svg.js";
+
+// Icona "casa" (outline, griglia 24px, stroke 1.5px): costruita inline come
+// le altre icone dell'interfaccia — lo sprite (assets/icons/icons.svg) non
+// esiste ancora, debito noto da Fase 2.
+function buildHomeIcon() {
+  const svg = svgNode("svg", { viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true" });
+  const attrs = { stroke: "currentColor", "stroke-width": "1.5", "stroke-linecap": "round", "stroke-linejoin": "round" };
+  svg.appendChild(svgNode("path", { d: "M3.5 11 12 3.5 20.5 11", ...attrs }));
+  svg.appendChild(svgNode("path", { d: "M5.5 9.5V19.5a1 1 0 0 0 1 1H10v-5.5h4v5.5h3.5a1 1 0 0 0 1-1V9.5", ...attrs }));
+  return svg;
+}
 
 function accessibleTriggerLabel(name) {
   return name ? `Apri menu profilo di ${name}` : "Apri menu profilo";
@@ -88,6 +106,26 @@ export function create(props = {}) {
     classNames: "sl-app-header__brand",
     text: "SocialAlive",
   });
+
+  // Tasto Home accanto al marchio: presente solo se il consumer fornisce
+  // "homeRoute" (default: assente — i consumer che non lo passano, es. la
+  // style guide, restano identici). È un vero <a href>, non un bottone
+  // con una navigazione scritta a mano: semantica di link (tastiera,
+  // screen reader, "apri in nuova scheda") gratis, e nessun codice di
+  // routing in un componente "dumb".
+  const homeLink = props.homeRoute
+    ? createElement(
+        "a",
+        {
+          classNames: "sl-app-header__home",
+          attrs: { href: props.homeRoute, "aria-label": "Vai alla Home" },
+        },
+        [buildHomeIcon()]
+      )
+    : null;
+  if (homeLink && props.homeActive) homeLink.setAttribute("aria-current", "page");
+
+  const brandGroup = createElement("div", { classNames: "sl-app-header__brand-group" }, [brand, homeLink]);
 
   const searchInput = createInput({
     type: "search",
@@ -120,7 +158,7 @@ export function create(props = {}) {
   );
 
   const element = createElement("header", { classNames: "sl-app-header" }, [
-    brand,
+    brandGroup,
     createElement("div", { classNames: "sl-app-header__search" }, [searchInput.element]),
     createElement("div", { classNames: "sl-app-header__actions" }, [trigger]),
   ]);
@@ -160,6 +198,11 @@ export function create(props = {}) {
     if (typeof nextProps.profileMenuOpen === "boolean") {
       state.profileMenuOpen = nextProps.profileMenuOpen;
       trigger.setAttribute("aria-expanded", String(state.profileMenuOpen));
+    }
+
+    if (homeLink && typeof nextProps.homeActive === "boolean") {
+      if (nextProps.homeActive) homeLink.setAttribute("aria-current", "page");
+      else homeLink.removeAttribute("aria-current");
     }
   }
 

@@ -1,104 +1,84 @@
 /**
  * Sidebar.js
  * -----------------------------------------------------------------------
- * Navigazione principale tra le rotte di primo livello (piano dei
- * componenti, Fase 1 §4). Componente "dumb": riceve le voci da fuori
- * (prop "items"), non conosce navigation.json né il router — stesso
+ * Navigazione principale tra le rotte di primo livello e gli scenari
+ * (piano dei componenti, Fase 1 §4). Componente "dumb": riceve le voci da
+ * fuori (prop "items"), non conosce modules.json né il router — stesso
  * principio già seguito da AppHeader/ProfileMenu.
  *
- * Le voci foglia sono vere <a href="#/...">, non bottoni: coerente con
- * la scelta di routing hash-based (Fase 1 §7). Voci "disabled" (moduli
- * non ancora implementati) sono <span aria-disabled="true">, mai
- * focalizzabili né cliccabili.
+ * FISARMONICA, NON FLYOUT (cambio richiesto dal docente): le voci con
+ * sottomenu — oggi "Scenari" → aree → scenari — si aprono e si chiudono
+ * IN LINEA, spingendo verso il basso le voci successive, invece di
+ * comparire in un pannello flottante accanto alla Sidebar all'hover. Il
+ * flyout richiedeva di tenere il mouse dentro un'area precisa e si
+ * chiudeva da solo; la fisarmonica resta com'è lasciata, si controlla
+ * con un click e funziona identica con mouse, tastiera e touch.
+ *   - Si apre/chiude SOLO per click/Invio/Spazio sul bottone (mai
+ *     all'hover, mai alla perdita del focus): un <button> nativo con
+ *     aria-expanded + aria-controls, il pattern WAI-ARIA "disclosure".
+ *   - Livelli: voce di primo livello ("Scenari") → gruppi (le AREE:
+ *     Cybersecurity, AI) → scenari. I gruppi sono ESCLUSIVI tra loro
+ *     (aprirne uno chiude gli altri: una vera fisarmonica, così la
+ *     Sidebar non cresce oltre lo schermo con più aree); lo stesso vale
+ *     per più voci di primo livello con sottomenu, se mai ce ne
+ *     saranno. Un solo punto da cambiare se si volessero indipendenti:
+ *     createExclusiveGroup().
+ *   - Stato iniziale: la voce di primo livello ("Scenari") nasce CHIUSA su
+ *     ogni pagina, salvo "expanded: true" esplicito; un'AREA nasce aperta
+ *     se ha "expanded: true" (appShell.js lo imposta per l'area dello
+ *     scenario corrente), quindi aprendo "Scenari" da uno scenario
+ *     l'area di appartenenza è già aperta. Perché "Scenari" non nasce
+ *     aperta nemmeno dentro uno scenario: la Sidebar resta visibile
+ *     durante la proiezione e un elenco aperto mostrerebbe il titolo
+ *     dello scenario in corso (es. "Oversharing" accanto al finto
+ *     profilo), che gli scenari devono evitare — regola "nessun elemento
+ *     didattico visibile". Con il flyout il problema non esisteva
+ *     (chiuso finché non lo si apriva).
+ *   - Chiusa = attributo nativo [hidden] sul pannello: fuori dall'ordine
+ *     di tabulazione e dall'albero di accessibilità senza codice
+ *     aggiuntivo. Nessuna animazione di chiusura (il pannello sparisce),
+ *     come Modal/ProfileMenu; in apertura una breve dissolvenza
+ *     (sidebar.css, azzerata da prefers-reduced-motion tramite i token).
  *
- * SOTTOMENU (nuovo, additivo): una voce con "children" (array non vuoto)
- * diventa una voce "disclosure" — un <button> con aria-haspopup/
- * aria-expanded (stesso pattern già usato dal trigger profilo di
- * AppHeader.js) che rivela un pannello flyout con i propri figli come
- * veri <a>. Nessun impatto su voci esistenti senza "children": stesso
- * comportamento di sempre.
+ * Le voci sono vere <a href="#/..."> per le rotte interne (routing
+ * hash-based, Fase 1 §7): un click nativo aggiorna location.hash senza
+ * reload e dà gratis semantica di navigazione corretta. Oltre al
+ * comportamento nativo il componente emette "sl:navigate" per dare un
+ * aggancio immediato a un eventuale consumer.
  *
- * Apertura SIA su hover SIA su click, convergono sullo STESSO stato
- * locale (mai due fonti di verità separate):
- *   - mouseenter sull'intera <li> (non solo sul trigger): così muovere
- *     il cursore dal trigger verso il pannello flyout non lo richiude —
- *     il pannello è figlio della stessa <li>.
- *   - mouseleave: chiusura ritardata (150ms), non immediata — un
- *     ritardo pari a zero chiuderebbe il pannello nell'istante in cui il
- *     cursore attraversa il piccolo margine tra trigger e pannello.
- *   - click sul trigger: indispensabile per tastiera/touch, dove l'hover
- *     non esiste — toggle immediato, annulla un'eventuale chiusura già
- *     pianificata.
- *   - Escape (quando il pannello è aperto): chiude e riporta il focus
- *     sul trigger, stesso principio già seguito da Modal/ProfileMenu per
- *     "mai lasciare il focus in un punto imprevedibile".
- *   - focusout dall'intera voce (tastiera: Tab che esce del tutto dalla
- *     voce): chiude — nessun listener globale su document necessario
- *     (a differenza di ProfileMenu, qui non serve un vero "click fuori"
- *     con focus trap: è un menu di navigazione, non un pannello di
- *     azioni bloccante).
+ * VOCI ESTERNE ({ external: true, href }): link verso un altro sito (oggi
+ * PixelProf). Si aprono in una NUOVA SCHEDA con rel="noopener noreferrer"
+ * — la sessione di SocialAlive resta intatta nella scheda di origine e il
+ * sito esterno non riceve né riferimento alla pagina né accesso a
+ * window.opener — con un'icona che lo segnala alla vista e un testo
+ * nascosto "(si apre in una nuova scheda)" per gli screen reader (il
+ * nome accessibile è quindi "PixelProf (si apre in una nuova scheda)").
+ * Non emettono "sl:navigate": non sono rotte dell'app.
  *
- * Un solo flyout aperto alla volta: un registro locale di "chiudi"
- * (Map id -> closeImmediately) permette a qualunque voce che si apre di
- * chiudere prima le altre — oggi un solo consumer reale ("Scenari"), ma
- * corretto anche se in futuro se ne aggiungesse un secondo.
+ * Voci "disabled": <span aria-disabled="true">, non <a>/<button>: un
+ * elemento senza destinazione non deve comparire nell'ordine di
+ * tabulazione né generare click. activeId → aria-current="page" sulla
+ * voce corrispondente (non solo una classe CSS).
  *
- * Stato locale (quale flyout è aperto), MAI esposto via props: stessa
- * natura di isFollowing in profileTimelineRenderer.js o dello stato di
- * zoom in MediaViewer.js — un dettaglio di presentazione interno al
- * componente, non un dato che un page controller debba orchestrare.
- *
- * Chevron: a differenza del trigger di AppHeader (dove aria-haspopup/
- * aria-expanded bastavano, nessun'altra voce dell'header suggerisce
- * interattività extra), qui la voce "Scenari" convive in una lista di
- * semplici link — senza un indizio visivo un utente vedente non ha modo
- * di distinguerla come "voce che si espande". Icona inline via
- * svgNode(), stesso pattern già usato ovunque nel progetto in assenza
- * dello sprite (assets/icons/icons.svg, debito noto).
- *
- * activeId → aria-current="page" sulla voce corrispondente, INVARIATO
- * per le voci foglia dirette e ora esteso anche ai figli di un
- * sottomenu: se "activeId" combacia con l'id di un figlio, quel link
- * riceve lo stesso trattamento (utile quando si è su una pagina di
- * scenario raggiunta dal flyout).
- *
- * SECONDO LIVELLO NEL FLYOUT (nuovo, additivo): un figlio del flyout può
- * a sua volta avere "children" (array non vuoto) e diventa allora un
- * GRUPPO a disclosure — un <button> con aria-expanded/aria-controls che
- * mostra o nasconde, SOTTO di sé, l'elenco dei propri link. Serve alla
- * voce "Scenari": il flyout contiene le categorie (Cybersecurity, AI) e
- * ciascuna raccoglie i propri scenari. Un figlio senza "children"
- * resta un normale link, identico a prima.
- *
- * Il gruppo si apre con click/Invio/Spazio (è un <button> nativo), NON
- * con l'hover: il flyout principale si apre già al passaggio del mouse,
- * ma una lista che si allunga sotto il puntatore mentre ci si sposta
- * verso la voce successiva farebbe "scappare" i bersagli. "expanded:
- * true" sul gruppo lo fa nascere aperto (lo decide chi costruisce i
- * dati, non Sidebar: oggi appShell, per la categoria della pagina in
- * cui ci si trova). Profondità massima: due livelli — un terzo non ha
- * alcun consumer reale (YAGNI).
+ * Nascosta sotto il breakpoint "md" (768px, sidebar.css): sul telefono
+ * l'accesso agli scenari passa dalle card della Home.
  *
  * Interfaccia: create(props) → { element, update(props), destroy() }
  *
  * Props:
- *   - items {Array<{
- *       id, label, route?, icon?: Node, disabled?: boolean,
- *       children?: Array<
- *         { id, label, route, disabled?: boolean } |
- *         { id, label, expanded?: boolean, children: Array<{ id, label, route, disabled?: boolean }> }
- *       >
- *     }>}
- *   - activeId {string} opzionale
+ *   - items    {Array<Item>} Item = voce semplice
+ *       { id, label, route, icon?: Node, disabled?: boolean }
+ *     | voce esterna { id, label, href, external: true }
+ *     | voce con sottomenu { id, label, children: Array<Item|Group> }
+ *     dove Group = { id, label, expanded?: boolean, children: Item[] }
+ *   - activeId {string} opzionale, id della voce corrispondente alla rotta corrente
  *
  * Eventi emessi (su element, bubbling):
- *   - sl:navigate  detail: { id, route }
+ *   - sl:navigate  detail: { id, route }  (solo per le voci interne)
  */
 
 import { createElement, clearChildren } from "../utils/dom.js";
 import { svgNode } from "../utils/svg.js";
-
-const CLOSE_DELAY_MS = 150;
 
 function buildChevronIcon() {
   const svg = svgNode("svg", {
@@ -110,6 +90,27 @@ function buildChevronIcon() {
   svg.appendChild(
     svgNode("path", {
       d: "M9 6l6 6-6 6",
+      stroke: "currentColor",
+      "stroke-width": "1.5",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+    })
+  );
+  return svg;
+}
+
+// Freccia "esce dal riquadro": convenzione comune per un link che porta
+// fuori dall'app.
+function buildExternalIcon() {
+  const svg = svgNode("svg", {
+    class: "sl-sidebar__external-icon",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    "aria-hidden": "true",
+  });
+  svg.appendChild(
+    svgNode("path", {
+      d: "M7 17 17 7M9 7h8v8",
       stroke: "currentColor",
       "stroke-width": "1.5",
       "stroke-linecap": "round",
@@ -132,15 +133,51 @@ function buildItemContent(item) {
   return children;
 }
 
-// Voce foglia (nessun sottomenu): stesso comportamento di sempre,
-// riusato sia per le voci di primo livello sia per i figli di un
-// flyout — un link è un link, indipendentemente da dove vive nel DOM.
+// Insieme di fratelli "a fisarmonica": aprirne uno chiude gli altri.
+// Registro di funzioni "chiudi" per id, locale a un gruppo di fratelli —
+// stesso stato locale mai esposto via props già usato dal componente
+// prima di questo cambio per il flyout.
+function createExclusiveGroup() {
+  const closers = new Map();
+  return {
+    register(id, close) {
+      closers.set(id, close);
+    },
+    unregister(id) {
+      closers.delete(id);
+    },
+    closeOthers(id) {
+      closers.forEach((close, otherId) => {
+        if (otherId !== id) close();
+      });
+    },
+  };
+}
+
+// Voce foglia: link interno, link esterno o voce disabilitata. Riusata
+// sia per le voci di primo livello sia per i figli di un pannello — un
+// link è un link, indipendentemente da dove vive nel DOM.
 function buildLeaf(item, activeId, onNavigate) {
   if (item.disabled) {
     return createElement(
       "span",
       { classNames: ["sl-sidebar__link", "sl-sidebar__link--disabled"], attrs: { "aria-disabled": "true" } },
       buildItemContent(item)
+    );
+  }
+
+  if (item.external) {
+    return createElement(
+      "a",
+      {
+        classNames: ["sl-sidebar__link", "sl-sidebar__link--external"],
+        attrs: { href: item.href, target: "_blank", rel: "noopener noreferrer" },
+      },
+      [
+        ...buildItemContent(item),
+        createElement("span", { classNames: "sl-visually-hidden", text: " (si apre in una nuova scheda)" }),
+        buildExternalIcon(),
+      ]
     );
   }
 
@@ -157,11 +194,17 @@ function buildLeaf(item, activeId, onNavigate) {
   return link;
 }
 
-// Gruppo del flyout (secondo livello): bottone disclosure + lista dei
-// link sotto di esso. Si apre solo per click/tastiera (vedi rationale in
-// testa al file). Riusa le classi del link e del chevron del trigger
-// principale: stessa resa visiva, nessuna regola CSS duplicata.
-function buildGroup(group, activeId, onNavigate) {
+// Link foglia dentro un <li>: una lista (<ul>) deve contenere solo <li>,
+// altrimenti gli screen reader non la annunciano come lista.
+function buildPanelLeafEntry(child, activeId, onNavigate) {
+  return createElement("li", { classNames: "sl-sidebar__panel-item" }, [
+    buildLeaf(child, activeId, onNavigate),
+  ]);
+}
+
+// Gruppo (secondo livello, un'AREA): bottone disclosure + lista degli
+// scenari sotto di esso. Esclusivo rispetto ai gruppi fratelli.
+function buildGroup(group, activeId, onNavigate, siblings) {
   const listId = `sl-sidebar-group-${group.id}`;
   const expanded = Boolean(group.expanded);
 
@@ -174,181 +217,120 @@ function buildGroup(group, activeId, onNavigate) {
     [...buildItemContent(group), buildChevronIcon()]
   );
 
-  const entries = group.children.map((child) => buildFlyoutLeafEntry(child, activeId, onNavigate));
   const list = createElement(
     "ul",
     { classNames: "sl-sidebar__group-list", attrs: { id: listId } },
-    entries
+    group.children.map((child) => buildPanelLeafEntry(child, activeId, onNavigate))
   );
   list.hidden = !expanded;
 
-  function handleToggle() {
-    const nextExpanded = list.hidden;
+  function setExpanded(nextExpanded) {
     list.hidden = !nextExpanded;
     trigger.setAttribute("aria-expanded", String(nextExpanded));
   }
+
+  function handleToggle() {
+    const nextExpanded = list.hidden;
+    if (nextExpanded) siblings.closeOthers(group.id);
+    setExpanded(nextExpanded);
+  }
   trigger.addEventListener("click", handleToggle);
+  siblings.register(group.id, () => setExpanded(false));
 
   const element = createElement(
     "li",
-    { classNames: ["sl-sidebar__flyout-item", "sl-sidebar__flyout-item--group"] },
+    { classNames: ["sl-sidebar__panel-item", "sl-sidebar__panel-item--group"] },
     [trigger, list]
   );
 
   return {
     element,
     destroy() {
+      siblings.unregister(group.id);
       trigger.removeEventListener("click", handleToggle);
     },
   };
 }
 
-// Link foglia dentro un <li>: una lista (<ul>) deve contenere solo <li>,
-// altrimenti gli screen reader non la annunciano come lista.
-function buildFlyoutLeafEntry(child, activeId, onNavigate) {
-  return createElement("li", { classNames: "sl-sidebar__flyout-item" }, [
-    buildLeaf(child, activeId, onNavigate),
-  ]);
-}
-
-// Una voce del flyout è un gruppo (ha dei figli) o un link semplice.
-function buildFlyoutEntry(child, activeId, onNavigate) {
+// Un figlio del pannello è un gruppo (ha dei figli) o un link semplice.
+function buildPanelEntry(child, activeId, onNavigate, groupSiblings) {
   if (Array.isArray(child.children) && child.children.length > 0) {
-    return buildGroup(child, activeId, onNavigate);
+    return buildGroup(child, activeId, onNavigate, groupSiblings);
   }
-  return { element: buildFlyoutLeafEntry(child, activeId, onNavigate), destroy() {} };
+  return { element: buildPanelLeafEntry(child, activeId, onNavigate), destroy() {} };
 }
 
-// Voce con sottomenu ("Scenari"): bottone disclosure + pannello flyout
-// con i figli (link, oppure gruppi a loro volta apribili). Vedi
-// rationale completo in testa al file per apertura hover+click,
-// chiusura ritardata, un solo flyout aperto.
-function buildExpandableItem(item, activeId, onNavigate, closers, closeAllExcept) {
+// Voce con sottomenu ("Scenari"): bottone disclosure + pannello in linea.
+// Vedi rationale in testa al file.
+function buildExpandableItem(item, activeId, onNavigate, topLevelSiblings) {
+  const panelId = `sl-sidebar-panel-${item.id}`;
+  const children = item.children || [];
+  const openInitially = Boolean(item.expanded);
+
   const trigger = createElement(
     "button",
     {
       classNames: ["sl-sidebar__link", "sl-sidebar__trigger"],
-      attrs: { type: "button", "aria-haspopup": "true", "aria-expanded": "false" },
+      attrs: { type: "button", "aria-expanded": String(openInitially), "aria-controls": panelId },
     },
     [...buildItemContent(item), buildChevronIcon()]
   );
 
-  const flyoutEntries = (item.children || []).map((child) => buildFlyoutEntry(child, activeId, onNavigate));
-  const flyout = createElement(
+  const groupSiblings = createExclusiveGroup();
+  const entries = children.map((child) => buildPanelEntry(child, activeId, onNavigate, groupSiblings));
+  const panel = createElement(
     "ul",
-    { classNames: "sl-sidebar__flyout" },
-    flyoutEntries.map((entry) => entry.element)
+    { classNames: "sl-sidebar__panel", attrs: { id: panelId } },
+    entries.map((entry) => entry.element)
   );
-  flyout.hidden = true;
+  panel.hidden = !openInitially;
 
   const listItem = createElement(
     "li",
     { classNames: ["sl-sidebar__item", "sl-sidebar__item--has-children"] },
-    [trigger, flyout]
+    [trigger, panel]
   );
 
-  let isOpen = false;
-  let closeTimer = null;
-
-  function applyOpenState(nextOpen) {
-    isOpen = nextOpen;
-    flyout.hidden = !nextOpen;
+  function setOpen(nextOpen) {
+    panel.hidden = !nextOpen;
     trigger.setAttribute("aria-expanded", String(nextOpen));
   }
 
-  function cancelPendingClose() {
-    if (closeTimer) {
-      clearTimeout(closeTimer);
-      closeTimer = null;
-    }
-  }
-
-  function open() {
-    cancelPendingClose();
-    closeAllExcept(item.id);
-    applyOpenState(true);
-  }
-
-  function closeImmediately() {
-    cancelPendingClose();
-    applyOpenState(false);
-  }
-
-  function scheduleClose() {
-    cancelPendingClose();
-    closeTimer = setTimeout(() => {
-      closeTimer = null;
-      applyOpenState(false);
-    }, CLOSE_DELAY_MS);
-  }
-
   function handleTriggerClick() {
-    if (isOpen) closeImmediately();
-    else open();
+    const nextOpen = panel.hidden;
+    if (nextOpen) topLevelSiblings.closeOthers(item.id);
+    setOpen(nextOpen);
   }
-
-  function handleMouseEnter() {
-    open();
-  }
-
-  function handleMouseLeave() {
-    scheduleClose();
-  }
-
-  // relatedTarget assente = il focus ha lasciato del tutto il documento
-  // (es. click su un'altra finestra/tab): non un segnale affidabile che
-  // l'utente abbia lasciato la voce, quindi non si chiude in quel caso.
-  function handleFocusOut(event) {
-    if (event.relatedTarget && listItem.contains(event.relatedTarget)) return;
-    closeImmediately();
-  }
-
-  function handleKeydown(event) {
-    if (event.key === "Escape" && isOpen) {
-      closeImmediately();
-      trigger.focus();
-    }
-  }
-
   trigger.addEventListener("click", handleTriggerClick);
-  listItem.addEventListener("mouseenter", handleMouseEnter);
-  listItem.addEventListener("mouseleave", handleMouseLeave);
-  listItem.addEventListener("focusout", handleFocusOut);
-  listItem.addEventListener("keydown", handleKeydown);
-
-  closers.set(item.id, closeImmediately);
+  topLevelSiblings.register(item.id, () => setOpen(false));
 
   return {
     element: listItem,
     destroy() {
-      closers.delete(item.id);
-      cancelPendingClose();
-      flyoutEntries.forEach((entry) => entry.destroy());
+      topLevelSiblings.unregister(item.id);
+      entries.forEach((entry) => entry.destroy());
       trigger.removeEventListener("click", handleTriggerClick);
-      listItem.removeEventListener("mouseenter", handleMouseEnter);
-      listItem.removeEventListener("mouseleave", handleMouseLeave);
-      listItem.removeEventListener("focusout", handleFocusOut);
-      listItem.removeEventListener("keydown", handleKeydown);
     },
   };
 }
 
-function buildItem(item, activeId, onNavigate, closers, closeAllExcept) {
+function buildItem(item, activeId, onNavigate, topLevelSiblings) {
   if (Array.isArray(item.children) && item.children.length > 0) {
-    return buildExpandableItem(item, activeId, onNavigate, closers, closeAllExcept);
+    return buildExpandableItem(item, activeId, onNavigate, topLevelSiblings);
   }
   const link = buildLeaf(item, activeId, onNavigate);
   const listItem = createElement("li", { classNames: "sl-sidebar__item" }, [link]);
   return { element: listItem, destroy() {} };
 }
 
-function render(list, props, onNavigate, closers, closeAllExcept, previousInstances) {
+function render(list, props, onNavigate, previousInstances) {
   previousInstances.forEach((instance) => instance.destroy());
   clearChildren(list);
 
+  const topLevelSiblings = createExclusiveGroup();
   const nextInstances = [];
   (props.items || []).forEach((item) => {
-    const instance = buildItem(item, props.activeId, onNavigate, closers, closeAllExcept);
+    const instance = buildItem(item, props.activeId, onNavigate, topLevelSiblings);
     nextInstances.push(instance);
     list.appendChild(instance.element);
   });
@@ -363,15 +345,6 @@ export function create(props = {}) {
     [list]
   );
 
-  // Registro dei "chiudi" delle voci con sottomenu attualmente montate
-  // — vedi rationale "un solo flyout alla volta" in testa al file.
-  const closers = new Map();
-  function closeAllExcept(exceptId) {
-    closers.forEach((closeFn, id) => {
-      if (id !== exceptId) closeFn();
-    });
-  }
-
   function onNavigate(item) {
     element.dispatchEvent(
       new CustomEvent("sl:navigate", {
@@ -381,11 +354,11 @@ export function create(props = {}) {
     );
   }
 
-  let instances = render(list, props, onNavigate, closers, closeAllExcept, []);
+  let instances = render(list, props, onNavigate, []);
 
   function update(nextProps = {}) {
     props = { ...props, ...nextProps };
-    instances = render(list, props, onNavigate, closers, closeAllExcept, instances);
+    instances = render(list, props, onNavigate, instances);
   }
 
   function destroy() {

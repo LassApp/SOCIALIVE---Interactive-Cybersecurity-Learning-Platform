@@ -23,7 +23,7 @@
  * catalogo che alimenta le card per area della Home — una sola regola
  * su quali aree sono visibili) — coerente col principio di progetto "i
  * contenuti non devono essere scritti nel codice". DUE LIVELLI: ogni
- * modulo con "available: true" e degli "scenarios" diventa un gruppo del flyout
+ * modulo con "available: true" e degli "scenarios" diventa un gruppo della fisarmonica
  * "Scenari" (oggi Cybersecurity e AI, nell'ordine del file), con i
  * propri scenari sotto di sé. La struttura a due livelli — rimandata
  * finché c'era un solo modulo reale (YAGNI) — è stata introdotta nel
@@ -75,8 +75,22 @@ const modulesRepository = createLocalJsonRepository({
   idField: "id",
 });
 
+// Link verso altri strumenti (oggi PixelProf), mostrati nella Sidebar: un
+// file di dati, non codice — aggiungerne uno è una riga in
+// data/external-links.json. Stessa fabbrica, stessa cache per URL.
+const externalLinksRepository = createLocalJsonRepository({
+  url: "data/external-links.json",
+  collectionKey: "links",
+  idField: "id",
+});
+
+// Solo https: un file di dati non va mai trattato come fidato fino
+// all'href di un link ("javascript:" o "data:" verrebbero eseguiti al
+// click). Un link non valido viene semplicemente ignorato.
+const SAFE_EXTERNAL_URL = /^https:\/\//i;
+
 // Scenario della pagina corrente, letto dall'hash (#/scenario/:id): serve
-// solo a far nascere aperta, nel flyout, la categoria che lo contiene.
+// solo a far nascere aperta, nella fisarmonica, l'area che lo contiene.
 // Nessuna voce risulta "attiva" su quella pagina (invariato: vedi
 // activeSidebarId) — qui si decide soltanto quale gruppo mostrare aperto.
 function getCurrentScenarioId() {
@@ -84,8 +98,8 @@ function getCurrentScenarioId() {
   return match ? match[1] : null;
 }
 
-// Una categoria (area disponibile con scenari) per ogni gruppo del flyout
-// "Scenari", ciascuna con i propri scenari — l'ordine è quello di
+// Una categoria (area disponibile con scenari) per ogni gruppo della
+// fisarmonica "Scenari", ciascuna con i propri scenari — l'ordine è quello di
 // data/modules.json. QUALI aree/scenari esistono (e la loro rotta) lo
 // decide js/utils/scenarioCatalog.js, condiviso con la Home: qui resta
 // solo la forma che Sidebar.js si aspetta (id/label/expanded/children).
@@ -104,12 +118,33 @@ function buildScenarioGroups(modules) {
   }));
 }
 
+// Voci della Sidebar: Home, "Scenari" (aree → scenari, a fisarmonica), i
+// link esterni da data/external-links.json e Impostazioni (disabilitata).
+// Con i dati ancora da caricare (modules = [], externalLinks = []) è
+// anche lo stato iniziale.
+function buildSidebarItems(modules, externalLinks) {
+  return [
+    { id: "home", label: "Home", route: "#/home" },
+    { id: "scenarios", label: "Scenari", children: buildScenarioGroups(modules) },
+    ...externalLinks
+      .filter((link) => SAFE_EXTERNAL_URL.test(link.url || ""))
+      .map((link) => ({ id: `link-${link.id}`, label: link.label, href: link.url, external: true })),
+    { id: "settings", label: "Impostazioni", disabled: true },
+  ];
+}
+
 export function createAppShell({ activeSidebarId } = {}) {
   const user = getCurrentUser();
   let destroyed = false;
 
+  // Tasto Home sempre presente accanto al marchio, su ogni pagina che
+  // monta la shell (Home inclusa, dove risulta "pagina corrente"). Le
+  // pagine immersive (chrome:"none") non montano la shell: lì l'uscita
+  // verso la Home è il bottone "×" di scenarioPageController.js.
   const appHeader = createAppHeader({
     user: { name: user?.displayName, avatarSrc: user?.avatar || undefined },
+    homeRoute: "#/home",
+    homeActive: activeSidebarId === "home",
   });
 
   let profileMenu = null;
@@ -142,36 +177,30 @@ export function createAppShell({ activeSidebarId } = {}) {
   appHeader.element.addEventListener("sl:profile-menu-toggle", handleProfileMenuToggle);
 
   const sidebar = createSidebar({
-    items: [
-      { id: "home", label: "Home", route: "#/home" },
-      { id: "scenarios", label: "Scenari", children: [] },
-      { id: "settings", label: "Impostazioni", disabled: true },
-    ],
+    items: buildSidebarItems([], []),
     activeId: activeSidebarId,
   });
 
-  modulesRepository
-    .list()
-    .then((modules) => {
-      if (destroyed) return;
-      sidebar.update({
-        items: [
-          { id: "home", label: "Home", route: "#/home" },
-          { id: "scenarios", label: "Scenari", children: buildScenarioGroups(modules) },
-          { id: "settings", label: "Impostazioni", disabled: true },
-        ],
-      });
-    })
-    .catch((error) => {
-      // Nessun blocco della pagina per un fallimento sul solo sottomenu:
-      // "Scenari" resta semplicemente senza figli (nessun sottomenu si
-      // apre) — stesso criterio di tolleranza già seguito altrove nel
-      // progetto per problemi non critici (es. sessione non persistita
-      // in authService.js). buildFallbackMessage non serve qui: non c'è
-      // un'area di contenuto dedicata in cui mostrare un messaggio,
-      // solo una voce di navigazione che resta silenziosamente vuota.
-      console.error("[appShell] Impossibile caricare data/modules.json per il sottomenu Sidebar", error);
-    });
+  // Due fetch indipendenti: il fallimento di una non impedisce all'altra
+  // di popolare la Sidebar. Nessun blocco della pagina per un problema sul
+  // solo menu: "Scenari" resta senza figli / il link non compare — stesso
+  // criterio di tolleranza già seguito altrove nel progetto per problemi
+  // non critici (es. sessione non persistita in authService.js).
+  // buildFallbackMessage non serve qui: non c'è un'area di contenuto in
+  // cui mostrare un messaggio, solo voci di navigazione.
+  const modulesPromise = modulesRepository.list().catch((error) => {
+    console.error("[appShell] Impossibile caricare data/modules.json per il sottomenu Sidebar", error);
+    return [];
+  });
+  const externalLinksPromise = externalLinksRepository.list().catch((error) => {
+    console.error("[appShell] Impossibile caricare data/external-links.json per la Sidebar", error);
+    return [];
+  });
+
+  Promise.all([modulesPromise, externalLinksPromise]).then(([modules, externalLinks]) => {
+    if (destroyed) return;
+    sidebar.update({ items: buildSidebarItems(modules, externalLinks) });
+  });
 
   function destroy() {
     destroyed = true;

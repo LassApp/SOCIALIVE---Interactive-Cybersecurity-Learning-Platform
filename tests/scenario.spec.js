@@ -99,7 +99,7 @@ const { chromium } = require("playwright");
 const { startServer } = require("./helpers/server");
 const { createSuite } = require("./helpers/testKit");
 const { loginAsDocente } = require("./helpers/auth");
-const { expandSidebarGroup } = require("./helpers/sidebar");
+const { openScenariosMenu, expandSidebarGroup } = require("./helpers/sidebar");
 
 const APP_ROOT = path.join(__dirname, "..");
 const SCREENSHOT_DIR = path.join(__dirname, "screenshots");
@@ -721,20 +721,11 @@ async function run() {
     await loginAsDocente(page, server.url);
     await page.waitForSelector(".sl-sidebar__trigger");
 
-    await suite.test("Sidebar: il flyout 'Scenari' elenca, aprendo Cybersecurity, Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi, Tokenizzazione e Allucinazioni (AI)", async () => {
-      // hover, non click: un click() di Playwright genera un vero
-      // mousemove che fa scattare "mouseenter" sul trigger PRIMA del
-      // click stesso — Sidebar.js apre il flyout all'hover (mouseenter
-      // sull'intera <li>) e poi handleTriggerClick(), vedendo isOpen
-      // già true, lo richiuderebbe subito dopo (stesso comportamento
-      // per un utente reale con mouse: hover apre, un click successivo
-      // sul trigger già aperto lo toggla chiuso — per questo il codice
-      // riserva esplicitamente il click al caso tastiera/touch, dove
-      // l'hover non esiste). hover() riproduce fedelmente il percorso
-      // mouse reale (apre via mouseenter, nessun secondo click sul
-      // trigger).
-      await page.hover(".sl-sidebar__trigger");
-      await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
+    await suite.test("Sidebar: la fisarmonica 'Scenari' elenca, aprendo Cybersecurity, Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi, Tokenizzazione e Allucinazioni (AI)", async () => {
+      // La Sidebar è una fisarmonica che si apre solo per click/Invio/Spazio
+      // (nessuna apertura all'hover): l'helper clicca il trigger solo se la voce
+      // non è già aperta — vedi helpers/sidebar.js.
+      await openScenariosMenu(page);
       await expandSidebarGroup(page, "Cybersecurity");
       const labels = await page.locator(".sl-sidebar__group-list .sl-sidebar__link").allTextContents();
       assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi", "Tokenizzazione", "Allucinazioni"]);
@@ -931,7 +922,7 @@ async function run() {
     // che monta contenuto asincrono).
     await page.waitForSelector(".sl-sidebar__trigger");
 
-    await suite.test("flusso da tastiera: Sidebar -> trigger 'Scenari' (Invio) apre il flyout", async () => {
+    await suite.test("flusso da tastiera: Sidebar -> trigger 'Scenari' (Invio) apre la fisarmonica", async () => {
       let focused = null;
       for (let i = 0; i < 15; i += 1) {
         await page.keyboard.press("Tab");
@@ -941,15 +932,15 @@ async function run() {
       assert.ok(focused, "il focus non ha raggiunto il trigger 'Scenari' entro 15 Tab");
 
       await page.keyboard.press("Enter");
-      await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
+      await page.waitForSelector(".sl-sidebar__panel:not([hidden])");
     });
 
-    await suite.test("flusso da tastiera: dal flyout apre Cybersecurity (Invio) e raggiunge Oversharing (Invio)", async () => {
-      // Il flyout contiene ora le categorie: il primo Tab porta al gruppo
+    await suite.test("flusso da tastiera: dalla fisarmonica apre Cybersecurity (Invio) e raggiunge Oversharing (Invio)", async () => {
+      // Il pannello contiene le aree: il primo Tab porta al gruppo
       // "Cybersecurity", che si espande con Invio (come un <button> nativo).
       await page.keyboard.press("Tab");
       const group = await page.evaluate(() => document.activeElement.textContent.trim());
-      assert.equal(group, "Cybersecurity", "il primo Tab nel flyout non ha raggiunto la categoria Cybersecurity");
+      assert.equal(group, "Cybersecurity", "il primo Tab nel pannello non ha raggiunto la categoria Cybersecurity");
       await page.keyboard.press("Enter");
 
       let focused = null;
@@ -958,7 +949,7 @@ async function run() {
         focused = await page.evaluate(() => document.activeElement.textContent.trim());
         if (focused === "Oversharing") break;
       }
-      assert.equal(focused, "Oversharing", "il focus non ha raggiunto la voce 'Oversharing' nel flyout entro 6 Tab");
+      assert.equal(focused, "Oversharing", "il focus non ha raggiunto la voce 'Oversharing' nel pannello entro 6 Tab");
 
       await page.keyboard.press("Enter");
       await page.waitForFunction(() => window.location.hash === "#/scenario/oversharing");

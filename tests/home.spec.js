@@ -5,7 +5,7 @@
  * benvenuto + una card per ogni area di data/modules.json (icona,
  * descrizione, badge, scenari come link) e la ricerca che filtra aree e
  * scenari. Include le regressioni sulle funzioni della shell che la Home
- * monta: Sidebar con flyout "Scenari", skip-link (WCAG 2.4.1),
+ * monta: Sidebar a fisarmonica "Scenari", tasto Home nella barra, skip-link (WCAG 2.4.1),
  * ProfileMenu.
  *
  * RISCRITTO per il redesign: la Home non è più un finto feed social (il
@@ -37,7 +37,7 @@ const { chromium } = require("playwright");
 const { startServer } = require("./helpers/server");
 const { createSuite } = require("./helpers/testKit");
 const { loginAsDocente } = require("./helpers/auth");
-const { expandSidebarGroup } = require("./helpers/sidebar");
+const { openScenariosMenu, expandSidebarGroup } = require("./helpers/sidebar");
 
 const APP_ROOT = path.join(__dirname, "..");
 const SCREENSHOT_DIR = path.join(__dirname, "screenshots");
@@ -46,7 +46,6 @@ const SCREENSHOT_DIR = path.join(__dirname, "screenshots");
 const MODULES = JSON.parse(fs.readFileSync(path.join(APP_ROOT, "data", "modules.json"), "utf8")).modules;
 const isArea = (moduleRecord) => moduleRecord.available && Array.isArray(moduleRecord.scenarios);
 const AREAS = MODULES.filter(isArea);
-const PLACEHOLDER_MODULES = MODULES.filter((moduleRecord) => !isArea(moduleRecord));
 
 const SEARCH_INPUT = ".sl-app-header__search input";
 const VISIBLE_ITEM = ".sl-home-page__area-item:not([hidden])";
@@ -121,35 +120,23 @@ async function run() {
       assert.equal((await page.locator("main h2").textContent()).trim(), "Aree di formazione");
     });
 
-    await suite.test("Sidebar: 'Scenari' è un trigger con sottomenu, chiuso di default (aria-haspopup/aria-expanded)", async () => {
+    await suite.test("Sidebar: 'Scenari' è un bottone a fisarmonica, chiuso di default (aria-expanded=false + aria-controls, nessun aria-haspopup)", async () => {
       const trigger = page.locator(".sl-sidebar__trigger");
       assert.equal(await trigger.count(), 1);
-      assert.equal(await trigger.getAttribute("aria-haspopup"), "true");
       assert.equal(await trigger.getAttribute("aria-expanded"), "false");
-      assert.equal(await page.locator(".sl-sidebar__flyout").isVisible(), false);
+      assert.equal(await trigger.getAttribute("aria-haspopup"), null, "non è più un flyout");
+      assert.equal(await page.locator(`#${await trigger.getAttribute("aria-controls")}`).isVisible(), false);
     });
 
-    await suite.test("hover su 'Scenari' apre il flyout con le 2 categorie reali (Cybersecurity, AI) di data/modules.json, chiuse di default", async () => {
-      // hover, non click: un click() di Playwright genera un vero
-      // mousemove che fa scattare "mouseenter" sul trigger PRIMA del
-      // click stesso — Sidebar.js apre il flyout all'hover (mouseenter
-      // sull'intera <li>) e poi handleTriggerClick(), vedendo isOpen
-      // già true, lo richiuderebbe subito dopo (stesso comportamento
-      // per un utente reale con mouse: hover apre, un click successivo
-      // sul trigger già aperto lo toggla chiuso — per questo il codice
-      // riserva esplicitamente il click al caso tastiera/touch, dove
-      // l'hover non esiste). hover() riproduce fedelmente il percorso
-      // mouse reale (apre via mouseenter, nessun secondo click sul
-      // trigger).
-      await page.hover(".sl-sidebar__trigger");
-      await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
+    await suite.test("click su 'Scenari' apre in linea le aree reali (Cybersecurity, AI) di data/modules.json, chiuse di default", async () => {
+      await openScenariosMenu(page);
       assert.equal(await page.locator(".sl-sidebar__trigger").getAttribute("aria-expanded"), "true");
       const groups = await page.locator(".sl-sidebar__group-trigger").allTextContents();
-      assert.deepEqual(groups.map((t) => t.trim()), ["Cybersecurity", "AI"]);
+      assert.deepEqual(groups.map((t) => t.trim()), AREAS.map((area) => area.title));
       const states = await page
         .locator(".sl-sidebar__group-trigger")
         .evaluateAll((els) => els.map((el) => el.getAttribute("aria-expanded")));
-      assert.deepEqual(states, ["false", "false"]);
+      assert.deepEqual(states, AREAS.map(() => "false"));
     });
 
     await suite.test("'Impostazioni' resta disabilitata, non raggiungibile con Tab", async () => {
@@ -168,15 +155,11 @@ async function run() {
       assert.ok(!bodyText.includes("Anna Ferrari"), "trovato il nome placeholder scartato 'Prof. Anna Ferrari'");
     });
 
-    await suite.test("una card per ogni area di modules.json, nell'ordine del file; le aree segnaposto non compaiono", async () => {
+    await suite.test("una card per ogni area di modules.json, nell'ordine del file", async () => {
       assert.deepEqual(
         (await page.locator(".sl-area-card__title").allTextContents()).map((t) => t.trim()),
         AREAS.map((area) => area.title)
       );
-      const shown = await page.locator(".sl-area-card__title").allTextContents();
-      PLACEHOLDER_MODULES.forEach((moduleRecord) => {
-        assert.ok(!shown.map((t) => t.trim()).includes(moduleRecord.title), `l'area segnaposto "${moduleRecord.title}" compare in Home`);
-      });
     });
 
     await suite.test("ogni card: descrizione e badge con il numero di scenari letti dal JSON", async () => {
@@ -367,12 +350,6 @@ async function run() {
       assert.equal(await page.evaluate(() => window.__xss), undefined);
     });
 
-    await suite.test("le aree segnaposto (non disponibili) non sono cercabili", async () => {
-      assert.ok(PLACEHOLDER_MODULES.length > 0, "il test presuppone almeno un modulo segnaposto in modules.json");
-      await page.fill(SEARCH_INPUT, PLACEHOLDER_MODULES[0].title);
-      assert.deepEqual(await visibleAreaTitles(page), []);
-    });
-
     await suite.test("svuotare la ricerca ripristina aree, scenari e badge; messaggio nascosto; annuncio 'Tutte le aree mostrate'", async () => {
       await page.fill(SEARCH_INPUT, "");
       assert.deepEqual(await visibleAreaTitles(page), AREAS.map((a) => a.title));
@@ -442,6 +419,12 @@ async function run() {
           ],
         },
         {
+          id: "area-non-pronta",
+          title: "Area non pronta",
+          available: false,
+          scenarios: [{ id: "x-non-pronto", title: "Scenario non pronto", available: true }],
+        },
+        {
           id: "icona-esterna",
           title: "Esterna",
           available: true,
@@ -489,9 +472,18 @@ async function run() {
       assert.deepEqual(requested.filter((url) => url.includes("evil.example")), []);
     });
 
-    await suite.test("Sidebar e Home condividono lo stesso catalogo: il flyout elenca le stesse aree (stesso ordine)", async () => {
-      await page.hover(".sl-sidebar__trigger");
-      await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
+    await suite.test("un'area con available:false non compare né in Home né nella Sidebar, e non è cercabile", async () => {
+      assert.ok(!(await visibleAreaTitles(page)).includes("Area non pronta"));
+      await openScenariosMenu(page);
+      const groups = (await page.locator(".sl-sidebar__group-trigger").allTextContents()).map((t) => t.trim());
+      assert.ok(!groups.includes("Area non pronta"));
+      await page.fill(SEARCH_INPUT, "non pronto");
+      assert.deepEqual(await visibleAreaTitles(page), []);
+      await page.fill(SEARCH_INPUT, "");
+    });
+
+    await suite.test("Sidebar e Home condividono lo stesso catalogo: la fisarmonica elenca le stesse aree (stesso ordine)", async () => {
+      await openScenariosMenu(page);
       const groups = (await page.locator(".sl-sidebar__group-trigger").allTextContents()).map((t) => t.trim());
       assert.deepEqual(groups, [...AREAS.map((a) => a.title), "Cyberbullismo", "Esterna"]);
     });
@@ -554,6 +546,79 @@ async function run() {
     await context.close();
   }
 
+  // --- Tasto Home nella barra superiore --------------------------------------
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await loginAsDocente(page, server.url);
+    await page.waitForSelector(".sl-area-card");
+    const homeButton = page.locator(".sl-app-header__home");
+    const chromeOf = (scenarioId) =>
+      JSON.parse(fs.readFileSync(path.join(APP_ROOT, "data", "scenarios", scenarioId, "scenario.json"), "utf8")).chrome;
+    const scenarios = AREAS.flatMap((area) => area.scenarios).filter((scenario) => scenario.available);
+
+    await suite.test("tasto Home accanto al marchio: <a href='#/home'> con nome accessibile, DOPO il marchio nello stesso gruppo", async () => {
+      assert.equal(await homeButton.count(), 1);
+      assert.equal(await homeButton.getAttribute("href"), "#/home");
+      assert.equal(await homeButton.getAttribute("aria-label"), "Vai alla Home");
+      const order = await page.locator(".sl-app-header__brand-group").evaluate((el) => Array.from(el.children).map((c) => c.className));
+      assert.deepEqual(order, ["sl-app-header__brand", "sl-app-header__home"]);
+      const brand = await page.locator(".sl-app-header__brand").boundingBox();
+      const home = await homeButton.boundingBox();
+      assert.ok(home.x >= brand.x + brand.width - 1, "il tasto Home non sta a destra del marchio");
+    });
+
+    await suite.test("il tasto è una casa (icona SVG 24px, decorativa), ha un bersaglio ≥ 44px e sulla Home è 'pagina corrente'", async () => {
+      const box = await homeButton.boundingBox();
+      assert.ok(box.width >= 44 && box.height >= 44, `bersaglio ${box.width}x${box.height}`);
+      const icon = homeButton.locator("svg");
+      assert.equal(await icon.getAttribute("aria-hidden"), "true");
+      const iconBox = await icon.boundingBox();
+      assert.equal(Math.round(iconBox.width), 24);
+      assert.equal(await homeButton.getAttribute("aria-current"), "page");
+    });
+
+    await suite.test("tastiera: dopo lo skip-link il tasto Home è il primo elemento focalizzabile, con focus visibile", async () => {
+      await page.keyboard.press("Tab"); // skip-link
+      await page.keyboard.press("Tab");
+      assert.equal(await page.evaluate(() => document.activeElement.className), "sl-app-header__home");
+      const outline = await page.evaluate(() => getComputedStyle(document.activeElement).outlineStyle);
+      assert.notEqual(outline, "none");
+    });
+
+    for (const scenario of scenarios.filter((s) => chromeOf(s.id) !== "none")) {
+      await suite.test(`scenario "${scenario.title}": il tasto Home è presente (non 'corrente') e riporta alla Home`, async () => {
+        await page.evaluate((id) => {
+          window.location.hash = `#/scenario/${id}`;
+        }, scenario.id);
+        await page.waitForSelector(`.sl-scenario-viewport[data-scenario-id="${scenario.id}"]:not([aria-busy])`, { state: "attached" });
+        assert.equal(await homeButton.count(), 1);
+        assert.equal(await homeButton.getAttribute("aria-current"), null);
+        await homeButton.click();
+        await page.waitForFunction(() => window.location.hash === "#/home");
+        await page.waitForSelector(".sl-home-page__content .sl-area-card");
+      });
+    }
+
+    for (const scenario of scenarios.filter((s) => chromeOf(s.id) === "none")) {
+      await suite.test(`scenario immersivo "${scenario.title}": nessuna barra (realismo), ma l'uscita "×" verso la Home è sempre presente`, async () => {
+        await page.evaluate((id) => {
+          window.location.hash = `#/scenario/${id}`;
+        }, scenario.id);
+        await page.waitForSelector(`.sl-scenario-viewport[data-scenario-id="${scenario.id}"]:not([aria-busy])`, { state: "attached" });
+        assert.equal(await page.locator(".sl-app-header").count(), 0);
+        const exit = page.locator(".sl-scenario-page__immersive-exit");
+        assert.equal(await exit.count(), 1);
+        assert.ok(/Home/.test(await exit.getAttribute("aria-label")));
+        await exit.click();
+        await page.waitForFunction(() => window.location.hash === "#/home");
+        await page.waitForSelector(".sl-home-page__content .sl-area-card");
+      });
+    }
+
+    await context.close();
+  }
+
   // --- Tastiera ---------------------------------------------------------------
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -606,6 +671,14 @@ async function run() {
       );
       const lefts = await page.locator(".sl-area-card").evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().left)));
       assert.equal(new Set(lefts).size, 1, "le card non sono incolonnate");
+    });
+
+    await suite.test("375px: il tasto Home resta visibile accanto al marchio (la barra superiore non perde nulla)", async () => {
+      const box = await page.locator(".sl-app-header__home").boundingBox();
+      const brand = await page.locator(".sl-app-header__brand").boundingBox();
+      assert.ok(box && box.width >= 44 && box.height >= 44);
+      assert.ok(box.x >= brand.x + brand.width - 1, "il tasto Home non sta dopo il marchio");
+      assert.ok(box.x + box.width <= 375, "il tasto Home esce dalla viewport");
     });
 
     await suite.test("375px: target di tocco degli scenari ≥ 44px (WCAG 2.5.5)", async () => {
@@ -731,11 +804,8 @@ async function run() {
     await page.waitForSelector(".sl-sidebar__trigger");
     await page.waitForSelector(".sl-area-card");
 
-    await suite.test("Home -> flyout Scenari -> Cybersecurity -> Oversharing -> Home: nessun componente duplicato, nessun feed", async () => {
-      // hover, non click: vedi helpers/sidebar.js (un click() apre il
-      // flyout via mouseenter e lo richiude subito col proprio toggle).
-      await page.hover(".sl-sidebar__trigger");
-      await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
+    await suite.test("Home -> Scenari (fisarmonica) -> Cybersecurity -> Oversharing -> Home: nessun componente duplicato, nessun feed", async () => {
+      await openScenariosMenu(page);
       await expandSidebarGroup(page, "Cybersecurity");
       await page.click(".sl-sidebar__group-list .sl-sidebar__link >> nth=0");
       await page.waitForFunction(() => window.location.hash === "#/scenario/oversharing");

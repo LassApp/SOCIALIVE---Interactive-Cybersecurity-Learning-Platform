@@ -2,32 +2,31 @@
  * helpers/sidebar.js
  * -----------------------------------------------------------------------
  * Percorso reale (mouse e DOM veri) per raggiungere gli scenari dalla
- * Sidebar a due livelli: voce "Scenari" → categoria (Cybersecurity, AI)
- * → scenario. Estratto perché serve identico a più suite (home,
- * phishing, scenario, sidebar, token) — stesso principio "si estrae al
- * secondo consumo reale" già seguito per helpers/auth.js.
+ * Sidebar a fisarmonica: voce "Scenari" → area (Cybersecurity, AI) →
+ * scenario. Estratto perché serve identico a più suite (home, phishing,
+ * scenario, sidebar, token, llm) — stesso principio "si estrae al secondo
+ * consumo reale" già seguito per helpers/auth.js.
  *
- * hover, non click, sul trigger "Scenari": un click() di Playwright
- * genera un vero mousemove che fa scattare "mouseenter" PRIMA del click
- * stesso; Sidebar.js apre il flyout all'hover e poi handleTriggerClick(),
- * vedendo isOpen già true, lo richiuderebbe subito (per un utente reale
- * con mouse vale lo stesso: il click è riservato al caso tastiera/touch,
- * dove l'hover non esiste). hover() riproduce fedelmente il percorso
- * mouse.
+ * La Sidebar era un flyout aperto dall'hover; oggi è una FISARMONICA in
+ * linea che si apre solo per click/Invio/Spazio (vedi Sidebar.js): i
+ * percorsi "hover" dei test precedenti non aprono più nulla e sono stati
+ * sostituiti da un click.
  *
- * Le categorie (gruppi) NON si aprono all'hover ma solo per click/Invio/
- * Spazio — vedi rationale in Sidebar.js.
+ * Idempotenti: se la voce è già aperta NON cliccano — un click su una voce
+ * già aperta la richiuderebbe (vale per le AREE: quella dello scenario
+ * corrente nasce già aperta; "Scenari" invece nasce sempre chiusa).
  */
 
-/** Apre il flyout "Scenari" con l'hover (percorso mouse reale). */
-async function openScenariosFlyout(page) {
-  await page.hover(".sl-sidebar__trigger");
-  await page.waitForSelector(".sl-sidebar__flyout:not([hidden])");
+/** Apre la voce "Scenari" (se non è già aperta) e attende il pannello visibile. */
+async function openScenariosMenu(page) {
+  const trigger = page.locator(".sl-sidebar__trigger");
+  if ((await trigger.getAttribute("aria-expanded")) !== "true") await trigger.click();
+  await page.waitForSelector(".sl-sidebar__panel:not([hidden])");
 }
 
 /**
- * Espande una categoria del flyout (se non lo è già) e attende che la
- * sua lista di scenari sia visibile. Il flyout deve essere già aperto.
+ * Espande un'area del pannello (se non lo è già) e attende che la sua
+ * lista di scenari sia visibile. La voce "Scenari" deve essere già aperta.
  * @param {import('playwright').Page} page
  * @param {string} groupLabel es. "Cybersecurity", "AI"
  */
@@ -40,9 +39,9 @@ async function expandSidebarGroup(page, groupLabel) {
   await page.waitForSelector(`#${listId}:not([hidden])`);
 }
 
-/** Percorso completo: flyout → categoria → click sullo scenario. */
+/** Percorso completo: "Scenari" → area → click sullo scenario. */
 async function openScenarioViaSidebar(page, groupLabel, scenarioLabel) {
-  await openScenariosFlyout(page);
+  await openScenariosMenu(page);
   await expandSidebarGroup(page, groupLabel);
   await page
     .locator(".sl-sidebar__group-list a.sl-sidebar__link", {
@@ -51,4 +50,4 @@ async function openScenarioViaSidebar(page, groupLabel, scenarioLabel) {
     .click();
 }
 
-module.exports = { openScenariosFlyout, expandSidebarGroup, openScenarioViaSidebar };
+module.exports = { openScenariosMenu, expandSidebarGroup, openScenarioViaSidebar };

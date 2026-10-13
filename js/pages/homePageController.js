@@ -18,7 +18,7 @@
  * piattaforma di formazione professionale.
  *
  * DATA-DRIVEN: aree e scenari arrivano da data/modules.json, tramite lo
- * stesso catalogo (js/utils/scenarioCatalog.js) che alimenta il flyout
+ * stesso catalogo (js/utils/scenarioCatalog.js) che alimenta il sottomenu a fisarmonica
  * "Scenari" della Sidebar — una sola regola su cosa è visibile, quindi
  * Home e Sidebar non possono divergere. Nessun contenuto di area o
  * scenario è scritto in questo file; qui vivono solo i testi di
