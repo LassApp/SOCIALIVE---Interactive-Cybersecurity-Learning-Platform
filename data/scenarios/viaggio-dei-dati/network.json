@@ -8,13 +8,28 @@
     "correctOrder": "Ordine corretto",
     "stepperAria": "Passi dello scenario",
     "startPoint": "Punto di partenza",
-    "stepCounter": "Passo {step} di {total}"
+    "stepCounter": "Passo {step} di {total}",
+    "settings": "Impostazioni dell'animazione",
+    "refresh": "Ricomincia dall'inizio",
+    "speedGroup": "Velocità dell'animazione",
+    "packetButton": "Pacchetto {seq}, arrivato {rank}°: evidenzia il suo percorso",
+    "routeHint": "Clicca su un pacchetto nel vassoio per evidenziarne il percorso."
   },
   "announcements": {
     "arrived": "Pacchetti arrivati nell'ordine: {order}.",
-    "rebuilt": "I pacchetti sono stati rimessi in ordine: il dato è ricostruito."
+    "rebuilt": "I pacchetti sono stati rimessi in ordine: il dato è ricostruito.",
+    "routeSelected": "Percorso del pacchetto {seq} in evidenza: {hops} nodi intermedi attraversati, arrivato {rank}°.",
+    "routeCleared": "Nessun percorso in evidenza: tutti i pacchetti sono di nuovo colorati."
   },
-  "actions": { "next": "Prosegui", "restart": "Ricomincia" },
+  "actions": { "next": "Prosegui", "review": "Rivedi", "restart": "Ricomincia" },
+  "settings": {
+    "defaultSpeed": 1,
+    "speeds": [
+      { "value": 0.5, "label": "0,5×" },
+      { "value": 1, "label": "1×" },
+      { "value": 2, "label": "2×" }
+    ]
+  },
   "steps": [
     {
       "stepper": "Dato",

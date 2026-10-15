@@ -50,11 +50,138 @@
 
 /* --- Intestazione ---------------------------------------------------- */
 
+/* Riga del titolo: titolo a sinistra, comandi (impostazioni, ricomincia) al
+   margine destro — il titolo resta pulito e i comandi non cambiano posto. */
 .sl-packet-journey__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sl-space-4);
+}
+
+.sl-packet-journey__title-block {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--sl-space-2);
+  min-width: 0;
+}
+
+.sl-packet-journey__toolbar {
+  position: relative; /* àncora del pannello impostazioni */
+  flex-shrink: 0;
+}
+
+.sl-packet-journey__toolbar-buttons {
+  display: flex;
+  gap: var(--sl-space-1);
+}
+
+/* Icone un poco più grandi del default, come i pulsanti principali: la LIM
+   si legge da lontano. L'ingranaggio è LO STESSO di Oversharing (stessa
+   utility, stessa resa: button.css riempie gli svg dei bottoni con
+   currentColor, e la corona con denti si legge come un disco con i denti).
+   La freccia circolare è a contorno e lo dichiara da sé sui propri tratti
+   (fill="none"), così non eredita il riempimento. */
+.sl-packet-journey__toolbar-buttons .sl-button__icon {
+  width: 24px;
+  height: 24px;
+}
+
+.sl-button.sl-packet-journey__settings-trigger,
+.sl-button.sl-packet-journey__refresh {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Pannello impostazioni: stessi token di ProfileMenu (bg-elevated, shadow-2,
+   radius-lg). z-index sopra la scena e sotto AppHeader (10, sticky). */
+.sl-packet-journey__settings-panel {
+  position: absolute;
+  top: calc(100% + var(--sl-space-2));
+  right: 0;
+  z-index: 5;
+  min-width: 260px;
+  padding: var(--sl-space-4);
+  background-color: var(--sl-color-bg-elevated);
+  border: 1px solid var(--sl-color-border-subtle);
+  border-radius: var(--sl-radius-lg);
+  box-shadow: var(--sl-shadow-2);
+}
+
+/* "display" non è dichiarato sul pannello, ma la regola resta esplicita: se
+   qualcuno lo aggiungesse, [hidden] smetterebbe di funzionare. */
+.sl-packet-journey__settings-panel[hidden] {
+  display: none;
+}
+
+.sl-packet-journey__speed-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.sl-packet-journey__speed-legend {
+  padding: 0;
+  margin-bottom: var(--sl-space-3);
+  font-size: var(--sl-font-size-sm);
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-packet-journey__speed-options {
+  display: flex;
+  gap: var(--sl-space-2);
+}
+
+/* Segmented control su radio NATIVI: l'input resta nel DOM, focalizzabile e
+   annunciato, e viene solo nascosto alla vista; il segno visivo è l'etichetta. */
+.sl-packet-journey__speed-chip {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.sl-packet-journey__speed-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Stesso trattamento dei chip delle impostazioni di Oversharing: bordo
+   border-strong sempre presente, attivo = primary-600 + text-inverse
+   (accostamenti già verificati, nessuno nuovo). */
+.sl-packet-journey__speed-label {
+  min-width: 64px;
+  padding: var(--sl-space-2) var(--sl-space-4);
+  border: 1px solid var(--sl-color-border-strong);
+  border-radius: var(--sl-radius-full);
+  background-color: var(--sl-color-bg-surface);
+  font-size: var(--sl-font-size-sm);
+  font-weight: var(--sl-font-weight-semibold);
+  color: var(--sl-color-text-primary);
+  text-align: center;
+  transition: background-color var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-packet-journey__speed-chip:hover .sl-packet-journey__speed-label {
+  background-color: var(--sl-color-bg-hover);
+}
+
+.sl-packet-journey__speed-input:checked + .sl-packet-journey__speed-label {
+  background-color: var(--sl-color-primary-600);
+  border-color: var(--sl-color-primary-600);
+  color: var(--sl-color-text-inverse);
+}
+
+.sl-packet-journey__speed-input:focus-visible + .sl-packet-journey__speed-label {
+  outline: 2px solid var(--sl-color-focus-ring);
+  outline-offset: 2px;
 }
 
 .sl-packet-journey__title {
@@ -113,9 +240,70 @@
 
 .sl-packet-journey__trail {
   fill: none;
+  stroke: var(--packet-color); /* variabile impostata dal renderer, un colore per pacchetto */
   stroke-width: 4;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+/* Percorso in evidenza (clic su un pacchetto del vassoio): le altre scie si
+   spengono in grigio (border-strong, già verificato come confine funzionale),
+   quella scelta resta colorata e più spessa. Cambia anche lo spessore: il
+   colore non è l'unico segnale. */
+.sl-packet-journey__trail--muted {
+  stroke: var(--sl-color-border-strong);
+  stroke-opacity: 0.55;
+  stroke-width: 3;
+}
+
+.sl-packet-journey__trail--selected {
+  stroke-width: 6;
+}
+
+/* Pacchetti: decorativi mentre la scena anima, bottoni a fine passo 2.
+   Il gruppo non intercetta il mouse finché non è interattivo. */
+.sl-packet-journey__packet {
+  pointer-events: none;
+}
+
+.sl-packet-journey__packet--interactive {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.sl-packet-journey__packet-hit {
+  fill: transparent; /* area di click più larga del pacchetto rimpicciolito */
+}
+
+/* Anello di focus: un elemento SVG vero (l'outline su un <g> SVG non è reso
+   da tutti i browser). Visibile solo da tastiera, come il resto del progetto. */
+.sl-packet-journey__packet-focus {
+  fill: none;
+  stroke: var(--sl-color-focus-ring);
+  stroke-width: 3;
+  opacity: 0;
+}
+
+.sl-packet-journey__packet:focus,
+.sl-packet-journey__packet:focus-visible {
+  outline: none;
+}
+
+.sl-packet-journey__packet:focus-visible .sl-packet-journey__packet-focus {
+  opacity: 1;
+}
+
+.sl-packet-journey__packet--interactive:hover .sl-packet-journey__packet-body,
+.sl-packet-journey__packet--selected .sl-packet-journey__packet-body {
+  stroke-width: 6;
+}
+
+.sl-packet-journey__packet--dimmed .sl-packet-journey__packet-body {
+  stroke-opacity: 0.35;
+}
+
+.sl-packet-journey__packet--dimmed .sl-packet-journey__packet-number {
+  fill-opacity: 0.5;
 }
 
 .sl-packet-journey__pulse {
@@ -265,12 +453,25 @@
   color: var(--sl-color-text-primary);
 }
 
+.sl-packet-journey__caption-column {
+  min-width: 0;
+}
+
+.sl-packet-journey__hint {
+  margin-top: var(--sl-space-3);
+  font-size: var(--sl-font-size-sm);
+  color: var(--sl-color-text-secondary);
+}
+
 .sl-packet-journey__actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--sl-space-3);
 }
 
 /* Pulsanti più grandi del default: la LIM si legge dall'ultimo banco. */
+.sl-button.sl-packet-journey__review,
 .sl-button.sl-packet-journey__proceed,
 .sl-button.sl-packet-journey__restart {
   min-width: 156px;
@@ -283,8 +484,19 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .sl-packet-journey__actions {
+    justify-content: stretch;
+  }
+
   .sl-packet-journey__actions .sl-button {
     flex: 1;
+  }
+
+  .sl-button.sl-packet-journey__review,
+  .sl-button.sl-packet-journey__proceed,
+  .sl-button.sl-packet-journey__restart {
+    min-width: 0;
+    padding-inline: var(--sl-space-5);
   }
 
   .sl-packet-journey__stepper-item {

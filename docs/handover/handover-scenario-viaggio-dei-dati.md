@@ -7,7 +7,7 @@ piattaforma (`packet-journey`). Un dato viene scomposto in pacchetti, che attrav
 nodi per strade e in tempi diversi e vengono ricomposti nell'ordine corretto. L'animazione è
 avanzabile con "Prosegui" in 3 passi. Lo scenario è stato approvato in forma di mockup animato
 prima di scrivere i file veri (richiesta esplicita, in deroga al prompt iniziale).
-**Data:** 15 ottobre 2026.
+**Data:** 15 ottobre 2026 (aggiornato dopo la revisione: Rivedi, velocità, refresh, percorso in evidenza).
 **Tag di riferimento suggerito:** `scenario-viaggio-dei-dati` (numero SemVer da assegnare
 sull'ultimo tag reale del repository).
 
@@ -19,13 +19,16 @@ sull'ultimo tag reale del repository).
   Tokenizzazione, Allucinazioni) e redesign Home/Sidebar: ✅ invariati nel comportamento.
 - **Scenario Viaggio dei dati: ✅ COMPLETATO E VERIFICATO** nell'app reale (`index.html`, Chromium
   reale, server locale).
-- **385/385 controlli** della suite `tests/` (era 344): 38 nuovi in `packet.spec.js`, 3 in più nelle
-  suite esistenti (il resto è data-driven e cresce da solo con la nuova area). Eseguita per intero
+- **400/400 controlli** della suite `tests/` (344 prima dello scenario): **53** in `packet.spec.js`,
+  3 in più nelle suite esistenti (il resto è data-driven e cresce da solo con la nuova area). Eseguita per intero
   su una **copia di prova con credenziali usa e getta**: `data/users.json` reale non è stato
   toccato e nessuna credenziale reale è stata usata.
 - Prova a **tempo reale** (senza orologio finto): passo 1 in 2,6 s, passo 2 in 7,8 s, passo 3 in
   4,6 s, nessun errore in console.
 - **Nessuna richiesta di rete verso l'esterno**, verificata da un controllo dedicato.
+- **Revisione dopo la prima consegna** (4 modifiche richieste): pulsante **Rivedi**, **impostazioni**
+  di velocità (ingranaggio), **refresh** dall'inizio, **percorso in evidenza** cliccando i pacchetti
+  del vassoio. Dettagli in §2.
 
 ---
 
@@ -48,6 +51,24 @@ sull'ultimo tag reale del repository).
 - **Contorno:** area "Reti" in Home (icona nuova, descrizione, badge "1 scenario"), nella Sidebar
   (fisarmonica esclusiva) e nella ricerca della Home ("viaggio" individua l'area).
 
+### Modifiche richieste dopo la prima consegna
+- **Rivedi** (accanto a "Prosegui"): ricomincia il passo corrente dall'inizio, anche a metà
+  animazione. Compare dal passo 1 (a riposo non c'è nulla da rivedere). Non cambia passo: il
+  fotogramma iniziale di ogni passo coincide con lo stato finale del precedente, quindi basta
+  rilanciarlo. Dopo il passo 3 convive con "Ricomincia", che diventa il pulsante primario.
+- **Impostazioni** (ingranaggio, al margine destro della riga del titolo): pannello a comparsa
+  "Velocità dell'animazione" con **0,5× / 1× / 2×**, default 1×. Applicata subito, **anche a passo in
+  corso** (il tempo si accumula, la scena non salta). Radio nativi: frecce da tastiera, Esc chiude
+  e restituisce il focus all'ingranaggio, click fuori chiude. Non persistita: ogni apertura riparte da 1×.
+- **Refresh** (icona, accanto all'ingranaggio): riporta al "Punto di partenza" da qualunque passo,
+  anche a metà animazione, senza fotogrammi in ritardo. Il focus resta sul comando usato.
+- **Percorso in evidenza**: a fine passo 2 i 4 pacchetti del vassoio diventano bottoni (nome
+  accessibile con numero e ordine di arrivo, `aria-pressed`). Un clic lascia **colorato e più spesso**
+  il percorso di quel pacchetto e porta **in grigio** le altre scie; gli altri pacchetti si attenuano.
+  Un secondo clic sullo stesso pacchetto toglie l'evidenza; un clic su un altro la sposta. Funziona
+  anche da tastiera (Tab, Invio, Spazio, anello di focus). L'evidenza si azzera passando al passo 3,
+  con Rivedi e con il refresh. Compare un suggerimento sotto la didascalia ("Clicca su un pacchetto…").
+
 ### Accessibilità e movimento
 - Didascalia del passo in regione `role="status"`; secondo annuncio nascosto per l'esito (ordine di
   arrivo, dato ricostruito).
@@ -58,7 +79,7 @@ sull'ultimo tag reale del repository).
   a fine corsa), solo se l'utente non l'ha spostato altrove.
 
 ### Verifica
-- **38 controlli** in `tests/packet.spec.js` (dati e utilità pure, renderer a orologio finto,
+- **53 controlli** in `tests/packet.spec.js` (dati e utilità pure, renderer a orologio finto,
   movimento ridotto, degrado, smontaggio, richieste esterne). L'ordine di arrivo è osservato **nel
   tempo** (si avanza l'orologio a passi di 25 ms e si registra quando ciascun pacchetto entra nel
   vassoio), non dedotto a posteriori.
@@ -88,7 +109,9 @@ sull'ultimo tag reale del repository).
 | `data/scenarios/viaggio-dei-dati/scenario.json` | ⭐ **NUOVO** | Metadati e `dataRefs.network` |
 | `data/scenarios/viaggio-dei-dati/network.json` | ⭐ **NUOVO** | Nodi, collegamenti, 4 pacchetti (percorso, velocità, partenza, colore), testi, didascalie, annunci |
 | `assets/icons/areas/reti.svg` | ⭐ **NUOVO** | Icona dell'area (tre nodi collegati), usata come maschera CSS |
-| `tests/packet.spec.js` | ⭐ **NUOVO** | 38 controlli |
+| `js/utils/settingsIcon.js` | ⭐ **NUOVO** | Icona ingranaggio, **estratta** da `profileTimelineRenderer.js` al secondo consumo reale |
+| `js/scenarios/renderers/profileTimelineRenderer.js` | ♻️ **MODIFICATO** | Solo l'icona: la funzione locale `buildSettingsIcon()` è sostituita dall'import della utility. Nessun cambio di comportamento né di resa |
+| `tests/packet.spec.js` | ⭐ **NUOVO** | 53 controlli |
 | `docs/handover/handover-scenario-viaggio-dei-dati.md` | ⭐ **NUOVO** | Questo documento |
 | `data/modules.json` | ♻️ **MODIFICATO** | + area `reti` in coda (id, titolo, descrizione, icona, 1 scenario) |
 | `index.html` | ♻️ **MODIFICATO** | + `<link>` a `packet-journey.css`, + import e `registerRenderer("packet-journey", …)` |
@@ -115,8 +138,10 @@ socialive/
 │       ├── scenario.json                        # ⭐
 │       └── network.json                         # ⭐
 ├── js/
-│   ├── utils/packetRoute.js                     # ⭐
-│   └── scenarios/renderers/packetJourneyRenderer.js   # ⭐
+│   ├── utils/packetRoute.js · settingsIcon.js   # ⭐
+│   └── scenarios/renderers/
+│       ├── packetJourneyRenderer.js             # ⭐
+│       └── profileTimelineRenderer.js           # ♻️ solo import dell'icona
 └── tests/
     ├── packet.spec.js                           # ⭐
     └── run-all.js · package.json · home / phishing / scenario / sidebar .spec.js   # ♻️
@@ -144,6 +169,17 @@ socialive/
 | Badge dell'area (`Reti`) con il componente `Badge` esistente; scena dentro una `Card` con padding azzerato | Nessun nuovo componente; Card e Badge riusati |
 | `window.matchMedia("(prefers-reduced-motion: reduce)")` letta a ogni passo | La rete di sicurezza CSS non copre le animazioni JS; la lettura a ogni passo recepisce un cambio a metà sessione |
 | Test a **orologio finto** (`page.clock`), ordine di arrivo osservato nel tempo | Nessun controllo dipende dalla velocità della macchina |
+| **Rivedi** rilancia il passo corrente (`runCurrentStep`), non c'è uno stato "da ricostruire" | Il fotogramma t=0 di ogni passo coincide con lo stato finale del precedente: nessuna logica di ripristino, nessuna possibilità di disallineamento |
+| Comandi **impostazioni e refresh al margine destro della riga del titolo** (non accanto al titolo) | Il titolo resta pulito e i comandi non cambiano posto al variare della lunghezza del titolo; stessa posizione in ogni stato |
+| Velocità in un **pannello a comparsa**, non in un Modal (come in Oversharing) | La velocità si cambia anche mentre la scena anima: l'overlay del Modal la coprirebbe. L'ingranaggio e il gesto restano gli stessi |
+| Velocità come **radio nativi** stilati a "chip" | Frecce, focus e annuncio dello stato gratis dal browser; stessa resa dei chip di Oversharing (primary-600 + text-inverse, già verificati) |
+| Tempo **accumulato** (dt × velocità) invece di ricalcolato dall'inizio | Cambiare velocità a passo in corso non fa saltare la scena |
+| Selezione del percorso = **classi CSS**, non stili inline; colore delle scie come variabile `--packet-color` | I fotogrammi riscrivono stili inline a ogni frame e batterebbero la selezione; con le classi la selezione sopravvive a qualunque ridisegno |
+| Percorso in evidenza: scia **più spessa** oltre che colorata, le altre grigie e più sottili | Il colore non è l'unico segnale (WCAG 1.4.1) |
+| I pacchetti del vassoio sono bottoni **solo a fine passo 2**; altrove sono decorazione (`aria-hidden`) | Selezionare un percorso a metà viaggio non avrebbe senso; i figli di `role="img"` sarebbero presentazionali, quindi la scena è `role="group"` |
+| Anello di focus dei pacchetti = **elemento SVG vero** | `outline` su un `<g>` SVG non è reso allo stesso modo da tutti i browser |
+| Stesso ingranaggio di Oversharing (utility condivisa `settingsIcon.js`) | Coerenza tra scenari; estratto al secondo consumo reale. Vedi §9 sulla sua resa |
+| Suggerimento "Clicca su un pacchetto…" **fuori** dalla regione `status` | Dentro la regione verrebbe riletto a ogni comparsa |
 | La logica pura è testata importandola **nel browser** (`import()` dal server di test) | I file `.js` del progetto sono moduli ES e i test sono CommonJS: si evita di dipendere dal rilevamento automatico dei moduli di Node |
 
 ---
@@ -154,9 +190,11 @@ socialive/
 
 1. **Scritta tagliata "Min…"** in basso a destra del secondo schizzo (`2.jpeg`): non è stata
    interpretata e **non è nello scenario**. Da chiarire se doveva comparire qualcosa.
-2. Gap generali già noti e invariati: icon sprite unificato, integrazione CI di `tests/`,
+2. **Ingranaggio in stile "sole"**: l'icona condivisa si legge come un disco con i denti (vedi §9).
+   Da decidere se disegnare un vero ingranaggio, per entrambi gli scenari.
+3. Gap generali già noti e invariati: icon sprite unificato, integrazione CI di `tests/`,
    `js/config/env.js` (Supabase), controllo anti-regressione per contenuti testuali banditi.
-3. Eventuale **secondo scenario dell'area Reti** (es. "Il Nodo smista", "Cosa succede se un
+4. Eventuale **secondo scenario dell'area Reti** (es. "Il Nodo smista", "Cosa succede se un
    pacchetto si perde"): il type `packet-journey` e la validazione sono riusabili, vedi §6.
 
 ---
@@ -187,8 +225,11 @@ Platform"). Dopo le aree Cybersecurity e AI e il redesign di Home/Sidebar, è st
 l'area RETI con lo scenario "Viaggio dei dati" (type "packet-journey"): un dato (anello di 4
 archi colorati) si scompone in 4 pacchetti numerati (passo 1), che attraversano una mappa di 12
 nodi per strade e in tempi diversi e arrivano fuori ordine (passo 2: ordine di arrivo 3,1,4,2),
-poi si riordinano e ricostruiscono il dato (passo 3). Si avanza con "Prosegui"; dopo il passo 3
-compare "Ricomincia". Il documento di handover completo è allegato: consideralo la fonte di
+poi si riordinano e ricostruiscono il dato (passo 3). Si avanza con "Prosegui"; "Rivedi" ripete il
+passo corrente; dopo il passo 3 compare anche "Ricomincia". In alto a destra: ingranaggio (velocità
+0,5×/1×/2×, applicata anche a passo in corso) e refresh (torna al punto di partenza). A fine passo 2 i
+4 pacchetti del vassoio sono bottoni: un clic mette in evidenza il loro percorso (le altre scie
+diventano grigie). Il documento di handover completo è allegato: consideralo la fonte di
 verità primaria, ma VERIFICA SEMPRE i file reali (clona il repository
 lassapp/SOCIALIVE---Interactive-Cybersecurity-Learning-Platform) prima di dare per fatto qualcosa.
 
@@ -202,10 +243,14 @@ derivano da lunghezza del percorso × velocità + sosta + partenza; la validazio
 l'ordine di arrivo differisca da quello di partenza. Il layout è dimensionato per esattamente 4
 pacchetti (validato). Colori dei pacchetti = nome del token (primary/success/warning/error/info).
 
-STATO DEI TEST: 385/385 (login 19, home 78, scenario 82, phishing 35, sidebar 39, token 38, llm 56,
-packet 38), eseguiti su una copia con credenziali usa e getta. Per eseguirli in locale servono
+STATO DEI TEST: 400/400 (login 19, home 78, scenario 82, phishing 35, sidebar 39, token 38, llm 56,
+packet 53), eseguiti su una copia con credenziali usa e getta. Per eseguirli in locale servono
 SL_TEST_EMAIL / SL_TEST_PASSWORD (mai nei file). Nota ambiente: tests/node_modules del repo è
 Playwright 1.62.1; l'ambiente di verifica usa quello globale 1.56.0 (NODE_PATH).
+
+ICONA INGRANAGGIO: js/utils/settingsIcon.js è condivisa con Oversharing; button.css riempie gli svg
+dei bottoni con currentColor, quindi si vede come un disco con i denti (stile "sole"), non come
+l'anello+foro descritto nel commento. Resa lasciata identica in entrambi gli scenari per coerenza.
 
 PUNTI APERTI: la scritta tagliata "Min…" nello schizzo 2.jpeg non è stata interpretata e non è
 nello scenario (chiedere se serve). La riga 'success' in Light ha contrasto 3,01:1 (al limite del
@@ -241,6 +286,13 @@ Tutti i controlli già **eseguiti realmente** in questa sessione (Chromium, serv
   sequenza di colori, spunta.
 - [x] "Ricomincia" e secondo giro; click forzato mentre l'animazione corre ignorato.
 - [x] Durata di ogni passo entro gli 8 secondi.
+- [x] Rivedi: ricomincia lo stesso passo (anello intero e pacchetti spenti al primo istante), anche al passo 3.
+- [x] Velocità: a 2× il passo dura la metà, a 0,5× il doppio; cambio a passo in corso senza salti.
+- [x] Impostazioni: nome accessibile, 3 velocità con default 1×, frecce, Esc, click fuori.
+- [x] Refresh: ritorno al punto di partenza da fermo e a metà animazione, nessun fotogramma in ritardo.
+- [x] Percorso in evidenza: scia scelta colorata/più spessa/in primo piano, altre grigie, pacchetti
+  attenuati, annuncio, alternanza e ripristino dell'ordine; tastiera (Tab, Invio, Spazio, anello di
+  focus); azzerata dal passo 3; pacchetti non interattivi fuori dal passo 2.
 
 ### Test UI
 - [x] Screenshot Light (passi 1, 2, 3), Dark (passo 3), 375 px, Home con la nuova area.
@@ -262,8 +314,8 @@ Tutti i controlli già **eseguiti realmente** in questa sessione (Chromium, serv
 - [x] Prova a tempo reale (senza orologio finto): 2,6 s / 7,8 s / 4,6 s.
 
 ### Test di regressione
-- [x] Suite completa **385/385** attraverso l'`index.html` reale. Baseline prima delle modifiche:
-  344/344 sullo stesso ambiente.
+- [x] Suite completa **400/400** attraverso l'`index.html` reale, comprese le suite di Oversharing
+  dopo l'estrazione dell'icona. Baseline prima dello scenario: 344/344 sullo stesso ambiente.
 - [x] Smontaggio a metà animazione: tornando alla Home la scena sparisce senza errori né
   fotogrammi in ritardo.
 
@@ -285,6 +337,13 @@ Tutti i controlli già **eseguiti realmente** in questa sessione (Chromium, serv
 - **Test eseguiti con credenziali usa e getta** su una copia: `users.json` reale non è stato usato.
   Sul tuo ambiente servono `SL_TEST_EMAIL`/`SL_TEST_PASSWORD` come per le altre suite.
 - **Scritta "Min…" dello schizzo non interpretata** (vedi §5).
+- **L'ingranaggio di Oversharing non si vede come descritto nel suo commento** (anello + foro +
+  denti): `button.css` imposta `fill: currentColor` sugli svg dei bottoni e il cerchio esterno si
+  riempie, quindi appare come un disco con i denti (stile "sole"). Emerso confrontando il rendering
+  reale durante la revisione. Non l'ho modificato in Oversharing (resa già approvata); nel nuovo
+  scenario ho usato la stessa icona per coerenza. La freccia di refresh è a contorno e dichiara
+  `fill="none"` sui propri tratti.
+- **Il pannello velocità non è persistito**: ogni apertura riparte da 1×.
 
 ---
 
@@ -295,8 +354,8 @@ Tutti i controlli già **eseguiti realmente** in questa sessione (Chromium, serv
   validata, non una scorciatoia nascosta.
 
 ### Refactoring consigliati
-- 🟡 **`packetJourneyRenderer.js` è tra i renderer più lunghi** (~790 righe): scena, 4 funzioni di
-  fotogramma e macchina a stati nello stesso file. Candidato a separare i fotogrammi in un modulo
+- 🟡 **`packetJourneyRenderer.js` è tra i renderer più lunghi** (~1050 righe): scena, 4 funzioni di
+  fotogramma, macchina a stati, impostazioni e selezione del percorso nello stesso file. Candidato a separare i fotogrammi in un modulo
   dedicato se un secondo scenario riusasse la scena.
 - 🟡 **Durate della coreografia sparse nelle funzioni di fotogramma** (es. 450, 950, 2300, 3100 ms
   nei passi 1 e 3): raccoglierle in una tabella `MOTION` renderebbe più semplice ritoccare il ritmo

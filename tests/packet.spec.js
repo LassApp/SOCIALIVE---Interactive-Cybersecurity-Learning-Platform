@@ -50,6 +50,13 @@ const SEL = {
   outcome: ".sl-packet-journey__outcome",
   stage: ".sl-packet-journey__stage",
   svg: ".sl-packet-journey__svg",
+  review: ".sl-packet-journey__review",
+  settings: ".sl-packet-journey__settings-trigger",
+  panel: ".sl-packet-journey__settings-panel",
+  refresh: ".sl-packet-journey__refresh",
+  hint: ".sl-packet-journey__hint",
+  packet: ".sl-packet-journey__packet",
+  trail: ".sl-packet-journey__trail",
 };
 
 const MAX_STEP_MS = 8000; // criterio del prompt: nessun passo oltre gli 8 secondi
@@ -132,6 +139,43 @@ async function openScenario(page) {
   await openScenarioViaSidebar(page, "Reti", "Viaggio dei dati");
   await page.waitForSelector(SEL.root);
   await page.waitForTimeout(150); // lascia esaurire il doppio rAF del fade-in di pagina
+}
+
+/** Sceglie una velocità dal pannello impostazioni (lo apre se serve) e lo richiude con Esc. */
+async function chooseSpeed(page, label) {
+  if ((await page.locator(SEL.settings).getAttribute("aria-expanded")) !== "true") await page.locator(SEL.settings).click();
+  await page.locator(".sl-packet-journey__speed-chip", { hasText: label }).click();
+  await page.keyboard.press("Escape");
+}
+
+/** Stato delle scie: ordine nel DOM, classi, colore e spessore calcolati. */
+async function readTrails(page) {
+  return page.evaluate(() =>
+    Array.from(document.querySelectorAll(".sl-packet-journey__trail")).map((trail) => {
+      const style = getComputedStyle(trail);
+      return {
+        color: trail.style.getPropertyValue("--packet-color"),
+        muted: trail.classList.contains("sl-packet-journey__trail--muted"),
+        selected: trail.classList.contains("sl-packet-journey__trail--selected"),
+        stroke: style.stroke,
+        width: parseFloat(style.strokeWidth),
+      };
+    })
+  );
+}
+
+async function readTrayButtons(page) {
+  return page.evaluate(() =>
+    Array.from(document.querySelectorAll(".sl-packet-journey__packet")).map((node) => ({
+      seq: Number(node.getAttribute("data-seq")),
+      role: node.getAttribute("role"),
+      tabindex: node.getAttribute("tabindex"),
+      pressed: node.getAttribute("aria-pressed"),
+      label: node.getAttribute("aria-label"),
+      hidden: node.getAttribute("aria-hidden"),
+      dimmed: node.classList.contains("sl-packet-journey__packet--dimmed"),
+    }))
+  );
 }
 
 async function run() {
@@ -235,6 +279,21 @@ async function run() {
     assert.ok(errors.some((e) => e.includes("scopo didattico")), JSON.stringify(errors));
   });
 
+  await suite.test("validatePacketNetwork: velocità iniziale non elencata o elenco vuoto → errori", async () => {
+    const result = await inBrowser((r, n) => {
+      const notListed = structuredClone(n);
+      notListed.settings.defaultSpeed = 3;
+      const empty = structuredClone(n);
+      empty.settings.speeds = [];
+      const badValue = structuredClone(n);
+      badValue.settings.speeds[0].value = 0;
+      return [r.validatePacketNetwork(notListed), r.validatePacketNetwork(empty), r.validatePacketNetwork(badValue)];
+    }, network);
+    assert.ok(result[0].some((e) => e.includes("defaultSpeed")), JSON.stringify(result[0]));
+    assert.ok(result[1].some((e) => e.includes("settings.speeds")), JSON.stringify(result[1]));
+    assert.ok(result[2].some((e) => e.includes("value non valido")), JSON.stringify(result[2]));
+  });
+
   await suite.test("offsetPolyline: su un tratto orizzontale le corsie restano parallele alla distanza richiesta", async () => {
     const lanes = await inBrowser((r) => {
       const line = [{ x: 0, y: 0 }, { x: 100, y: 0 }];
@@ -308,7 +367,7 @@ async function run() {
     assert.equal(await page.locator(".sl-packet-journey__link").count(), network.links.length);
     const labels = (await page.locator(".sl-packet-journey__node-label").allTextContents()).map((t) => t.trim());
     assert.deepEqual(labels.sort(), ["Arrivo", "Nodo", "Partenza"]);
-    assert.equal(await page.locator(SEL.svg).getAttribute("role"), "img");
+    assert.equal(await page.locator(SEL.svg).getAttribute("role"), "group", "con role=img i pacchetti-bottone sarebbero presentazionali");
     assert.equal(await page.locator(SEL.svg).getAttribute("aria-label"), network.labels.stage);
   });
 
@@ -318,6 +377,8 @@ async function run() {
     assert.equal((await page.locator(SEL.proceed).textContent()).trim(), "Prosegui");
     assert.equal(await page.locator(SEL.proceed).isEnabled(), true);
     assert.equal(await page.locator(SEL.restart).isHidden(), true);
+    assert.equal(await page.locator(SEL.review).isHidden(), true, "Rivedi non ha senso prima del primo passo");
+    assert.equal(await page.locator(SEL.panel).isHidden(), true);
     assert.equal((await page.locator(SEL.captionStep).textContent()).trim(), "Punto di partenza");
     assert.equal((await page.locator(SEL.captionTitle).textContent()).trim(), network.steps[0].title);
     assert.equal((await page.locator(SEL.captionText).textContent()).trim(), network.steps[0].text);
@@ -340,6 +401,69 @@ async function run() {
     assert.equal(await page.locator(SEL.proceed).evaluate((el) => el.tagName), "BUTTON");
     assert.equal(await page.locator(".sl-packet-journey__caption").getAttribute("role"), "status");
     assert.equal(await page.locator(SEL.stage).getAttribute("tabindex"), "-1");
+  });
+
+  // Impostazioni e comandi della riga del titolo ---------------------------------
+  await suite.test("impostazioni: ingranaggio con nome accessibile, pannello chiuso; aperto offre 0,5× / 1× / 2×, default 1× e focus sulla scelta attiva", async () => {
+    assert.equal(await page.locator(SEL.settings).getAttribute("aria-label"), network.labels.settings);
+    assert.equal(await page.locator(SEL.settings).getAttribute("aria-expanded"), "false");
+    assert.equal(await page.locator(SEL.root).getAttribute("data-speed"), "1");
+    await page.locator(SEL.settings).click();
+    assert.equal(await page.locator(SEL.settings).getAttribute("aria-expanded"), "true");
+    assert.equal(await page.locator(SEL.panel).isVisible(), true);
+    const labels = (await page.locator(".sl-packet-journey__speed-label").allTextContents()).map((t) => t.trim());
+    assert.deepEqual(labels, network.settings.speeds.map((o) => o.label));
+    assert.deepEqual(labels, ["0,5×", "1×", "2×"]);
+    const checked = await page.locator(".sl-packet-journey__speed-input:checked").evaluate((el) => el.nextElementSibling.textContent.trim());
+    assert.equal(checked, "1×");
+    assert.equal(await page.evaluate(() => document.activeElement.classList.contains("sl-packet-journey__speed-input")), true);
+    assert.equal(await page.locator("fieldset.sl-packet-journey__speed-group legend").textContent().then((t) => t.trim()), network.labels.speedGroup);
+  });
+
+  await suite.test("impostazioni: frecce cambiano velocità (radio nativi), Esc chiude e restituisce il focus all'ingranaggio", async () => {
+    await page.keyboard.press("ArrowRight");
+    assert.equal(await page.locator(SEL.root).getAttribute("data-speed"), "2");
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("ArrowLeft");
+    assert.equal(await page.locator(SEL.root).getAttribute("data-speed"), "0.5");
+    await page.keyboard.press("ArrowRight");
+    assert.equal(await page.locator(SEL.root).getAttribute("data-speed"), "1");
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator(SEL.panel).isHidden(), true);
+    assert.equal(await page.locator(SEL.settings).getAttribute("aria-expanded"), "false");
+    assert.equal(await page.evaluate(() => document.activeElement.classList.contains("sl-packet-journey__settings-trigger")), true);
+  });
+
+  await suite.test("impostazioni: un click fuori chiude il pannello senza cambiare la velocità; un secondo click sull'ingranaggio lo richiude", async () => {
+    await page.locator(SEL.settings).click();
+    assert.equal(await page.locator(SEL.panel).isVisible(), true);
+    await page.locator(SEL.title).click();
+    assert.equal(await page.locator(SEL.panel).isHidden(), true);
+    assert.equal(await page.locator(SEL.root).getAttribute("data-speed"), "1");
+    await page.locator(SEL.settings).click();
+    await page.locator(SEL.settings).click();
+    assert.equal(await page.locator(SEL.panel).isHidden(), true);
+  });
+
+  await suite.test("riga del titolo: ingranaggio e refresh stanno al margine destro, dopo il titolo, con nome accessibile", async () => {
+    const boxes = await page.evaluate(() => {
+      const box = (sel) => {
+        const r = document.querySelector(sel).getBoundingClientRect();
+        return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+      };
+      return {
+        title: box(".sl-packet-journey__title"),
+        gear: box(".sl-packet-journey__settings-trigger"),
+        refresh: box(".sl-packet-journey__refresh"),
+        stage: box(".sl-packet-journey__stage"),
+      };
+    });
+    assert.ok(boxes.gear.left > boxes.title.right, "l'ingranaggio dovrebbe stare dopo il titolo");
+    assert.ok(boxes.refresh.left >= boxes.gear.right - 1, "il refresh dovrebbe stare dopo l'ingranaggio");
+    assert.ok(Math.abs(boxes.refresh.right - boxes.stage.right) <= 2, "il refresh dovrebbe allinearsi al margine destro della scena");
+    assert.ok(boxes.gear.bottom <= boxes.stage.top, "i comandi stanno sopra la scena");
+    assert.equal(await page.locator(SEL.refresh).getAttribute("aria-label"), network.labels.refresh);
+    assert.equal(await page.locator(SEL.refresh).getAttribute("title"), network.labels.refresh);
   });
 
   // Passo 1 ------------------------------------------------------------------
@@ -385,11 +509,63 @@ async function run() {
     assert.equal(await page.evaluate(() => document.activeElement.classList.contains("sl-packet-journey__proceed")), true);
   });
 
+  await suite.test("passo 1: i pacchetti sono solo decorazione (nessun ruolo bottone, nascosti agli screen reader) e il suggerimento non c'è", async () => {
+    (await readTrayButtons(page)).forEach((b) => {
+      assert.equal(b.role, null);
+      assert.equal(b.tabindex, null);
+      assert.equal(b.hidden, "true");
+    });
+    assert.equal(await page.locator(SEL.hint).isHidden(), true);
+    assert.equal(await page.locator(SEL.review).isVisible(), true, "Rivedi dovrebbe comparire dal passo 1");
+  });
+
   await suite.test("passo 1: ogni pacchetto ha un colore diverso (stroke) e lo stesso colore del proprio arco", async () => {
     const packets = await readPackets(page);
     const strokes = [1, 2, 3, 4].map((s) => packets[s].stroke);
     assert.equal(new Set(strokes).size, 4, `colori dei pacchetti non distinti: ${strokes}`);
     strokes.forEach((stroke, i) => assert.equal(stroke, `var(--sl-color-${network.packets.find((p) => p.seq === i + 1).color}-500)`));
+  });
+
+  await suite.test("Rivedi (passo 1 concluso): ricomincia lo STESSO passo — al primo istante anello intero e pacchetti spenti, Prosegui disattivato, poi si ripete fino alla fine", async () => {
+    assert.equal((await page.locator(SEL.review).textContent()).trim(), "Rivedi");
+    await page.locator(SEL.review).click();
+    assert.equal(await dataStep(page), "1", "Rivedi non deve cambiare passo");
+    assert.equal(await isAnimating(page), true);
+    assert.equal(await page.locator(SEL.proceed).isDisabled(), true);
+    await page.clock.runFor(20);
+    (await readArcs(page)).forEach((arc) => assert.equal(arc.opacity, 1, "l'anello non è tornato intero al primo istante"));
+    Object.values(await readPackets(page)).forEach((p) => assert.equal(p.opacity, 0, "i pacchetti dovrebbero essere spenti al primo istante"));
+    assert.equal((await page.locator(SEL.captionStep).textContent()).trim(), "Passo 1 di 3");
+    await runUntilIdle(page);
+    assert.deepEqual(orderByX(await readPackets(page)), [1, 2, 3, 4]);
+    assert.equal(await page.locator(SEL.proceed).isEnabled(), true);
+  });
+
+  await suite.test("velocità: a 2× il passo dura la metà, a 0,5× il doppio", async () => {
+    await chooseSpeed(page, "2×");
+    assert.equal(await page.locator(SEL.root).getAttribute("data-speed"), "2");
+    await page.locator(SEL.review).click();
+    const fast = await runUntilIdle(page, { stepMs: 25 });
+    assert.ok(fast >= 1100 && fast <= 1400, `a 2× il passo 1 dovrebbe durare ~1250 ms (${fast})`);
+
+    await chooseSpeed(page, "0,5×");
+    await page.locator(SEL.review).click();
+    await page.clock.runFor(3000);
+    assert.equal(await isAnimating(page), true, "a 0,5× dopo 3 s il passo (5 s) dovrebbe essere ancora in corso");
+    const rest = await runUntilIdle(page, { stepMs: 25 });
+    assert.ok(3000 + rest >= 4800 && 3000 + rest <= 5300, `a 0,5× il passo 1 dovrebbe durare ~5000 ms (${3000 + rest})`);
+  });
+
+  await suite.test("velocità: cambiarla a passo in corso non fa saltare la scena (tempo accumulato)", async () => {
+    await page.locator(SEL.review).click(); // sempre a 0,5×
+    await page.clock.runFor(1000); // = 500 ms di scena
+    await chooseSpeed(page, "2×");
+    const before = await readArcs(page);
+    assert.ok(before.some((a) => a.opacity === 1), "a 500 ms di scena gli archi non dovrebbero essere ancora spariti");
+    const rest = await runUntilIdle(page, { stepMs: 25 });
+    assert.ok(rest >= 800 && rest <= 1200, `restano ~2000 ms di scena a 2× = ~1000 ms (${rest})`);
+    await chooseSpeed(page, "1×");
+    assert.equal(await page.locator(SEL.root).getAttribute("data-speed"), "1");
   });
 
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, "packet-step1-light.png"), fullPage: true });
@@ -438,7 +614,7 @@ async function run() {
       Array.from(document.querySelectorAll(".sl-packet-journey__trail")).map((t) => ({
         offset: Number(t.style.strokeDashoffset),
         opacity: Number(t.style.opacity),
-        color: t.style.stroke,
+        color: getComputedStyle(t).stroke,
       }))
     );
     assert.equal(trails.length, 4);
@@ -463,11 +639,103 @@ async function run() {
     assert.deepEqual(result, expected);
   });
 
+  // Percorso in evidenza ------------------------------------------------------
+  const rankOf = (seq) => arrivalSeen.indexOf(seq) + 1;
+  const sortedPackets = [...network.packets].sort((a, b) => a.seq - b.seq);
+
+  await suite.test("vassoio: a fine passo 2 i 4 pacchetti diventano bottoni (nome con numero e ordine di arrivo, aria-pressed=false) e compare il suggerimento", async () => {
+    const buttons = await readTrayButtons(page);
+    assert.equal(buttons.length, 4);
+    buttons.forEach((b) => {
+      assert.equal(b.role, "button");
+      assert.equal(b.tabindex, "0");
+      assert.equal(b.pressed, "false");
+      assert.equal(b.hidden, null);
+      assert.ok(b.label.includes(`Pacchetto ${b.seq}`) && b.label.includes(`arrivato ${rankOf(b.seq)}°`), b.label);
+    });
+    assert.equal(await page.locator(SEL.hint).isVisible(), true);
+    assert.equal((await page.locator(SEL.hint).textContent()).trim(), network.labels.routeHint);
+  });
+
+  await suite.test("clic sul pacchetto 1: solo il suo percorso resta colorato (e più spesso, in primo piano), le altre scie diventano grigie, esito annunciato", async () => {
+    await page.locator(`${SEL.packet}[data-seq="1"]`).click();
+    assert.equal(await page.locator(SEL.root).getAttribute("data-selected"), "1");
+    const trails = await readTrails(page);
+    const selected = trails.filter((t) => t.selected);
+    const muted = trails.filter((t) => t.muted);
+    assert.equal(selected.length, 1);
+    assert.equal(muted.length, 3);
+    assert.equal(selected[0].muted, false);
+    assert.equal(new Set(muted.map((t) => t.stroke)).size, 1, "le scie spente dovrebbero avere tutte lo stesso grigio");
+    assert.notEqual(muted[0].stroke, selected[0].stroke);
+    assert.ok(selected[0].width > muted[0].width, "la scia in evidenza dovrebbe essere più spessa");
+    assert.equal(trails[trails.length - 1].selected, true, "la scia in evidenza dovrebbe stare sopra le altre nel DOM");
+    // il grigio non coincide con nessuno dei 4 colori dei pacchetti
+    const packetStrokes = Object.values(await readPackets(page)).map((p) => p.stroke);
+    assert.ok(!packetStrokes.includes(muted[0].stroke));
+    const buttons = await readTrayButtons(page);
+    assert.deepEqual(buttons.map((b) => b.pressed), ["true", "false", "false", "false"]);
+    assert.deepEqual(buttons.map((b) => b.dimmed), [false, true, true, true]);
+    const route = sortedPackets[0].route;
+    assert.equal(
+      (await page.locator(SEL.outcome).textContent()).trim(),
+      `Percorso del pacchetto 1 in evidenza: ${route.length - 2} nodi intermedi attraversati, arrivato ${rankOf(1)}°.`
+    );
+  });
+
+  await suite.test("clic su un altro pacchetto sposta l'evidenza; clic sullo stesso la toglie e ripristina colori, ordine e annuncio", async () => {
+    await page.locator(`${SEL.packet}[data-seq="3"]`).click();
+    assert.equal(await page.locator(SEL.root).getAttribute("data-selected"), "3");
+    let trails = await readTrails(page);
+    assert.deepEqual(trails.map((t) => t.selected).filter(Boolean).length, 1);
+    assert.equal(trails.find((t) => t.selected).color, "var(--sl-color-success-500)", "la scia selezionata non è quella del pacchetto 3");
+    assert.equal((await readTrayButtons(page)).find((b) => b.seq === 1).dimmed, true);
+
+    await page.locator(`${SEL.packet}[data-seq="3"]`).click();
+    assert.equal(await page.locator(SEL.root).getAttribute("data-selected"), null);
+    trails = await readTrails(page);
+    trails.forEach((t) => assert.ok(!t.muted && !t.selected));
+    assert.deepEqual(trails.map((t) => t.color), sortedPackets.map((p) => `var(--sl-color-${p.color}-500)`), "l'ordine originale delle scie non è stato ripristinato");
+    assert.equal(new Set(trails.map((t) => t.stroke)).size, 4);
+    (await readTrayButtons(page)).forEach((b) => {
+      assert.equal(b.pressed, "false");
+      assert.equal(b.dimmed, false);
+    });
+    assert.equal((await page.locator(SEL.outcome).textContent()).trim(), network.announcements.routeCleared);
+  });
+
+  await suite.test("tastiera: Tab dal refresh raggiunge i pacchetti (anello di focus visibile); Invio e Spazio alternano l'evidenza", async () => {
+    await page.locator(SEL.refresh).focus();
+    await page.keyboard.press("Tab");
+    assert.equal(await page.evaluate(() => document.activeElement.getAttribute("data-seq")), "1");
+    const ring = await page.evaluate(() => Number(getComputedStyle(document.activeElement.querySelector(".sl-packet-journey__packet-focus")).opacity));
+    assert.equal(ring, 1, "anello di focus non visibile da tastiera");
+    await page.keyboard.press("Tab");
+    assert.equal(await page.evaluate(() => document.activeElement.getAttribute("data-seq")), "2");
+    await page.keyboard.press("Enter");
+    assert.equal(await page.locator(SEL.root).getAttribute("data-selected"), "2");
+    await page.keyboard.press("Space");
+    assert.equal(await page.locator(SEL.root).getAttribute("data-selected"), null);
+    await page.keyboard.press("Enter"); // lascia una selezione attiva: il passo 3 deve azzerarla
+    assert.equal(await page.locator(SEL.root).getAttribute("data-selected"), "2");
+  });
+
+  await page.screenshot({ path: path.join(SCREENSHOT_DIR, "packet-step2-selected-light.png"), fullPage: true });
+  await page.locator(`${SEL.packet}[data-seq="2"]`).click(); // deseleziona per lo screenshot successivo
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, "packet-step2-light.png"), fullPage: true });
 
   // Passo 3 ------------------------------------------------------------------
-  await suite.test("passo 3, all'inizio i pacchetti salgono in riga NELL'ORDINE DI ARRIVO", async () => {
+  await suite.test("passo 3, all'inizio i pacchetti salgono in riga NELL'ORDINE DI ARRIVO (e l'evidenza di un percorso viene azzerata)", async () => {
+    await page.locator(`${SEL.packet}[data-seq="4"]`).click(); // evidenza attiva prima di proseguire
+    assert.equal(await page.locator(SEL.root).getAttribute("data-selected"), "4");
     await page.locator(SEL.proceed).click();
+    assert.equal(await page.locator(SEL.root).getAttribute("data-selected"), null);
+    (await readTrails(page)).forEach((t) => assert.ok(!t.muted && !t.selected));
+    (await readTrayButtons(page)).forEach((b) => {
+      assert.equal(b.role, null, "i pacchetti non devono restare bottoni fuori dal passo 2");
+      assert.equal(b.hidden, "true");
+    });
+    assert.equal(await page.locator(SEL.hint).isHidden(), true);
     assert.equal(await dataStep(page), "3");
     assert.equal((await page.locator(SEL.captionStep).textContent()).trim(), "Passo 3 di 3");
     await page.clock.runFor(800);
@@ -535,6 +803,22 @@ async function run() {
     assert.notEqual(light.surface, dark.surface, "il tema scuro non cambia la superficie");
   });
 
+  await suite.test("passo 3 concluso: Rivedi e Ricomincia insieme (Ricomincia è l'azione principale); Rivedi ripete la ricomposizione senza uscire dal passo 3", async () => {
+    assert.equal(await page.locator(SEL.review).isVisible(), true);
+    assert.equal(await page.locator(SEL.restart).evaluate((el) => el.classList.contains("sl-button--primary")), true);
+    assert.equal(await page.locator(SEL.review).evaluate((el) => el.classList.contains("sl-button--secondary")), true);
+    await page.locator(SEL.review).click();
+    assert.equal(await dataStep(page), "3");
+    assert.equal(await isAnimating(page), true);
+    assert.equal(await page.locator(SEL.restart).isHidden(), true, "durante la ripetizione Ricomincia non serve");
+    await page.clock.runFor(800);
+    assert.deepEqual(orderByX(await readPackets(page)), arrivalSeen, "la ripetizione non riparte dall'ordine di arrivo");
+    await runUntilIdle(page);
+    assert.equal(await dataStep(page), "3");
+    (await readArcs(page)).forEach((arc) => assert.equal(arc.opacity, 1));
+    assert.equal(await page.locator(SEL.restart).isVisible(), true);
+  });
+
   await suite.test("Ricomincia: ritorno al passo 0 (anello intero, Prosegui attivo col focus, esito azzerato) e secondo giro possibile", async () => {
     await page.locator(SEL.restart).click();
     assert.equal(await dataStep(page), "0");
@@ -550,6 +834,28 @@ async function run() {
     await runUntilIdle(page);
     assert.equal(await dataStep(page), "1");
     assert.deepEqual(orderByX(await readPackets(page)), [1, 2, 3, 4]);
+  });
+
+  await suite.test("refresh (icona): riporta al punto di partenza anche a metà animazione, nasconde Rivedi e lascia il focus sul comando; nessun fotogramma in ritardo", async () => {
+    // dopo il test precedente la scena è al passo 1 concluso
+    await page.locator(SEL.refresh).click();
+    assert.equal(await dataStep(page), "0");
+    assert.equal(await isAnimating(page), false);
+    assert.equal(await page.locator(SEL.review).isHidden(), true);
+    assert.equal(await page.evaluate(() => document.activeElement.classList.contains("sl-packet-journey__refresh")), true);
+    assert.equal((await page.locator(SEL.captionStep).textContent()).trim(), "Punto di partenza");
+
+    await page.locator(SEL.proceed).click();
+    await page.clock.runFor(800);
+    assert.equal(await isAnimating(page), true);
+    await page.locator(SEL.refresh).click();
+    assert.equal(await dataStep(page), "0");
+    assert.equal(await isAnimating(page), false);
+    await page.clock.runFor(3000); // un fotogramma dell'animazione interrotta riapparirebbe qui
+    assert.equal(await dataStep(page), "0");
+    (await readArcs(page)).forEach((arc) => assert.equal(arc.opacity, 1));
+    Object.values(await readPackets(page)).forEach((p) => assert.equal(p.opacity, 0));
+    assert.equal(await page.locator(SEL.proceed).isEnabled(), true);
   });
 
   await suite.test("larghezze 900 e 375 px: nessun overflow orizzontale, scena 16:9, controlli impilati su mobile", async () => {
@@ -601,7 +907,7 @@ async function run() {
 
   // --- 4. Degrado, smontaggio, richieste esterne -----------------------------
   await suite.test("smontaggio a metà animazione: tornando alla Home la scena sparisce, nessun errore e nessun fotogramma in ritardo", async () => {
-    await page.locator(SEL.proceed).click(); // passo 2 in corso (il passo 1 era già concluso)
+    await page.locator(SEL.proceed).click(); // passo 1 in corso (il refresh ha riportato al punto di partenza)
     assert.equal(await isAnimating(page), true);
     await page.clock.runFor(1200);
     const errorsBefore = pageErrors.length;

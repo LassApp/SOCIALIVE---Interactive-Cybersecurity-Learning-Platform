@@ -202,13 +202,25 @@ export function validatePacketNetwork(network) {
   if (!network || typeof network !== "object") return ["network.json non è un oggetto."];
 
   // Testi
-  ["packets", "arrivalOrder", "correctOrder", "stage", "stepperAria", "stepCounter"].forEach((key) => {
+  [
+    "packets",
+    "arrivalOrder",
+    "correctOrder",
+    "stage",
+    "stepperAria",
+    "stepCounter",
+    "settings",
+    "refresh",
+    "speedGroup",
+    "packetButton",
+    "routeHint",
+  ].forEach((key) => {
     if (!isText(network.labels?.[key])) errors.push(`labels.${key} mancante.`);
   });
-  ["arrived", "rebuilt"].forEach((key) => {
+  ["arrived", "rebuilt", "routeSelected", "routeCleared"].forEach((key) => {
     if (!isText(network.announcements?.[key])) errors.push(`announcements.${key} mancante.`);
   });
-  ["next", "restart"].forEach((key) => {
+  ["next", "review", "restart"].forEach((key) => {
     if (!isText(network.actions?.[key])) errors.push(`actions.${key} mancante.`);
   });
   if (!isText(network.areaLabel)) errors.push("areaLabel mancante.");
@@ -223,6 +235,20 @@ export function validatePacketNetwork(network) {
     });
   }
   if (!isNumber(network.timing?.dwellMs) || network.timing.dwellMs < 0) errors.push("timing.dwellMs non valido.");
+
+  // Velocità selezionabili: il valore è un moltiplicatore del tempo (0,5 = più lenta).
+  const speeds = network.settings?.speeds;
+  if (!Array.isArray(speeds) || speeds.length === 0) {
+    errors.push("settings.speeds deve contenere almeno una velocità.");
+  } else {
+    speeds.forEach((option, i) => {
+      if (!isNumber(option?.value) || option.value <= 0) errors.push(`settings.speeds[${i}].value non valido.`);
+      if (!isText(option?.label)) errors.push(`settings.speeds[${i}].label mancante.`);
+    });
+    if (!speeds.some((option) => option?.value === network.settings.defaultSpeed)) {
+      errors.push("settings.defaultSpeed deve coincidere con una delle velocità elencate.");
+    }
+  }
 
   // Grafo
   const nodes = Array.isArray(network.nodes) ? network.nodes : [];

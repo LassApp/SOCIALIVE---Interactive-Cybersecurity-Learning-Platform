@@ -155,6 +155,7 @@ import { buildFallbackMessage } from "../../utils/fallbackMessage.js";
 import { applyImageFadeIn } from "../../utils/imageFadeIn.js";
 import { createLocalJsonResource, createLocalJsonRepository } from "../../repositories/localJsonRepository.js";
 import { svgNode } from "../../utils/svg.js";
+import { buildSettingsIcon } from "../../utils/settingsIcon.js";
 import { create as createAvatar } from "../../components/Avatar.js";
 import { create as createButton } from "../../components/Button.js";
 import { create as createModal } from "../../components/Modal.js";
@@ -195,35 +196,9 @@ function buildLockIcon() {
   return svg;
 }
 
-// Icona ingranaggio per il bottone "Impostazioni" — stile "corona con
-// denti squadrati" (anello + foro centrale + 8 denti rettangolari
-// ruotati), deliberatamente diverso dal precedente ingranaggio "a
-// bezier" (troppo simile a un'icona generica di terze parti, sostituito
-// su richiesta esplicita): resta comunque un ingranaggio, riconoscibile
-// come tale, solo con un tratto più geometrico/squadrato coerente con
-// lo stile "outline, stroke 1.5px" già usato per le altre icone inline
-// del progetto (lucchetto, chiusura, chevron).
-function buildSettingsIcon() {
-  const svg = svgNode("svg", { viewBox: "0 0 24 24", fill: "none" });
-  svg.appendChild(svgNode("circle", { cx: "12", cy: "12", r: "6.5", stroke: "currentColor", "stroke-width": "1.6" }));
-  svg.appendChild(svgNode("circle", { cx: "12", cy: "12", r: "2", fill: "currentColor" }));
-  // 8 denti equidistanti, un solo <rect> ruotato di 45° in 8 copie —
-  // più economico ed esplicito di 8 path scritti a mano.
-  for (let i = 0; i < 8; i += 1) {
-    svg.appendChild(
-      svgNode("rect", {
-        x: "10.75",
-        y: "0.9",
-        width: "2.5",
-        height: "3",
-        rx: "0.6",
-        fill: "currentColor",
-        transform: `rotate(${i * 45} 12 12)`,
-      })
-    );
-  }
-  return svg;
-}
+// L'icona ingranaggio del bottone "Impostazioni" vive ora in
+// js/utils/settingsIcon.js (estratta al secondo consumo reale: lo scenario
+// "Viaggio dei dati" usa la stessa identica icona).
 
 function buildStat(label, value) {
   return createElement("div", { classNames: "sl-profile-timeline__stat" }, [

@@ -64,6 +64,7 @@ import { createLocalJsonResource } from "../../repositories/localJsonRepository.
 import { create as createButton } from "../../components/Button.js";
 import { create as createCard } from "../../components/Card.js";
 import { create as createBadge } from "../../components/Badge.js";
+import { buildSettingsIcon } from "../../utils/settingsIcon.js";
 import {
   clamp,
   lerp,
@@ -94,6 +95,7 @@ const LAYOUT = {
   ],
   labelY: 62,
   packetRadius: 26,
+  packetHitRadius: 34,
   packetMapScale: 0.62,
   rowY: 160,
   rowGap: 125,
@@ -116,6 +118,35 @@ const LAST_STEP = 3;
 function colorVar(name) {
   return `var(--sl-color-${name}-500)`;
 }
+
+// Icona "ricomincia dall'inizio": freccia circolare a contorno. fill="none" sui
+// tratti: button.css riempie gli svg dei bottoni con currentColor e, senza,
+// l'arco diventerebbe una macchia piena. Un solo consumer: resta qui (YAGNI).
+function buildRefreshIcon() {
+  const svg = svgNode("svg", { viewBox: "0 0 24 24", fill: "none" });
+  svg.appendChild(
+    svgNode("path", {
+      d: "M19.5 12a7.5 7.5 0 1 1-2.2-5.3",
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-width": "1.8",
+      "stroke-linecap": "round",
+    })
+  );
+  svg.appendChild(
+    svgNode("path", {
+      d: "M19.8 3.8v4.4h-4.4",
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-width": "1.8",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+    })
+  );
+  return svg;
+}
+
+let instanceCounter = 0; // id univoci: la scena può essere montata più volte nella stessa pagina
 
 function formatTemplate(template, values) {
   return template.replace(/\{(\w+)\}/g, (match, key) => (key in values ? String(values[key]) : match));
@@ -192,14 +223,16 @@ function buildScene(network, model) {
   const { ring } = LAYOUT;
   const svg = svgNode("svg", {
     viewBox: `0 0 ${VIEW.width} ${VIEW.height}`,
-    role: "img",
+    // "group" e non "img": un role="img" renderebbe presentazionali i figli, e i
+    // pacchetti del vassoio diventano bottoni (selezione del percorso).
+    role: "group",
     focusable: "false",
     "aria-label": network.labels.stage,
     class: `${CLASS}__svg`,
   });
 
   // --- Mappa (livello più basso) ---
-  const mapLayer = addSvg(svg, "g");
+  const mapLayer = addSvg(svg, "g", { "aria-hidden": "true" });
   const gLinks = addSvg(mapLayer, "g");
   const gTrails = addSvg(mapLayer, "g");
   const gNodes = addSvg(mapLayer, "g");
@@ -248,7 +281,9 @@ function buildScene(network, model) {
   const trails = model.packets.map((packet) => {
     const d = `M${packet.points.map((p) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" L")}`;
     const trail = addSvg(gTrails, "path", { d, class: `${CLASS}__trail` });
-    trail.style.stroke = packet.color;
+    // Colore come variabile, non come stroke inline: le scie non selezionate si
+    // "spengono" con una classe CSS (un valore inline batterebbe qualunque regola).
+    trail.style.setProperty("--packet-color", packet.color);
     trail.style.strokeDasharray = packet.timeline.length;
     return trail;
   });
@@ -262,7 +297,7 @@ function buildScene(network, model) {
   );
 
   // --- Dato: guida tratteggiata, connettori, etichette ---
-  const dataLayer = addSvg(svg, "g");
+  const dataLayer = addSvg(svg, "g", { "aria-hidden": "true" });
   const ghost = addSvg(dataLayer, "circle", { cx: ring.cx, cy: ring.cy, r: ring.outer, class: `${CLASS}__ghost` });
   const connectorsLayer = addSvg(dataLayer, "g");
   const connectors = model.packets.map(() => addSvg(connectorsLayer, "line", { class: `${CLASS}__connector` }));
@@ -276,7 +311,7 @@ function buildScene(network, model) {
   const labelCorrect = makeLabel(network.labels.correctOrder);
 
   // --- Anello del dato: un arco per pacchetto (quadranti) ---
-  const ringLayer = addSvg(svg, "g");
+  const ringLayer = addSvg(svg, "g", { "aria-hidden": "true" });
   const arcsLayer = addSvg(ringLayer, "g");
   const sector = 360 / model.packets.length;
   const centroidRadius = (ring.outer + ring.inner) / 2;
@@ -325,7 +360,13 @@ function buildScene(network, model) {
   // --- Pacchetti (livello più alto) ---
   const packetLayer = addSvg(svg, "g");
   const packetNodes = model.packets.map((packet) => {
-    const group = addSvg(packetLayer, "g");
+    // Decorativo finché la scena anima; diventa un bottone solo a fine passo 2
+    // (vedi syncSelectableTray). L'area di click è più larga del pacchetto
+    // rimpicciolito sulla mappa, e l'anello di focus è un elemento SVG vero:
+    // outline su un <g> SVG non è reso allo stesso modo da tutti i browser.
+    const group = addSvg(packetLayer, "g", { class: `${CLASS}__packet`, "data-seq": packet.seq, "aria-hidden": "true" });
+    addSvg(group, "circle", { r: LAYOUT.packetHitRadius, class: `${CLASS}__packet-hit` });
+    addSvg(group, "circle", { r: LAYOUT.packetRadius + 6, class: `${CLASS}__packet-focus` });
     const body = addSvg(group, "circle", { r: LAYOUT.packetRadius, class: `${CLASS}__packet-body` });
     body.style.stroke = packet.color;
     const number = addSvg(group, "text", { class: `${CLASS}__packet-number` });
@@ -337,6 +378,7 @@ function buildScene(network, model) {
     svg,
     mapLayer,
     trails,
+    trailsLayer: gTrails,
     pulses,
     traySlots,
     ordinals,
@@ -597,9 +639,66 @@ export async function renderPacketJourney(container, scenario) {
   // Struttura della pagina
   // ---------------------------------------------------------------------
 
+  const instanceId = `${CLASS}-${(instanceCounter += 1)}`;
+
   const areaBadge = createBadge({ label: network.areaLabel, tone: "neutral" });
   const heading = createElement("h1", { classNames: `${CLASS}__title`, text: scenario.title || "" });
-  const header = createElement("header", { classNames: `${CLASS}__header` }, [areaBadge.element, heading]);
+  const titleBlock = createElement("div", { classNames: `${CLASS}__title-block` }, [areaBadge.element, heading]);
+
+  // Impostazioni (velocità) e "ricomincia dall'inizio": due bottoni icona al
+  // margine destro della riga del titolo, così il titolo resta pulito e la
+  // posizione dei comandi è la stessa in ogni stato della scena.
+  const settingsButton = createButton({
+    variant: "icon",
+    ariaLabel: network.labels.settings,
+    icon: buildSettingsIcon(),
+  });
+  settingsButton.element.classList.add(`${CLASS}__settings-trigger`);
+  settingsButton.element.setAttribute("title", network.labels.settings);
+  settingsButton.element.setAttribute("aria-haspopup", "true");
+  settingsButton.element.setAttribute("aria-expanded", "false");
+  settingsButton.element.setAttribute("aria-controls", `${instanceId}-settings`);
+
+  const refreshButton = createButton({
+    variant: "icon",
+    ariaLabel: network.labels.refresh,
+    icon: buildRefreshIcon(),
+  });
+  refreshButton.element.classList.add(`${CLASS}__refresh`);
+  refreshButton.element.setAttribute("title", network.labels.refresh);
+
+  // Pannello a comparsa (non un Modal: la velocità si cambia anche mentre la
+  // scena anima, e l'overlay la coprirebbe). Un gruppo di radio NATIVI:
+  // frecce, focus e annuncio dello stato arrivano gratis dal browser.
+  let speed = network.settings.defaultSpeed;
+  const speedOptions = network.settings.speeds.map((option) => {
+    const input = createElement("input", {
+      classNames: `${CLASS}__speed-input`,
+      attrs: { type: "radio", name: `${instanceId}-speed`, value: String(option.value) },
+    });
+    input.checked = option.value === speed;
+    const chip = createElement("label", { classNames: `${CLASS}__speed-chip` }, [
+      input,
+      createElement("span", { classNames: `${CLASS}__speed-label`, text: option.label }),
+    ]);
+    return { input, chip, value: option.value };
+  });
+  const speedGroup = createElement("fieldset", { classNames: `${CLASS}__speed-group` }, [
+    createElement("legend", { classNames: `${CLASS}__speed-legend`, text: network.labels.speedGroup }),
+    createElement("div", { classNames: `${CLASS}__speed-options` }, speedOptions.map((option) => option.chip)),
+  ]);
+  const settingsPanel = createElement(
+    "div",
+    { classNames: `${CLASS}__settings-panel`, attrs: { id: `${instanceId}-settings` } },
+    [speedGroup]
+  );
+  settingsPanel.hidden = true;
+
+  const toolbar = createElement("div", { classNames: `${CLASS}__toolbar` }, [
+    createElement("div", { classNames: `${CLASS}__toolbar-buttons` }, [settingsButton.element, refreshButton.element]),
+    settingsPanel,
+  ]);
+  const header = createElement("header", { classNames: `${CLASS}__header` }, [titleBlock, toolbar]);
 
   // Il riquadro della scena è il bersaglio del focus mentre "Prosegui" è disabilitato.
   const stageCard = createCard({ content: scene.svg });
@@ -623,18 +722,26 @@ export async function renderPacketJourney(container, scenario) {
     { classNames: `${CLASS}__caption`, attrs: { role: "status", "aria-live": "polite" } },
     [captionStep, captionTitle, captionText]
   );
+  // Suggerimento fuori dalla regione "status": comparirebbe come annuncio a ogni cambio.
+  const hint = createElement("p", { classNames: `${CLASS}__hint`, text: network.labels.routeHint });
+  hint.hidden = true;
+  const captionColumn = createElement("div", { classNames: `${CLASS}__caption-column` }, [caption, hint]);
 
+  const reviewButton = createButton({ variant: "secondary", label: network.actions.review });
+  reviewButton.element.classList.add(`${CLASS}__review`);
+  reviewButton.element.hidden = true;
   const proceedButton = createButton({ variant: "primary", label: network.actions.next });
   proceedButton.element.classList.add(`${CLASS}__proceed`);
-  const restartButton = createButton({ variant: "secondary", label: network.actions.restart });
+  const restartButton = createButton({ variant: "primary", label: network.actions.restart });
   restartButton.element.classList.add(`${CLASS}__restart`);
   restartButton.element.hidden = true;
   const actions = createElement("div", { classNames: `${CLASS}__actions` }, [
+    reviewButton.element,
     proceedButton.element,
     restartButton.element,
   ]);
 
-  // Annuncio dell'esito di un passo (ordine di arrivo, dato ricostruito).
+  // Annuncio dell'esito di un passo (ordine di arrivo, dato ricostruito, percorso in evidenza).
   const outcomeStatus = createElement("p", {
     classNames: ["sl-visually-hidden", `${CLASS}__outcome`],
     attrs: { role: "status", "aria-live": "polite" },
@@ -642,7 +749,7 @@ export async function renderPacketJourney(container, scenario) {
 
   const controls = createElement("section", { classNames: `${CLASS}__controls` }, [
     stepper,
-    createElement("div", { classNames: `${CLASS}__control-row` }, [caption, actions]),
+    createElement("div", { classNames: `${CLASS}__control-row` }, [captionColumn, actions]),
     outcomeStatus,
   ]);
 
@@ -657,14 +764,99 @@ export async function renderPacketJourney(container, scenario) {
   let runId = 0;
   let rafId = 0;
   let destroyed = false;
+  let selectedSeq = null; // percorso in evidenza (solo a fine passo 2)
+  let settingsOpen = false;
+
+  const isSelectionEnabled = () => step === 2 && !animating;
+
+  // --- Percorso in evidenza -------------------------------------------------
+
+  // Selezione = classi CSS, mai attributi inline: i fotogrammi non le toccano,
+  // quindi la selezione sopravvive a qualunque ridisegno.
+  function applySelection(seq) {
+    selectedSeq = seq;
+    if (seq === null) root.removeAttribute("data-selected");
+    else root.dataset.selected = String(seq);
+    model.packets.forEach((packet, k) => {
+      const isSelected = packet.seq === seq;
+      scene.trails[k].classList.toggle(`${CLASS}__trail--selected`, isSelected);
+      scene.trails[k].classList.toggle(`${CLASS}__trail--muted`, seq !== null && !isSelected);
+      const node = scene.packetNodes[k];
+      node.classList.toggle(`${CLASS}__packet--selected`, isSelected);
+      node.classList.toggle(`${CLASS}__packet--dimmed`, seq !== null && !isSelected);
+      if (node.hasAttribute("role")) node.setAttribute("aria-pressed", String(isSelected));
+    });
+    // Ordine di sovrapposizione: la scia in evidenza sopra le altre; senza
+    // selezione, l'ordine originale (per numero d'ordine).
+    const onTop = scene.trails.filter((_, k) => model.packets[k].seq === seq);
+    const others = scene.trails.filter((_, k) => model.packets[k].seq !== seq);
+    [...others, ...onTop].forEach((trail) => scene.trailsLayer.appendChild(trail));
+  }
+
+  // I pacchetti del vassoio sono decorazione finché la scena anima; a fine
+  // passo 2 diventano bottoni a due stati (aria-pressed) navigabili da tastiera.
+  function syncSelectableTray() {
+    const enabled = isSelectionEnabled();
+    if (!enabled && selectedSeq !== null) applySelection(null);
+    scene.packetNodes.forEach((node, k) => {
+      const packet = model.packets[k];
+      node.classList.toggle(`${CLASS}__packet--interactive`, enabled);
+      if (enabled) {
+        node.setAttribute("role", "button");
+        node.setAttribute("tabindex", "0");
+        node.setAttribute(
+          "aria-label",
+          formatTemplate(network.labels.packetButton, { seq: packet.seq, rank: packet.rank + 1 })
+        );
+        node.setAttribute("aria-pressed", String(selectedSeq === packet.seq));
+        node.removeAttribute("aria-hidden");
+      } else {
+        ["role", "tabindex", "aria-label", "aria-pressed"].forEach((name) => node.removeAttribute(name));
+        node.setAttribute("aria-hidden", "true");
+      }
+    });
+  }
+
+  function togglePacketRoute(index) {
+    if (!isSelectionEnabled() || destroyed) return;
+    const packet = model.packets[index];
+    const next = selectedSeq === packet.seq ? null : packet.seq;
+    applySelection(next);
+    outcomeStatus.textContent =
+      next === null
+        ? network.announcements.routeCleared
+        : formatTemplate(network.announcements.routeSelected, {
+            seq: packet.seq,
+            hops: packet.route.length - 2,
+            rank: packet.rank + 1,
+          });
+  }
+
+  const packetHandlers = scene.packetNodes.map((node, index) => {
+    const onClick = () => togglePacketRoute(index);
+    const onKeydown = (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault(); // Spazio non deve far scorrere la pagina
+      togglePacketRoute(index);
+    };
+    node.addEventListener("click", onClick);
+    node.addEventListener("keydown", onKeydown);
+    return { node, onClick, onKeydown };
+  });
+
+  // --- Stato e didascalia ---------------------------------------------------
 
   function applyState() {
     root.dataset.step = String(step);
     root.dataset.animating = String(animating);
+    root.dataset.speed = String(speed);
     const finished = step >= LAST_STEP && !animating;
     proceedButton.update({ disabled: animating });
     proceedButton.element.hidden = finished;
     restartButton.element.hidden = !finished;
+    reviewButton.element.hidden = step === 0;
+    hint.hidden = !isSelectionEnabled();
+    syncSelectableTray();
   }
 
   function showCaption() {
@@ -695,6 +887,11 @@ export async function renderPacketJourney(container, scenario) {
     }
   }
 
+  // --- Riproduzione ---------------------------------------------------------
+
+  // Il tempo trascorso si ACCUMULA (dt × velocità) invece di essere
+  // ricalcolato dall'inizio: cambiare velocità a passo in corso non fa saltare
+  // la scena avanti o indietro.
   function playStep(targetStep, id) {
     return new Promise((resolve) => {
       const duration = model.durations[targetStep];
@@ -703,13 +900,16 @@ export async function renderPacketJourney(container, scenario) {
         resolve();
         return;
       }
-      const startedAt = performance.now();
+      let elapsed = 0;
+      let previous = performance.now();
       function frame(now) {
         if (id !== runId) {
           resolve();
           return;
         }
-        const t = Math.min(now - startedAt, duration);
+        elapsed += (now - previous) * speed;
+        previous = now;
+        const t = Math.min(elapsed, duration);
         renderFrame(targetStep, t);
         if (t >= duration) {
           resolve();
@@ -730,15 +930,13 @@ export async function renderPacketJourney(container, scenario) {
     target.focus();
   }
 
-  function handleProceed() {
-    if (animating || step >= LAST_STEP || destroyed) return;
-    step += 1;
-    animating = true;
+  // Avvia (o riavvia da capo) il passo corrente: usato da "Prosegui" e "Rivedi".
+  function runCurrentStep() {
     const id = ++runId;
-    showCaption();
+    cancelAnimationFrame(rafId);
+    applySelection(null);
     outcomeStatus.textContent = "";
-    // Il bottone sta per essere disabilitato: il focus passa alla scena.
-    if (document.activeElement === proceedButton.element) stageCard.element.focus();
+    animating = true;
     applyState();
     playStep(step, id).then(() => {
       if (id !== runId || destroyed) return;
@@ -749,21 +947,86 @@ export async function renderPacketJourney(container, scenario) {
     });
   }
 
-  function handleRestart() {
+  function handleProceed() {
+    if (animating || step >= LAST_STEP || destroyed) return;
+    step += 1;
+    showCaption();
+    // Il bottone sta per essere disabilitato: il focus passa alla scena.
+    if (document.activeElement === proceedButton.element) stageCard.element.focus();
+    runCurrentStep();
+  }
+
+  // "Rivedi": rimostra il passo corrente dall'inizio, anche a metà animazione.
+  // Il fotogramma t=0 di ogni passo coincide con lo stato finale del precedente.
+  function handleReview() {
+    if (destroyed || step === 0) return;
+    runCurrentStep();
+  }
+
+  // Ritorno al punto di partenza. Il focus resta sul comando usato dall'utente.
+  function restart(focusTarget) {
     if (destroyed) return;
     runId += 1;
     cancelAnimationFrame(rafId);
     animating = false;
     step = 0;
+    applySelection(null);
     outcomeStatus.textContent = "";
     renderFrame(0, 0);
     showCaption();
     applyState();
-    proceedButton.element.focus();
+    focusTarget.focus();
   }
 
+  const handleRestartButton = () => restart(proceedButton.element);
+  const handleRefresh = () => restart(refreshButton.element);
+
+  // --- Impostazioni -----------------------------------------------------------
+
+  // Click fuori e Esc chiudono il pannello; un click DENTRO la barra degli
+  // strumenti (incluso quello che lo ha aperto, che risale fino al document)
+  // viene ignorato.
+  function handleDocumentClick(event) {
+    if (!toolbar.contains(event.target)) setSettingsOpen(false);
+  }
+  function handleDocumentKeydown(event) {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    setSettingsOpen(false, { restoreFocus: true });
+  }
+  function setSettingsOpen(open, { restoreFocus: shouldRestore = false } = {}) {
+    if (open === settingsOpen) return;
+    settingsOpen = open;
+    settingsPanel.hidden = !open;
+    settingsButton.element.setAttribute("aria-expanded", String(open));
+    if (open) {
+      document.addEventListener("click", handleDocumentClick);
+      document.addEventListener("keydown", handleDocumentKeydown);
+    } else {
+      document.removeEventListener("click", handleDocumentClick);
+      document.removeEventListener("keydown", handleDocumentKeydown);
+      if (shouldRestore) settingsButton.element.focus();
+    }
+  }
+  function handleSettingsToggle() {
+    setSettingsOpen(!settingsOpen);
+    if (settingsOpen) speedOptions.find((option) => option.input.checked)?.input.focus();
+  }
+  const speedHandlers = speedOptions.map((option) => {
+    const onChange = () => {
+      if (!option.input.checked) return;
+      speed = option.value;
+      root.dataset.speed = String(speed);
+    };
+    option.input.addEventListener("change", onChange);
+    return { input: option.input, onChange };
+  });
+
+  settingsButton.element.addEventListener("sl:click", handleSettingsToggle);
+  refreshButton.element.addEventListener("sl:click", handleRefresh);
+  reviewButton.element.addEventListener("sl:click", handleReview);
   proceedButton.element.addEventListener("sl:click", handleProceed);
-  restartButton.element.addEventListener("sl:click", handleRestart);
+  restartButton.element.addEventListener("sl:click", handleRestartButton);
 
   renderFrame(0, 0);
   showCaption();
@@ -775,12 +1038,20 @@ export async function renderPacketJourney(container, scenario) {
     destroyed = true;
     runId += 1;
     cancelAnimationFrame(rafId);
+    setSettingsOpen(false);
+    settingsButton.element.removeEventListener("sl:click", handleSettingsToggle);
+    refreshButton.element.removeEventListener("sl:click", handleRefresh);
+    reviewButton.element.removeEventListener("sl:click", handleReview);
     proceedButton.element.removeEventListener("sl:click", handleProceed);
-    restartButton.element.removeEventListener("sl:click", handleRestart);
-    proceedButton.destroy();
-    restartButton.destroy();
-    areaBadge.destroy();
-    stageCard.destroy();
+    restartButton.element.removeEventListener("sl:click", handleRestartButton);
+    speedHandlers.forEach(({ input, onChange }) => input.removeEventListener("change", onChange));
+    packetHandlers.forEach(({ node, onClick, onKeydown }) => {
+      node.removeEventListener("click", onClick);
+      node.removeEventListener("keydown", onKeydown);
+    });
+    [settingsButton, refreshButton, reviewButton, proceedButton, restartButton, areaBadge, stageCard].forEach(
+      (component) => component.destroy()
+    );
     root.remove();
   };
 }
