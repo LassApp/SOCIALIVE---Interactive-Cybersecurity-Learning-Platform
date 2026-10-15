@@ -11,7 +11,8 @@
     "test:phishing": "node phishing.spec.js",
     "test:sidebar": "node sidebar.spec.js",
     "test:token": "node token.spec.js",
-    "test:llm": "node llm.spec.js"
+    "test:llm": "node llm.spec.js",
+    "test:packet": "node packet.spec.js"
   },
   "devDependencies": {
     "playwright": "^1.56.0"

@@ -3,7 +3,7 @@
  * -----------------------------------------------------------------------
  * Sidebar a FISARMONICA (sostituisce il precedente flyout aperto
  * dall'hover): la voce "Scenari" si apre e si chiude IN LINEA per
- * click/Invio/Spazio e contiene le AREE (Cybersecurity, AI), ciascuna a
+ * click/Invio/Spazio e contiene le AREE (Cybersecurity, AI, Reti), ciascuna a
  * sua volta a fisarmonica con i propri scenari SOTTO di sé. Le aree sono
  * ESCLUSIVE tra loro (aprirne una chiude le altre). "Scenari" nasce
  * sempre CHIUSA (altrimenti dentro Oversharing la Sidebar mostrerebbe il
@@ -100,10 +100,10 @@ async function run() {
       assert.ok(panel.x + panel.width <= sidebar.x + sidebar.width + 1, "il pannello esce dalla colonna della Sidebar (è ancora un flyout?)");
     });
 
-    await suite.test("aperto: mostra le 2 aree reali (Cybersecurity, AI) nell'ordine di modules.json, entrambe chiuse su Home", async () => {
+    await suite.test("aperto: mostra le 3 aree reali (Cybersecurity, AI, Reti) nell'ordine di modules.json, tutte chiuse su Home", async () => {
       const groups = await page.locator(".sl-sidebar__group-trigger").allTextContents();
-      assert.deepEqual(trim(groups), ["Cybersecurity", "AI"]);
-      assert.deepEqual(await groupStates(page), ["false", "false"]);
+      assert.deepEqual(trim(groups), ["Cybersecurity", "AI", "Reti"]);
+      assert.deepEqual(await groupStates(page), ["false", "false", "false"]);
     });
 
     await suite.test("semantica a lista: i figli diretti del pannello e dei gruppi sono tutti <li>", async () => {
@@ -126,13 +126,14 @@ async function run() {
       assert.deepEqual(checks, [
         { exists: true, hidden: true },
         { exists: true, hidden: true },
+        { exists: true, hidden: true },
       ]);
       assert.equal(await page.locator(".sl-sidebar__group-list a.sl-sidebar__link").first().isVisible(), false);
     });
 
-    await suite.test("click su Cybersecurity: si apre SOTTO di sé con i 4 scenari nell'ordine di modules.json; AI resta chiusa", async () => {
+    await suite.test("click su Cybersecurity: si apre SOTTO di sé con i 4 scenari nell'ordine di modules.json; AI e Reti restano chiuse", async () => {
       await page.locator(".sl-sidebar__group-trigger", { hasText: /^\s*Cybersecurity\s*$/ }).click();
-      assert.deepEqual(await groupStates(page), ["true", "false"]);
+      assert.deepEqual(await groupStates(page), ["true", "false", "false"]);
       const visible = await page
         .locator("#sl-sidebar-group-cybersecurity a.sl-sidebar__link")
         .evaluateAll((els) => els.map((el) => el.textContent.trim()));
@@ -148,7 +149,7 @@ async function run() {
 
     await suite.test("FISARMONICA ESCLUSIVA: aprire AI chiude Cybersecurity; AI ha 2 voci con i link corretti", async () => {
       await page.locator(".sl-sidebar__group-trigger", { hasText: /^\s*AI\s*$/ }).click();
-      assert.deepEqual(await groupStates(page), ["false", "true"]);
+      assert.deepEqual(await groupStates(page), ["false", "true", "false"]);
       assert.equal(await page.locator("#sl-sidebar-group-cybersecurity").isVisible(), false);
       const aiLinks = page.locator("#sl-sidebar-group-ai a.sl-sidebar__link");
       assert.equal(await aiLinks.count(), 2);
@@ -157,9 +158,22 @@ async function run() {
       assert.equal(await aiLinks.nth(1).getAttribute("href"), "#/scenario/allucinazioni");
     });
 
+    await suite.test("FISARMONICA ESCLUSIVA: aprire Reti chiude AI; Reti ha 1 voce con il link corretto", async () => {
+      await page.locator(".sl-sidebar__group-trigger", { hasText: /^\s*Reti\s*$/ }).click();
+      assert.deepEqual(await groupStates(page), ["false", "false", "true"]);
+      assert.equal(await page.locator("#sl-sidebar-group-ai").isVisible(), false);
+      const retiLinks = page.locator("#sl-sidebar-group-reti a.sl-sidebar__link");
+      assert.equal(await retiLinks.count(), 1);
+      assert.deepEqual(trim(await retiLinks.allTextContents()), ["Viaggio dei dati"]);
+      assert.equal(await retiLinks.nth(0).getAttribute("href"), "#/scenario/viaggio-dei-dati");
+      // Rimette AI aperta: i test successivi partono da "AI aperta, le altre chiuse".
+      await page.locator(".sl-sidebar__group-trigger", { hasText: /^\s*AI\s*$/ }).click();
+      assert.deepEqual(await groupStates(page), ["false", "true", "false"]);
+    });
+
     await suite.test("un secondo click sull'area aperta la richiude (tutte chiuse)", async () => {
       await page.locator(".sl-sidebar__group-trigger", { hasText: /^\s*AI\s*$/ }).click();
-      assert.deepEqual(await groupStates(page), ["false", "false"]);
+      assert.deepEqual(await groupStates(page), ["false", "false", "false"]);
       assert.equal(await page.locator("#sl-sidebar-group-ai").isVisible(), false);
     });
 
@@ -190,7 +204,7 @@ async function run() {
             return Math.round((Math.atan2(matrix.b, matrix.a) * 180) / Math.PI);
           })
         );
-      assert.deepEqual(await rotation(".sl-sidebar__group-trigger .sl-sidebar__chevron"), [0, 90]);
+      assert.deepEqual(await rotation(".sl-sidebar__group-trigger .sl-sidebar__chevron"), [0, 90, 0]);
       assert.deepEqual(await rotation(".sl-sidebar__trigger .sl-sidebar__chevron"), [90]);
     });
 
@@ -200,7 +214,7 @@ async function run() {
       await page.waitForTimeout(500);
       assert.equal(await trigger.getAttribute("aria-expanded"), "true");
       assert.equal(await page.locator(".sl-sidebar__panel").isVisible(), true);
-      assert.deepEqual(await groupStates(page), ["false", "true"]);
+      assert.deepEqual(await groupStates(page), ["false", "true", "false"]);
     });
 
     await suite.test("chiudere 'Scenari' nasconde tutto (anche l'area aperta): i link escono dall'ordine di tabulazione", async () => {
@@ -209,7 +223,7 @@ async function run() {
       assert.equal(await page.locator(".sl-sidebar__panel").isHidden(), true);
       assert.equal(await page.locator(".sl-sidebar__group-list a.sl-sidebar__link").first().isVisible(), false);
       await trigger.click(); // riapre: lo stato interno delle aree è conservato
-      assert.deepEqual(await groupStates(page), ["false", "true"]);
+      assert.deepEqual(await groupStates(page), ["false", "true", "false"]);
     });
 
     await suite.test("screenshot — fisarmonica con Cybersecurity aperta (Light e Dark)", async () => {
@@ -331,7 +345,7 @@ async function run() {
       await page.waitForSelector(".sl-sidebar__trigger");
       assert.deepEqual(await topLevelLabels(page), ["Home", "Scenari", "Impostazioni"]);
       await openScenariosMenu(page);
-      assert.equal(await page.locator(".sl-sidebar__group-trigger").count(), 2);
+      assert.equal(await page.locator(".sl-sidebar__group-trigger").count(), 3);
       assert.deepEqual(errors, []);
     });
 
@@ -353,22 +367,22 @@ async function run() {
       assert.ok(!(await page.evaluate(() => document.body.innerText)).toLowerCase().includes("oversharing"));
     });
 
-    await suite.test("aprendo 'Scenari' da Oversharing l'area di appartenenza è GIÀ aperta (Cybersecurity), AI chiusa; nessuna voce 'attiva'", async () => {
+    await suite.test("aprendo 'Scenari' da Oversharing l'area di appartenenza è GIÀ aperta (Cybersecurity), AI e Reti chiuse; nessuna voce 'attiva'", async () => {
       await openScenariosMenu(page);
-      assert.deepEqual(await groupStates(page), ["true", "false"]);
+      assert.deepEqual(await groupStates(page), ["true", "false", "false"]);
       assert.equal(await page.locator(".sl-sidebar__link--active").count(), 0);
     });
 
     await suite.test("dalla Sidebar: AI → Tokenizzazione porta a #/scenario/tokenizzazione; riaprendo 'Scenari' c'è già AI aperta", async () => {
       await expandSidebarGroup(page, "AI");
-      assert.deepEqual(await groupStates(page), ["false", "true"], "aprire AI deve chiudere Cybersecurity");
+      assert.deepEqual(await groupStates(page), ["false", "true", "false"], "aprire AI deve chiudere Cybersecurity");
       await page.locator("#sl-sidebar-group-ai a.sl-sidebar__link", { hasText: /^\s*Tokenizzazione\s*$/ }).click();
       await page.waitForFunction(() => window.location.hash === "#/scenario/tokenizzazione");
       await page.waitForSelector(".sl-token-prediction");
       await waitForSidebar(page);
       assert.equal(await page.locator(".sl-sidebar__trigger").getAttribute("aria-expanded"), "false");
       await openScenariosMenu(page);
-      assert.deepEqual(await groupStates(page), ["false", "true"]);
+      assert.deepEqual(await groupStates(page), ["false", "true", "false"]);
     });
 
     await context.close();
@@ -453,7 +467,7 @@ async function run() {
       assert.equal(await sidebar.isVisible(), true);
       assert.equal(await toggle.getAttribute("aria-expanded"), "true");
       assert.equal(await page.locator(".sl-sidebar__trigger").getAttribute("aria-expanded"), "true");
-      assert.deepEqual(await groupStates(page), ["true", "false"]);
+      assert.deepEqual(await groupStates(page), ["true", "false", "false"]);
       assert.equal(await storedState(), "false");
     });
 

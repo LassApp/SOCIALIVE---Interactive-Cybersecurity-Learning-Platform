@@ -1,0 +1,17 @@
+<!--
+  reti.svg
+  Icona dell'area "Reti": tre nodi collegati a triangolo (la forma minima
+  di una rete magliata) — due nodi in outline e uno pieno, per dare
+  gerarchia visiva come nelle altre icone d'area. Griglia 24px.
+
+  Il colore (#000) è solo un segnaposto: il file viene usato come
+  maschera CSS (mask-image, vedi css/components/area-card.css), quindi
+  conta soltanto la forma (canale alfa) — il colore reale arriva da
+  currentColor e segue il tema Light/Dark.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M7.8 7.9 10.2 16M16.2 7.9 13.8 16M9.4 5.2h5.2"/>
+  <circle cx="6.5" cy="5.2" r="2.2"/>
+  <circle cx="17.5" cy="5.2" r="2.2"/>
+  <circle cx="12" cy="18.2" r="2.6" fill="#000"/>
+</svg>

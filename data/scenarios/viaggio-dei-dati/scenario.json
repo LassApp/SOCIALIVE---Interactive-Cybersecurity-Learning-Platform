@@ -1,0 +1,9 @@
+{
+  "id": "viaggio-dei-dati",
+  "type": "packet-journey",
+  "title": "Viaggio dei dati",
+  "description": "Un dato viene scomposto in pacchetti, che attraversano una rete di nodi per strade e in tempi diversi e arrivano a destinazione fuori ordine: il numero d'ordine permette di ricostruire il dato originale.",
+  "dataRefs": {
+    "network": "data/scenarios/viaggio-dei-dati/network.json"
+  }
+}

@@ -23,6 +23,16 @@
         { "id": "tokenizzazione", "title": "Tokenizzazione", "available": true },
         { "id": "allucinazioni", "title": "Allucinazioni", "available": true }
       ]
+    },
+    {
+      "id": "reti",
+      "title": "Reti",
+      "available": true,
+      "description": "Come viaggiano i dati: dalla scomposizione in pacchetti all'instradamento fino alla ricostruzione.",
+      "icon": "assets/icons/areas/reti.svg",
+      "scenarios": [
+        { "id": "viaggio-dei-dati", "title": "Viaggio dei dati", "available": true }
+      ]
     }
   ]
 }

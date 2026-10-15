@@ -1,0 +1,293 @@
+/**
+ * packet-journey.css
+ * -----------------------------------------------------------------------
+ * Stile del renderer "packet-journey" (scenario "Viaggio dei dati", area
+ * Reti). Possiede il layout della pagina e gli elementi propri della
+ * scena SVG (nodi, collegamenti, scie, pacchetti, anello del dato);
+ * superfici, pulsanti e badge sono i componenti già esistenti (Card,
+ * Button, Badge), non ridisegnati qui.
+ *
+ * PENSATO PER LA LIM: etichette e numeri della scena in px del viewBox
+ * (la scena scala con la larghezza: a 1280px le etichette sono ~21px,
+ * i numeri dei pacchetti ~26px), didascalia in --sl-font-size-md.
+ *
+ * COLORI — nessun accostamento nuovo rispetto a quelli già verificati
+ * nel Design System:
+ *   - testo: text-primary/text-secondary su bg-surface/bg-elevated (già
+ *     verificati in profile-menu.css e token-prediction.css);
+ *   - bordi/nodi: border-strong su bg-surface (3.91:1 Light / 4.36:1 Dark,
+ *     input.css), stessa funzione di confine funzionale;
+ *   - pacchetti, scie, archi dell'anello: token primary/warning/success/
+ *     error -500 su bg-surface, uso grafico (WCAG 1.4.11, ≥ 3:1): valori
+ *     già documentati in theme-light.css/theme-dark.css e ri-verificati
+ *     numericamente per questo scenario (vedi handover). Il colore non è
+ *     mai l'unico segnale: ogni pacchetto porta il numero in testo.
+ *   - i collegamenti "a riposo" sono volutamente tenui (opacity .5): sono
+ *     sfondo decorativo, l'informazione è nelle scie colorate e nei numeri.
+ *
+ * NESSUNA transizione/animazione CSS sulla scena: tutti i fotogrammi
+ * arrivano da JavaScript (packetJourneyRenderer.js, un solo ciclo
+ * requestAnimationFrame) — una transizione CSS li "ammorbidirebbe" in
+ * ritardo. La rete di sicurezza prefers-reduced-motion di global.css non
+ * copre le animazioni JS: la preferenza è letta dal renderer.
+ *
+ * Regola "[hidden]" ridichiarata per i Button: .sl-button impone
+ * display:inline-flex e batterebbe l'attributo nativo (stesso bug
+ * pattern già corretto più volte nel progetto).
+ */
+
+.sl-packet-journey {
+  max-width: 1120px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-6);
+}
+
+.sl-packet-journey .sl-button[hidden] {
+  display: none;
+}
+
+/* --- Intestazione ---------------------------------------------------- */
+
+.sl-packet-journey__header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sl-space-2);
+}
+
+.sl-packet-journey__title {
+  font-size: var(--sl-font-size-2xl);
+  font-weight: var(--sl-font-weight-bold);
+  line-height: var(--sl-line-height-tight);
+  color: var(--sl-color-text-primary);
+}
+
+/* --- Scena ------------------------------------------------------------ */
+
+/* La scena riempie la Card fino ai bordi: niente padding, angoli ritagliati. */
+.sl-card.sl-packet-journey__stage {
+  padding: 0;
+  overflow: hidden;
+}
+
+.sl-packet-journey__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  font-family: inherit;
+}
+
+.sl-packet-journey__link {
+  stroke: var(--sl-color-border-strong);
+  stroke-width: 2;
+  opacity: 0.5;
+}
+
+.sl-packet-journey__node {
+  fill: var(--sl-color-bg-surface);
+  stroke: var(--sl-color-border-strong);
+  stroke-width: 2.5;
+}
+
+.sl-packet-journey__node-dot {
+  fill: var(--sl-color-border-strong);
+}
+
+/* Partenza, Nodo d'ingresso e Arrivo: stesso colore di marca del brand. */
+.sl-packet-journey__node--key {
+  stroke: var(--sl-color-primary-text);
+}
+
+.sl-packet-journey__node--key + .sl-packet-journey__node-dot {
+  fill: var(--sl-color-primary-text);
+}
+
+.sl-packet-journey__node-label {
+  font-size: 18px;
+  font-weight: var(--sl-font-weight-semibold);
+  fill: var(--sl-color-text-primary);
+  text-anchor: middle;
+}
+
+.sl-packet-journey__trail {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sl-packet-journey__pulse {
+  fill: none;
+  stroke-width: 3;
+}
+
+.sl-packet-journey__tray {
+  fill: var(--sl-color-bg-elevated);
+  stroke: var(--sl-color-border-subtle);
+  stroke-width: 2;
+}
+
+.sl-packet-journey__tray-slot {
+  fill: none;
+  stroke: var(--sl-color-border-strong);
+  stroke-width: 2;
+  stroke-dasharray: 4 5;
+  opacity: 0.55;
+}
+
+.sl-packet-journey__tray-title {
+  font-size: 15px;
+  font-weight: var(--sl-font-weight-semibold);
+  fill: var(--sl-color-text-secondary);
+}
+
+.sl-packet-journey__tray-ordinal {
+  font-size: 15px;
+  font-weight: var(--sl-font-weight-bold);
+  fill: var(--sl-color-text-primary);
+  text-anchor: middle;
+}
+
+.sl-packet-journey__ghost {
+  fill: none;
+  stroke: var(--sl-color-border-strong);
+  stroke-width: 2;
+  stroke-dasharray: 6 6;
+}
+
+.sl-packet-journey__connector {
+  stroke: var(--sl-color-border-strong);
+  stroke-width: 2;
+  stroke-dasharray: 3 7;
+  stroke-linecap: round;
+}
+
+.sl-packet-journey__label {
+  font-size: 21px;
+  font-weight: var(--sl-font-weight-semibold);
+  fill: var(--sl-color-text-secondary);
+  text-anchor: middle;
+}
+
+.sl-packet-journey__ring-label {
+  font-size: 30px;
+  font-weight: var(--sl-font-weight-bold);
+  fill: var(--sl-color-text-primary);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.sl-packet-journey__check {
+  fill: none;
+  stroke: var(--sl-color-success-500);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sl-packet-journey__ring-pulse {
+  fill: none;
+  stroke: var(--sl-color-success-500);
+  stroke-width: 3;
+}
+
+.sl-packet-journey__packet-body {
+  fill: var(--sl-color-bg-surface);
+  stroke-width: 4;
+}
+
+.sl-packet-journey__packet-number {
+  font-size: 26px;
+  font-weight: var(--sl-font-weight-bold);
+  fill: var(--sl-color-text-primary);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+/* --- Avanzamento, didascalia, pulsanti -------------------------------- */
+
+.sl-packet-journey__controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sl-space-5);
+}
+
+.sl-packet-journey__stepper {
+  display: flex;
+  gap: var(--sl-space-2);
+}
+
+.sl-packet-journey__stepper-item {
+  flex: 1;
+  padding-top: var(--sl-space-3);
+  border-top: 4px solid var(--sl-color-border-subtle);
+  font-size: var(--sl-font-size-sm);
+  color: var(--sl-color-text-secondary);
+  transition: border-color var(--sl-duration-fast) var(--sl-ease-standard);
+}
+
+.sl-packet-journey__stepper-item--done,
+.sl-packet-journey__stepper-item--current {
+  border-top-color: var(--sl-color-primary-500);
+}
+
+.sl-packet-journey__stepper-item--current {
+  color: var(--sl-color-text-primary);
+  font-weight: var(--sl-font-weight-semibold);
+}
+
+.sl-packet-journey__control-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sl-space-6);
+}
+
+.sl-packet-journey__caption-step {
+  font-size: var(--sl-font-size-sm);
+  color: var(--sl-color-text-secondary);
+}
+
+.sl-packet-journey__caption-title {
+  margin: var(--sl-space-1) 0 var(--sl-space-2);
+  font-size: var(--sl-font-size-lg);
+  font-weight: var(--sl-font-weight-semibold);
+  line-height: 1.3;
+  color: var(--sl-color-text-primary);
+}
+
+.sl-packet-journey__caption-text {
+  max-width: 62ch;
+  font-size: var(--sl-font-size-md);
+  line-height: var(--sl-line-height-relaxed);
+  color: var(--sl-color-text-primary);
+}
+
+.sl-packet-journey__actions {
+  display: flex;
+  gap: var(--sl-space-3);
+}
+
+/* Pulsanti più grandi del default: la LIM si legge dall'ultimo banco. */
+.sl-button.sl-packet-journey__proceed,
+.sl-button.sl-packet-journey__restart {
+  min-width: 156px;
+  padding: var(--sl-space-4) var(--sl-space-8);
+  font-size: var(--sl-font-size-base);
+}
+
+@media (max-width: 767px) {
+  .sl-packet-journey__control-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sl-packet-journey__actions .sl-button {
+    flex: 1;
+  }
+
+  .sl-packet-journey__stepper-item {
+    font-size: var(--sl-font-size-xs);
+  }
+}

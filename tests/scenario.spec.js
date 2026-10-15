@@ -721,14 +721,14 @@ async function run() {
     await loginAsDocente(page, server.url);
     await page.waitForSelector(".sl-sidebar__trigger");
 
-    await suite.test("Sidebar: la fisarmonica 'Scenari' elenca, aprendo Cybersecurity, Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi, Tokenizzazione e Allucinazioni (AI)", async () => {
+    await suite.test("Sidebar: la fisarmonica 'Scenari' elenca, aprendo Cybersecurity, Oversharing, Keylogger, Phishing, Evil Twin Wi-Fi, Tokenizzazione e Allucinazioni (AI) e Viaggio dei dati (Reti)", async () => {
       // La Sidebar è una fisarmonica che si apre solo per click/Invio/Spazio
       // (nessuna apertura all'hover): l'helper clicca il trigger solo se la voce
       // non è già aperta — vedi helpers/sidebar.js.
       await openScenariosMenu(page);
       await expandSidebarGroup(page, "Cybersecurity");
       const labels = await page.locator(".sl-sidebar__group-list .sl-sidebar__link").allTextContents();
-      assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi", "Tokenizzazione", "Allucinazioni"]);
+      assert.deepEqual(labels.map((t) => t.trim()), ["Oversharing", "Keylogger", "Phishing", "Evil Twin Wi-Fi", "Tokenizzazione", "Allucinazioni", "Viaggio dei dati"]);
     });
 
     await suite.test("click su Evil Twin Wi-Fi -> #/scenario/evil-twin-wifi, chrome:none rispettato", async () => {

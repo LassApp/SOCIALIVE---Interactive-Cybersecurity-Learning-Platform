@@ -1,0 +1,67 @@
+{
+  "areaLabel": "Reti",
+  "data": { "label": "Dato" },
+  "labels": {
+    "stage": "Schema animato: un dato circolare si divide in quattro pacchetti numerati, che attraversano una rete di nodi lungo percorsi diversi e arrivano in ordine diverso; infine vengono rimessi in ordine e ricostruiscono il dato.",
+    "packets": "Pacchetti",
+    "arrivalOrder": "Ordine di arrivo",
+    "correctOrder": "Ordine corretto",
+    "stepperAria": "Passi dello scenario",
+    "startPoint": "Punto di partenza",
+    "stepCounter": "Passo {step} di {total}"
+  },
+  "announcements": {
+    "arrived": "Pacchetti arrivati nell'ordine: {order}.",
+    "rebuilt": "I pacchetti sono stati rimessi in ordine: il dato è ricostruito."
+  },
+  "actions": { "next": "Prosegui", "restart": "Ricomincia" },
+  "steps": [
+    {
+      "stepper": "Dato",
+      "title": "Il dato",
+      "text": "Un file, un messaggio, una foto: per la rete è una sequenza di dati da inviare."
+    },
+    {
+      "stepper": "Pacchetti",
+      "title": "Suddivisione in pacchetti",
+      "text": "Prima di partire il dato viene spezzato in piccoli pacchetti. Ognuno porta con sé la destinazione e un numero d'ordine."
+    },
+    {
+      "stepper": "Instradamento",
+      "title": "Instradamento",
+      "text": "Ogni pacchetto sceglie la propria strada attraverso nodi diversi. Alcuni percorsi sono più rapidi: i pacchetti non arrivano nell'ordine in cui sono partiti."
+    },
+    {
+      "stepper": "Ricomposizione",
+      "title": "Ricomposizione",
+      "text": "A destinazione i pacchetti vengono rimessi in ordine grazie al loro numero e il dato originale è ricostruito."
+    }
+  ],
+  "timing": { "dwellMs": 150 },
+  "nodes": [
+    { "id": "P", "role": "start", "label": "Partenza", "x": 88, "y": 300 },
+    { "id": "N", "role": "gateway", "label": "Nodo", "x": 225, "y": 300 },
+    { "id": "a", "role": "hop", "x": 371, "y": 88 },
+    { "id": "b", "role": "hop", "x": 647, "y": 75 },
+    { "id": "c", "role": "hop", "x": 937, "y": 105 },
+    { "id": "d", "role": "hop", "x": 497, "y": 228 },
+    { "id": "e", "role": "hop", "x": 638, "y": 268 },
+    { "id": "f", "role": "hop", "x": 755, "y": 245 },
+    { "id": "g", "role": "hop", "x": 486, "y": 372 },
+    { "id": "h", "role": "hop", "x": 687, "y": 520 },
+    { "id": "i", "role": "hop", "x": 842, "y": 395 },
+    { "id": "A", "role": "end", "label": "Arrivo", "x": 1040, "y": 290 }
+  ],
+  "links": [
+    ["P", "N"], ["N", "a"], ["N", "d"], ["N", "g"], ["g", "i"], ["a", "b"],
+    ["a", "d"], ["a", "f"], ["b", "c"], ["b", "f"], ["b", "d"], ["b", "e"],
+    ["c", "A"], ["c", "f"], ["f", "A"], ["f", "i"], ["f", "d"], ["i", "A"],
+    ["i", "h"], ["e", "h"], ["e", "d"], ["h", "g"], ["d", "g"]
+  ],
+  "packets": [
+    { "seq": 1, "color": "primary", "route": ["P", "N", "a", "b", "c", "A"], "speed": 337, "departMs": 1000 },
+    { "seq": 2, "color": "warning", "route": ["P", "N", "g", "h", "i", "A"], "speed": 219, "departMs": 1350 },
+    { "seq": 3, "color": "success", "route": ["P", "N", "d", "f", "A"], "speed": 439, "departMs": 1650 },
+    { "seq": 4, "color": "error", "route": ["P", "N", "d", "e", "b", "c", "A"], "speed": 389, "departMs": 2000 }
+  ]
+}

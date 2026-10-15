@@ -354,7 +354,7 @@ async function run() {
       await page.fill(SEARCH_INPUT, "");
       assert.deepEqual(await visibleAreaTitles(page), AREAS.map((a) => a.title));
       assert.equal(await page.locator(`${VISIBLE_ITEM} .sl-area-card__scenario`).count(), AREAS.reduce((n, a) => n + a.scenarios.length, 0));
-      assert.deepEqual(await visibleBadges(page), AREAS.map((a) => `${a.scenarios.length} scenari`));
+      assert.deepEqual(await visibleBadges(page), AREAS.map((a) => (a.scenarios.length === 1 ? "1 scenario" : `${a.scenarios.length} scenari`)));
       assert.equal(await emptyMessage.isHidden(), true);
       assert.equal(await page.locator(".sl-home-page__areas-grid").isVisible(), true);
       assert.equal((await status.textContent()).trim(), "Tutte le aree mostrate");
