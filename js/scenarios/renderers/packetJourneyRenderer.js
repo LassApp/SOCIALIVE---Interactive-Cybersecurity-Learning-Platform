@@ -5,14 +5,16 @@
  * dei dati", area Reti): mostra come un dato viaggia in rete, in 3 passi
  * avanzabili con "Prosegui".
  *
- *   Passo 1 — Suddivisione: il dato (un anello di 4 archi colorati) si
- *             scompone in 4 pacchetti numerati che si dispongono a
- *             ventaglio.
+ *   Passo 0 — Il dato è un tesseratto (ipercubo 4D) che ruota su sé stesso.
+ *   Passo 1 — Suddivisione: il tesseratto si apre nelle sue 4 parti (una
+ *             per asse, 8 spigoli ciascuna), che diventano 4 pacchetti
+ *             numerati e si dispongono a ventaglio.
  *   Passo 2 — Instradamento: sulla mappa a nodi ogni pacchetto percorre
  *             una strada diversa (linea colorata) in tempi diversi: gli
  *             arrivi avvengono in un ordine diverso da quello di partenza.
  *   Passo 3 — Ricomposizione: i pacchetti si riordinano per numero e si
- *             fondono di nuovo nell'anello, ricostruendo il dato.
+ *             fondono di nuovo nelle 4 parti, ricostruendo il tesseratto,
+ *             che riprende a ruotare.
  *
  * ANIMAZIONE COME FUNZIONE DEL TEMPO — ogni passo è una funzione pura
  * render(passo, t): dato un istante "t" (ms dall'inizio del passo)
@@ -28,13 +30,22 @@
  * prefers-reduced-motion: la rete di sicurezza CSS di global.css NON
  * copre animazioni guidate da JavaScript — la preferenza è letta qui,
  * all'avvio di ogni passo: con riduzione attiva il passo salta
- * direttamente al proprio stato finale (nessun movimento).
+ * direttamente al proprio stato finale (nessun movimento) e il
+ * tesseratto resta fermo nella posa canonica.
+ *
+ * ROTAZIONE A RIPOSO — l'unico movimento fuori dai passi: a passo 0 e a
+ * passo 3 concluso il tesseratto ruota con un ciclo rAF proprio
+ * (startIdle/stopIdle), che si ferma appena parte un passo. Il passo 1
+ * parte dalla posa in cui la rotazione si trova (settlePose la porta alla
+ * canonica) — nessun salto — e dal passo 1 al passo 3 la posa resta
+ * canonica, così ventaglio e ricomposizione hanno sempre la stessa
+ * inquadratura. La geometria vive in js/utils/tesseract.js.
  *
  * DATI — nessun contenuto nel codice: nodi, collegamenti, percorsi,
  * velocità, istanti di partenza, colori (nome del token, mai CSS libero),
  * titoli e didascalie arrivano da network.json (dataRefs.network) e sono
  * validati da validatePacketNetwork(). Qui restano solo scelte di resa
- * grafica (geometria dell'anello, del ventaglio e del vassoio) e di
+ * grafica (geometria del tesseratto, del ventaglio e del vassoio) e di
  * coreografia (durate dei passi).
  *
  * COLORI — nessun accostamento nuovo rispetto a quelli già verificati
@@ -66,6 +77,13 @@ import { create as createCard } from "../../components/Card.js";
 import { create as createBadge } from "../../components/Badge.js";
 import { buildSettingsIcon } from "../../utils/settingsIcon.js";
 import {
+  CANONICAL_POSE,
+  TESSERACT_EDGES,
+  idlePose,
+  settlePose,
+  projectTesseract,
+} from "../../utils/tesseract.js";
+import {
   clamp,
   lerp,
   progress,
@@ -85,7 +103,14 @@ const CLASS = "sl-packet-journey";
 const VIEW = { width: 1120, height: 630 };
 
 const LAYOUT = {
-  ring: { cx: 560, cy: 360, outer: 112, inner: 68, gap: 5, detach: 24 },
+  // Il dato è un tesseratto (ipercubo 4D) che ruota: 4 parti = 4 assi.
+  // radius/hyperDistance/focal/cameraZ: vedi projectTesseract(); detach: di quanti
+  // px ogni parte si allontana dal centro quando il dato si apre.
+  // Raggio 46: in tutte le pose di rotazione il dato resta tra x 434–686 e y 168–512
+  // (misurato su 2 minuti di rotazione), cioè lontano dall'etichetta "Pacchetti", dai
+  // pacchetti del ventaglio (y ≤ 146 in alto) e dall'etichetta "Dato" sotto.
+  shape: { center: { x: 560, y: 340 }, radius: 46, hyperDistance: 2.4, focal: 620, cameraZ: 620, detach: 74 },
+  dataLabelY: 548,
   // Posizioni del ventaglio, in ordine di numero d'ordine (sinistra → destra).
   fan: [
     { x: 310, y: 195 },
@@ -102,16 +127,25 @@ const LAYOUT = {
   laneGap: 6,
   tray: { x: 735, y: 522, width: 340, height: 96, slotY: 576, slotsX: [790, 870, 950, 1030] },
   nodeRadius: { hop: 17, start: 20, gateway: 26, end: 24 },
+  connectorStart: 80, // distanza dal centro del tesseratto da cui partono i connettori
 };
 
 // Coreografia (ms). I tempi di viaggio dei pacchetti NON sono qui: derivano dai dati.
 const MOTION = {
-  step1: 2500,
+  step1: 3300,
   step3: 4500,
   trayMove: 550,
   traySettle: 350,
   pulse: 520,
 };
+
+// Direzione di allontanamento di ciascuna parte (gradi, 0° = destra, senso orario
+// sullo schermo): in basso a sinistra, in alto a sinistra, in alto a destra, in
+// basso a destra — i numeri d'ordine crescono da sinistra a destra anche nel ventaglio.
+const PART_DIRECTIONS = [135, 225, 315, 45].map((deg) => ({
+  x: Math.cos((deg * Math.PI) / 180),
+  y: Math.sin((deg * Math.PI) / 180),
+}));
 
 const LAST_STEP = 3;
 
@@ -156,23 +190,6 @@ function addSvg(parent, tag, attrs = {}) {
   const node = svgNode(tag, attrs);
   parent.appendChild(node);
   return node;
-}
-
-function polarPoint(radius, degrees) {
-  const rad = (degrees * Math.PI) / 180;
-  return { x: LAYOUT.ring.cx + radius * Math.cos(rad), y: LAYOUT.ring.cy + radius * Math.sin(rad) };
-}
-
-// Settore anulare tra due angoli (gradi, 0° = destra, senso orario sullo schermo).
-function annularSectorPath(outerRadius, innerRadius, startDeg, endDeg) {
-  const p0 = polarPoint(outerRadius, startDeg);
-  const p1 = polarPoint(outerRadius, endDeg);
-  const p2 = polarPoint(innerRadius, endDeg);
-  const p3 = polarPoint(innerRadius, startDeg);
-  return (
-    `M${p0.x} ${p0.y}A${outerRadius} ${outerRadius} 0 0 1 ${p1.x} ${p1.y}` +
-    `L${p2.x} ${p2.y}A${innerRadius} ${innerRadius} 0 0 0 ${p3.x} ${p3.y}Z`
-  );
 }
 
 /**
@@ -220,7 +237,6 @@ function prepareModel(network) {
  * restituisce i riferimenti agli elementi che i fotogrammi aggiornano.
  */
 function buildScene(network, model) {
-  const { ring } = LAYOUT;
   const svg = svgNode("svg", {
     viewBox: `0 0 ${VIEW.width} ${VIEW.height}`,
     // "group" e non "img": un role="img" renderebbe presentazionali i figli, e i
@@ -296,13 +312,31 @@ function buildScene(network, model) {
     })
   );
 
-  // --- Dato: guida tratteggiata, connettori, etichette ---
+  // --- Dato: guida tratteggiata (sagoma del tesseratto), connettori, etichette ---
+  const { shape } = LAYOUT;
   const dataLayer = addSvg(svg, "g", { "aria-hidden": "true" });
-  const ghost = addSvg(dataLayer, "circle", { cx: ring.cx, cy: ring.cy, r: ring.outer, class: `${CLASS}__ghost` });
+  // La sagoma sta ferma nella posa canonica: le coordinate si scrivono una volta, i fotogrammi ne cambiano solo l'opacità.
+  const canonicalProjection = projectTesseract(CANONICAL_POSE, shape);
+  const ghostLines = TESSERACT_EDGES.map((edge) => {
+    const a = canonicalProjection.points[edge.a];
+    const b = canonicalProjection.points[edge.b];
+    return addSvg(dataLayer, "line", {
+      x1: a.x.toFixed(1),
+      y1: a.y.toFixed(1),
+      x2: b.x.toFixed(1),
+      y2: b.y.toFixed(1),
+      class: `${CLASS}__ghost`,
+    });
+  });
+  // Dove va ciascuna parte quando il dato è aperto (posa canonica): da qui nascono i pacchetti.
+  const openAnchors = canonicalProjection.centres.map((centre, k) => ({
+    x: centre.x + PART_DIRECTIONS[k].x * shape.detach,
+    y: centre.y + PART_DIRECTIONS[k].y * shape.detach,
+  }));
   const connectorsLayer = addSvg(dataLayer, "g");
   const connectors = model.packets.map(() => addSvg(connectorsLayer, "line", { class: `${CLASS}__connector` }));
   const makeLabel = (text) => {
-    const label = addSvg(dataLayer, "text", { x: ring.cx, y: LAYOUT.labelY, class: `${CLASS}__label` });
+    const label = addSvg(dataLayer, "text", { x: shape.center.x, y: LAYOUT.labelY, class: `${CLASS}__label` });
     label.textContent = text;
     return label;
   };
@@ -310,44 +344,25 @@ function buildScene(network, model) {
   const labelArrival = makeLabel(network.labels.arrivalOrder);
   const labelCorrect = makeLabel(network.labels.correctOrder);
 
-  // --- Anello del dato: un arco per pacchetto (quadranti) ---
-  const ringLayer = addSvg(svg, "g", { "aria-hidden": "true" });
-  const arcsLayer = addSvg(ringLayer, "g");
-  const sector = 360 / model.packets.length;
-  const centroidRadius = (ring.outer + ring.inner) / 2;
-  const arcs = model.packets.map((packet, k) => {
-    // Sequenza oraziale a partire dal quadrante in basso a sinistra:
-    // i numeri d'ordine crescono da sinistra a destra anche nel ventaglio.
-    const start = 90 + k * sector;
-    const bisector = ((start + sector / 2) * Math.PI) / 180;
-    const dir = { x: Math.cos(bisector), y: Math.sin(bisector) };
-    const group = addSvg(arcsLayer, "g");
-    // Il bordo arrotondato è un tratto dello stesso colore: i raggi si riducono di metà spessore.
-    const path = addSvg(group, "path", {
-      d: annularSectorPath(ring.outer - 3, ring.inner + 3, start + ring.gap / 2, start + sector - ring.gap / 2),
-      "stroke-width": 6,
-      "stroke-linejoin": "round",
-    });
-    path.style.fill = packet.color;
-    path.style.stroke = packet.color;
-    return {
-      group,
-      dir,
-      detachedPos: {
-        x: ring.cx + dir.x * (centroidRadius + ring.detach),
-        y: ring.cy + dir.y * (centroidRadius + ring.detach),
-      },
-    };
+  // --- Il tesseratto: 4 parti (una per asse, 8 spigoli ciascuna) ---
+  const shapeLayer = addSvg(svg, "g", { "aria-hidden": "true" });
+  const parts = model.packets.map((packet, k) => ({
+    group: addSvg(shapeLayer, "g", { class: `${CLASS}__part`, "data-part": k + 1 }),
+  }));
+  const edges = TESSERACT_EDGES.map((edge) => {
+    const line = addSvg(parts[edge.axis].group, "line", { class: `${CLASS}__edge` });
+    line.style.stroke = model.packets[edge.axis].color;
+    return line;
   });
 
-  const ringLabel = addSvg(ringLayer, "text", { x: ring.cx, y: ring.cy - 8, class: `${CLASS}__ring-label` });
-  ringLabel.textContent = network.data.label;
+  const dataLabel = addSvg(shapeLayer, "text", { x: shape.center.x, y: LAYOUT.dataLabelY, class: `${CLASS}__data-label` });
+  dataLabel.textContent = network.data.label;
   const checkPoints = [
-    { x: ring.cx - 16, y: ring.cy + 26 },
-    { x: ring.cx - 4, y: ring.cy + 38 },
-    { x: ring.cx + 18, y: ring.cy + 14 },
+    { x: shape.center.x + 64, y: LAYOUT.dataLabelY + 2 },
+    { x: shape.center.x + 76, y: LAYOUT.dataLabelY + 14 },
+    { x: shape.center.x + 98, y: LAYOUT.dataLabelY - 10 },
   ];
-  const check = addSvg(ringLayer, "path", {
+  const check = addSvg(shapeLayer, "path", {
     d: `M${checkPoints[0].x} ${checkPoints[0].y} L${checkPoints[1].x} ${checkPoints[1].y} L${checkPoints[2].x} ${checkPoints[2].y}`,
     class: `${CLASS}__check`,
   });
@@ -355,7 +370,7 @@ function buildScene(network, model) {
     Math.hypot(checkPoints[1].x - checkPoints[0].x, checkPoints[1].y - checkPoints[0].y) +
     Math.hypot(checkPoints[2].x - checkPoints[1].x, checkPoints[2].y - checkPoints[1].y);
   check.style.strokeDasharray = checkLength;
-  const ringPulse = addSvg(ringLayer, "circle", { cx: ring.cx, cy: ring.cy, r: ring.outer, class: `${CLASS}__ring-pulse` });
+  const burst = addSvg(shapeLayer, "circle", { cx: shape.center.x, cy: shape.center.y, r: 110, class: `${CLASS}__burst` });
 
   // --- Pacchetti (livello più alto) ---
   const packetLayer = addSvg(svg, "g");
@@ -382,16 +397,18 @@ function buildScene(network, model) {
     pulses,
     traySlots,
     ordinals,
-    ghost,
+    ghostLines,
+    openAnchors,
     connectors,
     labelPackets,
     labelArrival,
     labelCorrect,
-    arcs,
-    ringLabel,
+    parts,
+    edges,
+    dataLabel,
     check,
     checkLength,
-    ringPulse,
+    burst,
     packetNodes,
   };
 }
@@ -422,7 +439,6 @@ export async function renderPacketJourney(container, scenario) {
 
   const model = prepareModel(network);
   const scene = buildScene(network, model);
-  const { ring } = LAYOUT;
 
   // ---------------------------------------------------------------------
   // Fotogrammi: ogni passo imposta l'INTERA scena a partire da "t" (ms).
@@ -435,35 +451,80 @@ export async function renderPacketJourney(container, scenario) {
   }
 
   function placeConnector(index, x, y) {
-    // Parte dal bordo dell'anello, in direzione del pacchetto.
-    const vx = x - ring.cx;
-    const vy = y - ring.cy;
+    // Parte da poco fuori dal tesseratto, in direzione del pacchetto.
+    const vx = x - LAYOUT.shape.center.x;
+    const vy = y - LAYOUT.shape.center.y;
     const length = Math.hypot(vx, vy) || 1;
     const line = scene.connectors[index];
-    line.setAttribute("x1", ring.cx + (vx / length) * ring.outer);
-    line.setAttribute("y1", ring.cy + (vy / length) * ring.outer);
+    line.setAttribute("x1", LAYOUT.shape.center.x + (vx / length) * LAYOUT.connectorStart);
+    line.setAttribute("y1", LAYOUT.shape.center.y + (vy / length) * LAYOUT.connectorStart);
     line.setAttribute("x2", x);
     line.setAttribute("y2", y);
   }
 
-  function setArc(index, detach, opacity) {
-    const arc = scene.arcs[index];
-    arc.group.setAttribute("transform", `translate(${arc.dir.x * detach} ${arc.dir.y * detach})`);
-    arc.group.style.opacity = opacity;
+  function setGhost(opacity) {
+    scene.ghostLines.forEach((line) => {
+      line.style.opacity = opacity;
+    });
   }
 
-  function rowX(position) {
-    return ring.cx + (position - (model.packets.length - 1) / 2) * LAYOUT.rowGap;
+  const perPart = (fn) => model.packets.map((_, k) => fn(k));
+
+  // Posa corrente del tesseratto: serve a partire da dove la rotazione libera si
+  // trova quando il docente preme "Prosegui" (vedi settleFrom).
+  let lastPose = CANONICAL_POSE;
+  let settleFrom = CANONICAL_POSE;
+
+  /**
+   * Disegna il tesseratto: 32 spigoli proiettati nella posa data, poi ogni
+   * parte (gruppo di 8 spigoli) viene spostata, rimpicciolita e sfumata.
+   * Spostamento e riduzione sono la trasformazione del GRUPPO, non delle
+   * coordinate: con spostamento nullo e scala 1 l'attributo transform sparisce.
+   * @param {{ay:number,ax:number,a1:number,a2:number}} pose
+   * @param {number} explode 0 = dato intero, 1 = parti allontanate
+   * @param {number[]} shrink per parte, 0 = intera, 1 = ridotta quasi a un punto
+   * @param {number[]} alpha per parte, opacità
+   */
+  function drawShape(pose, explode, shrink, alpha) {
+    const { points, centres } = projectTesseract(pose, LAYOUT.shape);
+    TESSERACT_EDGES.forEach((edge, i) => {
+      const a = points[edge.a];
+      const b = points[edge.b];
+      const line = scene.edges[i];
+      line.setAttribute("x1", a.x.toFixed(1));
+      line.setAttribute("y1", a.y.toFixed(1));
+      line.setAttribute("x2", b.x.toFixed(1));
+      line.setAttribute("y2", b.y.toFixed(1));
+      // Profondità: gli spigoli lontani sono più tenui.
+      line.style.opacity = clamp(0.95 - ((a.z + b.z) / 2) * 0.004, 0.4, 1);
+    });
+    scene.parts.forEach((part, k) => {
+      const dx = PART_DIRECTIONS[k].x * explode * LAYOUT.shape.detach;
+      const dy = PART_DIRECTIONS[k].y * explode * LAYOUT.shape.detach;
+      const scale = 1 - 0.85 * shrink[k];
+      if (Math.abs(dx) + Math.abs(dy) < 0.01 && scale > 0.999) {
+        part.group.removeAttribute("transform");
+      } else {
+        const c = centres[k];
+        part.group.setAttribute(
+          "transform",
+          `translate(${dx.toFixed(2)} ${dy.toFixed(2)}) translate(${c.x.toFixed(2)} ${c.y.toFixed(2)}) ` +
+            `scale(${scale.toFixed(3)}) translate(${(-c.x).toFixed(2)} ${(-c.y).toFixed(2)})`
+        );
+      }
+      part.group.style.opacity = alpha[k];
+    });
+    lastPose = pose;
   }
 
   // Tutto nascosto: ogni passo accende solo ciò che gli serve.
   function resetScene() {
     scene.mapLayer.style.opacity = 0;
-    scene.ghost.style.opacity = 0;
-    scene.ringLabel.style.opacity = 0;
-    [scene.labelPackets, scene.labelArrival, scene.labelCorrect, scene.check, scene.ringPulse].forEach((node) => {
+    scene.dataLabel.style.opacity = 0;
+    [scene.labelPackets, scene.labelArrival, scene.labelCorrect, scene.check, scene.burst].forEach((node) => {
       node.style.opacity = 0;
     });
+    setGhost(0);
     scene.connectors.forEach((line) => {
       line.style.opacity = 0;
     });
@@ -473,7 +534,7 @@ export async function renderPacketJourney(container, scenario) {
     scene.ordinals.forEach((ordinal) => {
       ordinal.style.opacity = 0;
     });
-    scene.arcs.forEach((arc, i) => setArc(i, 0, 0));
+    drawShape(lastPose, 0, perPart(() => 0), perPart(() => 0));
     scene.trails.forEach((trail, i) => {
       trail.style.opacity = 0;
       trail.style.strokeDashoffset = model.packets[i].timeline.length;
@@ -485,36 +546,43 @@ export async function renderPacketJourney(container, scenario) {
     );
   }
 
-  function frameStep0() {
-    scene.arcs.forEach((arc, i) => setArc(i, 0, 1));
-    scene.ringLabel.style.opacity = 1;
+  // Stato iniziale (e riposo dopo il passo 3): il dato intero, che ruota.
+  function frameStep0(t, pose) {
+    drawShape(pose, 0, perPart(() => 0), perPart(() => 1));
+    scene.dataLabel.style.opacity = 1;
   }
 
   function frameStep1(t) {
+    // La rotazione libera si ferma nella posa canonica, poi il dato si apre,
+    // le parti diventano pacchetti e i pacchetti si dispongono a ventaglio.
+    const pose = settlePose(settleFrom, ease(progress(t, 0, 700)));
+    const convert = (k) => ease(progress(t, 1250 + k * 80, 450));
+    drawShape(
+      pose,
+      ease(progress(t, 500, 700)),
+      perPart(convert),
+      perPart((k) => 1 - convert(k))
+    );
     model.packets.forEach((packet, k) => {
-      const stagger = k * 70;
-      const detach = ring.detach * ease(progress(t, stagger, 400));
-      const toPacket = ease(progress(t, 450 + stagger, 450));
-      const toFan = ease(progress(t, 950 + k * 120, 1000));
-      const from = scene.arcs[k].detachedPos;
+      const from = scene.openAnchors[k];
       const to = LAYOUT.fan[k];
+      const toFan = ease(progress(t, 1700 + k * 120, 1000));
       const x = lerp(from.x, to.x, toFan);
       const y = lerp(from.y, to.y, toFan);
-      setArc(k, detach, 1 - toPacket);
-      setPacket(k, x, y, lerp(0.6, 1, toPacket), clamp(toPacket * 2));
+      setPacket(k, x, y, lerp(0.6, 1, convert(k)), clamp(convert(k) * 2));
       placeConnector(k, x, y);
       scene.connectors[k].style.opacity = 0.55 * clamp(toFan * 3);
     });
-    scene.ghost.style.opacity = 0.4 * ease(progress(t, 0, 450));
-    scene.ringLabel.style.opacity = 1 - 0.55 * ease(progress(t, 300, 600));
-    scene.labelPackets.style.opacity = ease(progress(t, 2000, 400));
+    setGhost(0.4 * ease(progress(t, 700, 500)));
+    scene.dataLabel.style.opacity = 1 - 0.55 * ease(progress(t, 500, 600));
+    scene.labelPackets.style.opacity = ease(progress(t, 2800, 400));
   }
 
   function frameStep2(t) {
     // Dissolvenza dalla scena del dato alla mappa
     const dataFade = 1 - ease(progress(t, 0, 450));
-    scene.ghost.style.opacity = 0.4 * dataFade;
-    scene.ringLabel.style.opacity = 0.45 * dataFade;
+    setGhost(0.4 * dataFade);
+    scene.dataLabel.style.opacity = 0.45 * dataFade;
     scene.labelPackets.style.opacity = dataFade;
     scene.connectors.forEach((line, k) => {
       placeConnector(k, LAYOUT.fan[k].x, LAYOUT.fan[k].y);
@@ -568,7 +636,12 @@ export async function renderPacketJourney(container, scenario) {
     });
   }
 
-  function frameStep3(t) {
+  function rowX(position) {
+    return LAYOUT.shape.center.x + (position - (model.packets.length - 1) / 2) * LAYOUT.rowGap;
+  }
+
+  // "pose": solo a passo concluso, quando il tesseratto ricostruito riprende a ruotare.
+  function frameStep3(t, pose) {
     scene.mapLayer.style.opacity = 1 - ease(progress(t, 0, 500));
     scene.trails.forEach((trail) => {
       trail.style.opacity = 1;
@@ -580,12 +653,21 @@ export async function renderPacketJourney(container, scenario) {
 
     const guideIn = ease(progress(t, 300, 400));
     const guideOut = ease(progress(t, 3100, 600));
-    scene.ghost.style.opacity = 0.4 * guideIn * (1 - guideOut);
-    scene.ringLabel.style.opacity = Math.max(0.45 * guideIn, ease(progress(t, 3100, 500)));
+    setGhost(0.4 * guideIn * (1 - guideOut));
+    scene.dataLabel.style.opacity = Math.max(0.45 * guideIn, ease(progress(t, 3100, 500)));
     scene.labelArrival.style.opacity = ease(progress(t, 300, 300)) * (1 - ease(progress(t, 1500, 300)));
     scene.labelCorrect.style.opacity = ease(progress(t, 1500, 300)) * (1 - ease(progress(t, 2300, 300)));
 
-    const detachNow = ring.detach * (1 - ease(progress(t, 3100, 600)));
+    // Ogni pacchetto si fonde nella propria parte (che riappare, riducendosi
+    // all'inizio), poi le parti si richiudono nel tesseratto.
+    const merged = (k) => ease(progress(t, 2300 + k * 90 + 450, 250));
+    drawShape(
+      pose,
+      1 - ease(progress(t, 3100, 600)),
+      perPart((k) => 1 - merged(k)),
+      perPart(merged)
+    );
+
     model.packets.forEach((packet, k) => {
       const slot = scene.traySlots[packet.rank];
       const inArrivalOrder = { x: rowX(packet.rank), y: LAYOUT.rowY };
@@ -608,31 +690,29 @@ export async function renderPacketJourney(container, scenario) {
         scale = 1;
       }
 
-      // 3) ricomposizione: il pacchetto si fonde nel proprio arco
-      const mergeStart = 2300 + k * 90;
-      const toArc = ease(progress(t, mergeStart, 700));
-      const fused = ease(progress(t, mergeStart + 450, 250));
-      if (toArc > 0) {
-        x = lerp(inCorrectOrder.x, scene.arcs[k].detachedPos.x, toArc);
-        y = lerp(inCorrectOrder.y, scene.arcs[k].detachedPos.y, toArc);
-        scale = lerp(1, 0.7, fused);
+      // 3) ricomposizione: il pacchetto raggiunge la propria parte
+      const toPart = ease(progress(t, 2300 + k * 90, 700));
+      if (toPart > 0) {
+        x = lerp(inCorrectOrder.x, scene.openAnchors[k].x, toPart);
+        y = lerp(inCorrectOrder.y, scene.openAnchors[k].y, toPart);
+        scale = lerp(1, 0.7, merged(k));
       }
-      setPacket(k, x, y, scale, 1 - fused);
-      setArc(k, detachNow, fused);
+      setPacket(k, x, y, scale, 1 - merged(k));
     });
 
     const checked = ease(progress(t, 3700, 500));
     scene.check.style.opacity = checked > 0 ? 1 : 0;
     scene.check.style.strokeDashoffset = scene.checkLength * (1 - checked);
-    const burst = progress(t, 3700, 700);
-    scene.ringPulse.setAttribute("r", ring.outer + burst * 26);
-    scene.ringPulse.style.opacity = burst > 0 && burst < 1 ? (1 - burst) * 0.8 : 0;
+    const spread = progress(t, 3700, 700);
+    scene.burst.setAttribute("r", 110 + spread * 34);
+    scene.burst.style.opacity = spread > 0 && spread < 1 ? (1 - spread) * 0.8 : 0;
   }
 
   const FRAMES = [frameStep0, frameStep1, frameStep2, frameStep3];
-  function renderFrame(step, t) {
+  // "pose" conta solo per il passo 0 e per il passo 3 concluso (rotazione libera).
+  function renderFrame(step, t, pose = CANONICAL_POSE) {
     resetScene();
-    FRAMES[step](t);
+    FRAMES[step](t, pose);
   }
 
   // ---------------------------------------------------------------------
@@ -892,10 +972,12 @@ export async function renderPacketJourney(container, scenario) {
   // Il tempo trascorso si ACCUMULA (dt × velocità) invece di essere
   // ricalcolato dall'inizio: cambiare velocità a passo in corso non fa saltare
   // la scena avanti o indietro.
+  const prefersReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
   function playStep(targetStep, id) {
     return new Promise((resolve) => {
       const duration = model.durations[targetStep];
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if (prefersReducedMotion()) {
         renderFrame(targetStep, duration);
         resolve();
         return;
@@ -930,10 +1012,39 @@ export async function renderPacketJourney(container, scenario) {
     target.focus();
   }
 
+  // Rotazione libera del tesseratto: solo a riposo (passo 0 e passo 3 concluso),
+  // con un ciclo requestAnimationFrame proprio che si ferma appena parte un passo.
+  // Con "riduci animazioni" il dato resta fermo nella posa canonica.
+  let idleRafId = 0;
+
+  function stopIdle() {
+    cancelAnimationFrame(idleRafId);
+    idleRafId = 0;
+  }
+
+  function startIdle() {
+    stopIdle();
+    const duration = model.durations[step];
+    if (prefersReducedMotion()) {
+      renderFrame(step, duration, CANONICAL_POSE);
+      return;
+    }
+    const startedAt = performance.now();
+    renderFrame(step, duration, idlePose(0));
+    function loop(now) {
+      idleRafId = requestAnimationFrame(loop);
+      renderFrame(step, duration, idlePose(now - startedAt));
+    }
+    idleRafId = requestAnimationFrame(loop);
+  }
+
   // Avvia (o riavvia da capo) il passo corrente: usato da "Prosegui" e "Rivedi".
   function runCurrentStep() {
     const id = ++runId;
     cancelAnimationFrame(rafId);
+    stopIdle();
+    // Il passo 1 parte da dove la rotazione libera si trova, non da un salto.
+    if (step === 1) settleFrom = lastPose;
     applySelection(null);
     outcomeStatus.textContent = "";
     animating = true;
@@ -944,6 +1055,7 @@ export async function renderPacketJourney(container, scenario) {
       applyState();
       announceOutcome(step);
       restoreFocus();
+      if (step === LAST_STEP) startIdle(); // il dato ricostruito riprende a ruotare
     });
   }
 
@@ -972,7 +1084,7 @@ export async function renderPacketJourney(container, scenario) {
     step = 0;
     applySelection(null);
     outcomeStatus.textContent = "";
-    renderFrame(0, 0);
+    startIdle();
     showCaption();
     applyState();
     focusTarget.focus();
@@ -1028,7 +1140,7 @@ export async function renderPacketJourney(container, scenario) {
   proceedButton.element.addEventListener("sl:click", handleProceed);
   restartButton.element.addEventListener("sl:click", handleRestartButton);
 
-  renderFrame(0, 0);
+  startIdle();
   showCaption();
   applyState();
 
@@ -1038,6 +1150,7 @@ export async function renderPacketJourney(container, scenario) {
     destroyed = true;
     runId += 1;
     cancelAnimationFrame(rafId);
+    stopIdle();
     setSettingsOpen(false);
     settingsButton.element.removeEventListener("sl:click", handleSettingsToggle);
     refreshButton.element.removeEventListener("sl:click", handleRefresh);

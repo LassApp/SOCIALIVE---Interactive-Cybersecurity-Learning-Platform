@@ -3,7 +3,7 @@
  * -----------------------------------------------------------------------
  * Stile del renderer "packet-journey" (scenario "Viaggio dei dati", area
  * Reti). Possiede il layout della pagina e gli elementi propri della
- * scena SVG (nodi, collegamenti, scie, pacchetti, anello del dato);
+ * scena SVG (nodi, collegamenti, scie, pacchetti, tesseratto del dato);
  * superfici, pulsanti e badge sono i componenti già esistenti (Card,
  * Button, Badge), non ridisegnati qui.
  *
@@ -17,7 +17,7 @@
  *     verificati in profile-menu.css e token-prediction.css);
  *   - bordi/nodi: border-strong su bg-surface (3.91:1 Light / 4.36:1 Dark,
  *     input.css), stessa funzione di confine funzionale;
- *   - pacchetti, scie, archi dell'anello: token primary/warning/success/
+ *   - pacchetti, scie, spigoli del tesseratto: token primary/warning/success/
  *     error -500 su bg-surface, uso grafico (WCAG 1.4.11, ≥ 3:1): valori
  *     già documentati in theme-light.css/theme-dark.css e ri-verificati
  *     numericamente per questo scenario (vedi handover). Il colore non è
@@ -78,11 +78,12 @@
 }
 
 /* Icone un poco più grandi del default, come i pulsanti principali: la LIM
-   si legge da lontano. L'ingranaggio è LO STESSO di Oversharing (stessa
-   utility, stessa resa: button.css riempie gli svg dei bottoni con
-   currentColor, e la corona con denti si legge come un disco con i denti).
-   La freccia circolare è a contorno e lo dichiara da sé sui propri tratti
-   (fill="none"), così non eredita il riempimento. */
+   si legge da lontano. L'ingranaggio è LO STESSO di Oversharing (utility
+   condivisa settingsIcon.js): un solo tracciato pieno con foro, che si
+   legge come ingranaggio proprio perché button.css riempie gli svg dei
+   bottoni con currentColor. La freccia circolare è a contorno e lo
+   dichiara da sé sui propri tratti (fill="none"), così non eredita il
+   riempimento. */
 .sl-packet-journey__toolbar-buttons .sl-button__icon {
   width: 24px;
   height: 24px;
@@ -338,11 +339,22 @@
   text-anchor: middle;
 }
 
+/* Sagoma tratteggiata del tesseratto: resta dov'era il dato mentre le parti
+   viaggiano e fa da guida alla ricomposizione. */
 .sl-packet-journey__ghost {
-  fill: none;
   stroke: var(--sl-color-border-strong);
   stroke-width: 2;
-  stroke-dasharray: 6 6;
+  stroke-dasharray: 5 6;
+  stroke-linecap: round;
+  fill: none;
+}
+
+/* Spigoli del tesseratto: il colore (token del pacchetto) è impostato dal
+   renderer sullo stile di ciascuno spigolo; la profondità sfuma l'opacità. */
+.sl-packet-journey__edge {
+  stroke-width: 4;
+  stroke-linecap: round;
+  fill: none;
 }
 
 .sl-packet-journey__connector {
@@ -359,7 +371,7 @@
   text-anchor: middle;
 }
 
-.sl-packet-journey__ring-label {
+.sl-packet-journey__data-label {
   font-size: 30px;
   font-weight: var(--sl-font-weight-bold);
   fill: var(--sl-color-text-primary);
@@ -375,7 +387,7 @@
   stroke-linejoin: round;
 }
 
-.sl-packet-journey__ring-pulse {
+.sl-packet-journey__burst {
   fill: none;
   stroke: var(--sl-color-success-500);
   stroke-width: 3;

@@ -13,7 +13,7 @@
  *      (Scenari → Reti → Viaggio dei dati), i tre passi uno per uno con
  *      OROLOGIO FINTO (page.clock, fermo e fatto avanzare a mano:
  *      nessun controllo dipende dai tempi reali della macchina), l'ordine
- *      di arrivo osservato NEL TEMPO, il riordino, l'anello ricostruito,
+ *      di arrivo osservato NEL TEMPO, il riordino, il tesseratto ricostruito,
  *      "Ricomincia", contrasto numerico dei colori, assenza di overflow
  *      su più larghezze, screenshot Light/Dark.
  *   3. "riduci animazioni": ogni passo salta allo stato finale.
@@ -101,16 +101,25 @@ async function readPackets(page) {
   });
 }
 
-/** Archi dell'anello (nell'ordine del DOM = numero d'ordine crescente). */
-async function readArcs(page) {
-  return page.evaluate(() => {
-    const layer = document.querySelectorAll(".sl-packet-journey__svg > g")[2];
-    return Array.from(layer.querySelectorAll(":scope > g > g")).map((group) => ({
+/** Parti del tesseratto (una per asse, nell'ordine del DOM = numero d'ordine crescente). */
+async function readParts(page) {
+  return page.evaluate(() =>
+    Array.from(document.querySelectorAll(".sl-packet-journey__part")).map((group) => ({
       opacity: Number(group.style.opacity),
       transform: group.getAttribute("transform") || "",
-      fill: group.querySelector("path").style.fill,
-    }));
-  });
+      fill: group.querySelector(".sl-packet-journey__edge").style.stroke,
+      edges: group.querySelectorAll(".sl-packet-journey__edge").length,
+    }))
+  );
+}
+
+/** Coordinate di tutti gli spigoli del tesseratto: cambiano nel tempo solo se il dato ruota. */
+async function readEdgeCoordinates(page) {
+  return page.evaluate(() =>
+    Array.from(document.querySelectorAll(".sl-packet-journey__edge")).map((el) =>
+      ["x1", "y1", "x2", "y2"].map((name) => Number(el.getAttribute(name)))
+    )
+  );
 }
 
 const layerOpacity = (page, index) =>
@@ -329,6 +338,94 @@ async function run() {
     assert.deepEqual([r.dwell.x, r.dwell.y, r.dwell.distance], [100, 0, 100]);
     assert.deepEqual([r.end.x, r.end.y, r.end.distance], [100, 100, 200]);
   });
+  const inTesseract = (fn, arg) =>
+    utilPage.evaluate(
+      async ({ source, arg: a }) => {
+        const mod = await import("/js/utils/tesseract.js");
+        // eslint-disable-next-line no-new-func
+        return new Function("tess", "arg", `return (${source})(tess, arg);`)(mod, a);
+      },
+      { source: fn.toString(), arg }
+    );
+
+  await suite.test("tesseract.js: 16 vertici, 32 spigoli (8 per ciascuno dei 4 assi), ogni vertice ha 4 spigoli", async () => {
+    const r = await inTesseract((t) => {
+      const perAxis = [0, 1, 2, 3].map((axis) => t.TESSERACT_EDGES.filter((e) => e.axis === axis).length);
+      const degree = t.TESSERACT_VERTICES.map((_, i) => t.TESSERACT_EDGES.filter((e) => e.a === i || e.b === i).length);
+      // ogni spigolo collega due vertici che differiscono in UNA sola coordinata, quella dell'asse
+      const oneCoordinate = t.TESSERACT_EDGES.every((e) => {
+        const diff = t.TESSERACT_VERTICES[e.a].map((c, k) => (c !== t.TESSERACT_VERTICES[e.b][k] ? k : -1)).filter((k) => k >= 0);
+        return diff.length === 1 && diff[0] === e.axis;
+      });
+      return { vertices: t.TESSERACT_VERTICES.length, edges: t.TESSERACT_EDGES.length, perAxis, degree, oneCoordinate, axes: t.TESSERACT_AXES };
+    });
+    assert.equal(r.vertices, 16);
+    assert.equal(r.edges, 32);
+    assert.equal(r.axes, 4);
+    assert.deepEqual(r.perAxis, [8, 8, 8, 8]);
+    assert.deepEqual(r.degree, new Array(16).fill(4));
+    assert.equal(r.oneCoordinate, true);
+  });
+
+  await suite.test("tesseract.js: idlePose(0) è la posa canonica; settlePose raggiunge la canonica (modulo 2π) senza tornare indietro", async () => {
+    const r = await inTesseract((t) => {
+      const TAU = Math.PI * 2;
+      const canon = t.CANONICAL_POSE;
+      const from = t.idlePose(7300);
+      const mid = t.settlePose(from, 0.5);
+      const end = t.settlePose(from, 1);
+      const start = t.settlePose(from, 0);
+      const mod = (v) => ((v % TAU) + TAU) % TAU;
+      return {
+        idle0: t.idlePose(0),
+        canon,
+        fromAy: from.ay,
+        midAy: mid.ay,
+        endAy: end.ay,
+        endDelta: [end.ay - canon.ay, end.a1 - canon.a1, end.a2 - canon.a2].map((d) => Math.min(mod(d), TAU - mod(d))),
+        endAx: end.ax,
+        startSame: ["ay", "ax", "a1", "a2"].every((k) => Math.abs(start[k] - from[k]) < 1e-12),
+      };
+    });
+    ["ay", "ax", "a1", "a2"].forEach((k) => assert.ok(Math.abs(r.idle0[k] - r.canon[k]) < 1e-12, `idlePose(0).${k}`));
+    r.endDelta.forEach((d) => assert.ok(d < 1e-9, `angolo non riportato alla canonica (${d})`));
+    assert.ok(Math.abs(r.endAx - r.canon.ax) < 1e-12);
+    assert.ok(r.midAy >= r.fromAy && r.endAy >= r.fromAy, "la rotazione non deve mai tornare indietro");
+    assert.equal(r.startSame, true, "settlePose(…, 0) deve coincidere con la posa di partenza");
+  });
+
+  await suite.test("tesseract.js: la proiezione è finita e deterministica; ogni parte è distesa (non un punto), i baricentri cadono vicino al centro e i vertici, in tutte le pose della rotazione, restano nella zona centrale della scena", async () => {
+    const r = await inTesseract((t) => {
+      // stessi parametri di LAYOUT.shape in packetJourneyRenderer.js
+      const view = { center: { x: 560, y: 340 }, radius: 46, hyperDistance: 2.4, focal: 620, cameraZ: 620 };
+      const a = t.projectTesseract(t.CANONICAL_POSE, view);
+      const b = t.projectTesseract(t.CANONICAL_POSE, view);
+      // l'ingombro vale per TUTTE le pose della rotazione libera: si campiona un minuto di rotazione
+      const all = [...a.points];
+      for (let ms = 0; ms < 60000; ms += 100) all.push(...t.projectTesseract(t.idlePose(ms), view).points);
+      // I 4 gruppi di spigoli sono simmetrici rispetto al centro dell'ipercubo: i loro baricentri
+      // coincidono (quasi) con il centro della scena. Per questo il perno di riduzione/spostamento di
+      // ogni parte è il centro, e la parte si distingue dalle altre per DIREZIONE di allontanamento.
+      const centreOffset = a.centres.map((c) => Math.hypot(c.x - view.center.x, c.y - view.center.y));
+      const spread = [0, 1, 2, 3].map((axis) =>
+        Math.max(...t.TESSERACT_EDGES.filter((e) => e.axis === axis).map((e) => Math.hypot((a.points[e.a].x + a.points[e.b].x) / 2 - a.centres[axis].x, (a.points[e.a].y + a.points[e.b].y) / 2 - a.centres[axis].y)))
+      );
+      return {
+        same: JSON.stringify(a) === JSON.stringify(b),
+        finite: all.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z)),
+        count: [a.points.length, a.centres.length],
+        maxCentreOffset: Math.max(...centreOffset),
+        minSpread: Math.min(...spread),
+        bounds: [Math.min(...all.map((p) => p.x)), Math.max(...all.map((p) => p.x)), Math.min(...all.map((p) => p.y)), Math.max(...all.map((p) => p.y))],
+      };
+    });
+    assert.equal(r.same, true);
+    assert.equal(r.finite, true);
+    assert.deepEqual(r.count, [16, 4]);
+    assert.ok(r.maxCentreOffset < 15, `un baricentro è lontano dal centro (${r.maxCentreOffset})`);
+    assert.ok(r.minSpread > 20, `una parte è quasi un punto (${r.minSpread}): non si distinguerebbe come fascio di spigoli`);
+    assert.ok(r.bounds[0] > 420 && r.bounds[1] < 700 && r.bounds[2] > 160 && r.bounds[3] < 520, `fuori dalla zona centrale: ${r.bounds}`);
+  });
   await utilPage.context().close();
 
   // --- 2. Renderer, movimento pieno ----------------------------------------
@@ -371,7 +468,33 @@ async function run() {
     assert.equal(await page.locator(SEL.svg).getAttribute("aria-label"), network.labels.stage);
   });
 
-  await suite.test("stato a riposo: passo 0, Prosegui attivo, Ricomincia nascosto, anello intero, pacchetti e mappa spenti", async () => {
+  await suite.test("tesseratto: 4 parti da 8 spigoli, un colore per parte (token dei pacchetti), sagoma tratteggiata di 32 spigoli", async () => {
+    const info = await page.evaluate(() => ({
+      parts: Array.from(document.querySelectorAll(".sl-packet-journey__part")).map((g) =>
+        Array.from(g.querySelectorAll(".sl-packet-journey__edge")).map((e) => e.style.stroke)
+      ),
+      ghost: document.querySelectorAll(".sl-packet-journey__ghost").length,
+      label: document.querySelector(".sl-packet-journey__data-label").textContent.trim(),
+    }));
+    const colors = [...network.packets].sort((a, b) => a.seq - b.seq).map((p) => `var(--sl-color-${p.color}-500)`);
+    assert.equal(info.parts.length, 4);
+    info.parts.forEach((edges, k) => {
+      assert.equal(edges.length, 8, `la parte ${k + 1} non ha 8 spigoli`);
+      edges.forEach((stroke) => assert.equal(stroke, colors[k]));
+    });
+    assert.equal(info.ghost, 32);
+    assert.equal(info.label, network.data.label);
+  });
+
+  await suite.test("tesseratto: a riposo ruota (le coordinate degli spigoli cambiano nel tempo)", async () => {
+    const before = await readEdgeCoordinates(page);
+    await page.clock.runFor(600);
+    const after = await readEdgeCoordinates(page);
+    const moved = after.filter((c, i) => c.some((v, j) => Math.abs(v - before[i][j]) > 0.5)).length;
+    assert.ok(moved >= 24, `solo ${moved}/32 spigoli si sono mossi in 600 ms`);
+  });
+
+  await suite.test("stato a riposo: passo 0, Prosegui attivo, Ricomincia nascosto, tesseratto intero, pacchetti e mappa spenti", async () => {
     assert.equal(await dataStep(page), "0");
     assert.equal(await isAnimating(page), false);
     assert.equal((await page.locator(SEL.proceed).textContent()).trim(), "Prosegui");
@@ -382,9 +505,12 @@ async function run() {
     assert.equal((await page.locator(SEL.captionStep).textContent()).trim(), "Punto di partenza");
     assert.equal((await page.locator(SEL.captionTitle).textContent()).trim(), network.steps[0].title);
     assert.equal((await page.locator(SEL.captionText).textContent()).trim(), network.steps[0].text);
-    const arcs = await readArcs(page);
-    assert.equal(arcs.length, 4);
-    arcs.forEach((arc) => assert.equal(arc.opacity, 1));
+    const parts = await readParts(page);
+    assert.equal(parts.length, 4);
+    parts.forEach((part) => {
+      assert.equal(part.opacity, 1);
+      assert.equal(part.transform, "", "a riposo le parti stanno al loro posto");
+    });
     const packets = await readPackets(page);
     Object.values(packets).forEach((p) => assert.equal(p.opacity, 0));
     assert.equal(await layerOpacity(page, 0), 0, "la mappa dovrebbe essere spenta");
@@ -467,9 +593,14 @@ async function run() {
   });
 
   // Passo 1 ------------------------------------------------------------------
-  await suite.test("passo 1: all'avvio Prosegui si disabilita, il focus passa alla scena, la didascalia cambia", async () => {
+  await suite.test("passo 1: all'avvio Prosegui si disabilita, il focus passa alla scena, la didascalia cambia, il tesseratto non salta di posa", async () => {
+    const beforeClick = await readEdgeCoordinates(page);
     await page.locator(SEL.proceed).focus();
     await page.locator(SEL.proceed).click();
+    await page.clock.runFor(16); // primo fotogramma del passo: la posa riparte da dove stava ruotando
+    const firstFrame = await readEdgeCoordinates(page);
+    const maxJump = Math.max(...firstFrame.flatMap((c, i) => c.map((v, j) => Math.abs(v - beforeClick[i][j]))));
+    assert.ok(maxJump < 4, `salto di ${maxJump.toFixed(1)} px al primo fotogramma del passo 1`);
     assert.equal(await dataStep(page), "1");
     assert.equal(await isAnimating(page), true);
     assert.equal(await page.locator(SEL.proceed).isDisabled(), true);
@@ -485,15 +616,16 @@ async function run() {
     assert.equal(await dataStep(page), "1");
   });
 
-  await suite.test("passo 1, a metà: gli archi si stanno staccando e compaiono i primi pacchetti", async () => {
-    await page.clock.runFor(900); // ~1000 ms dall'avvio
+  await suite.test("passo 1, a metà: il tesseratto si è aperto e le parti diventano i primi pacchetti", async () => {
+    await page.clock.runFor(1400); // ~1500 ms dall'avvio: apertura conclusa (1200 ms), i pacchetti nascono da 1250 ms
     const packets = await readPackets(page);
     assert.ok(Object.values(packets).some((p) => p.opacity > 0), "nessun pacchetto visibile a metà del passo 1");
-    const arcs = await readArcs(page);
-    assert.ok(arcs.some((a) => a.opacity < 1), "gli archi non hanno iniziato a trasformarsi in pacchetti");
+    const parts = await readParts(page);
+    assert.ok(parts.some((p) => p.opacity < 1), "le parti non hanno iniziato a trasformarsi in pacchetti");
+    assert.ok(parts.some((p) => p.transform !== ""), "il tesseratto non si è aperto");
   });
 
-  await suite.test("passo 1, fine: 4 pacchetti numerati 1..4 a ventaglio da sinistra a destra, anello scomposto, Prosegui di nuovo attivo col focus", async () => {
+  await suite.test("passo 1, fine: 4 pacchetti numerati 1..4 a ventaglio da sinistra a destra, tesseratto aperto (parti spente), Prosegui di nuovo attivo col focus", async () => {
     const elapsed = await runUntilIdle(page);
     assert.ok(elapsed + 1000 <= MAX_STEP_MS, `il passo 1 dura troppo (${elapsed + 1000} ms)`);
     assert.equal(await dataStep(page), "1");
@@ -504,7 +636,7 @@ async function run() {
       assert.equal(p.scale, 1);
     });
     assert.deepEqual(orderByX(packets), [1, 2, 3, 4], "il ventaglio non è ordinato da sinistra a destra");
-    (await readArcs(page)).forEach((arc) => assert.equal(arc.opacity, 0));
+    (await readParts(page)).forEach((arc) => assert.equal(arc.opacity, 0));
     assert.equal(await page.locator(SEL.proceed).isEnabled(), true);
     assert.equal(await page.evaluate(() => document.activeElement.classList.contains("sl-packet-journey__proceed")), true);
   });
@@ -519,6 +651,16 @@ async function run() {
     assert.equal(await page.locator(SEL.review).isVisible(), true, "Rivedi dovrebbe comparire dal passo 1");
   });
 
+  await suite.test("passo 1: resta la sagoma tratteggiata del tesseratto (guida alla ricomposizione) e compare l'etichetta 'Pacchetti'", async () => {
+    const info = await page.evaluate(() => ({
+      ghost: Array.from(document.querySelectorAll(".sl-packet-journey__ghost")).map((l) => Number(l.style.opacity)),
+      label: Number(document.querySelectorAll(".sl-packet-journey__label")[0].style.opacity),
+    }));
+    assert.equal(info.ghost.length, 32);
+    info.ghost.forEach((o) => assert.ok(Math.abs(o - 0.4) < 0.01, `opacità sagoma ${o}`));
+    assert.equal(info.label, 1);
+  });
+
   await suite.test("passo 1: ogni pacchetto ha un colore diverso (stroke) e lo stesso colore del proprio arco", async () => {
     const packets = await readPackets(page);
     const strokes = [1, 2, 3, 4].map((s) => packets[s].stroke);
@@ -526,14 +668,14 @@ async function run() {
     strokes.forEach((stroke, i) => assert.equal(stroke, `var(--sl-color-${network.packets.find((p) => p.seq === i + 1).color}-500)`));
   });
 
-  await suite.test("Rivedi (passo 1 concluso): ricomincia lo STESSO passo — al primo istante anello intero e pacchetti spenti, Prosegui disattivato, poi si ripete fino alla fine", async () => {
+  await suite.test("Rivedi (passo 1 concluso): ricomincia lo STESSO passo — al primo istante tesseratto intero e pacchetti spenti, Prosegui disattivato, poi si ripete fino alla fine", async () => {
     assert.equal((await page.locator(SEL.review).textContent()).trim(), "Rivedi");
     await page.locator(SEL.review).click();
     assert.equal(await dataStep(page), "1", "Rivedi non deve cambiare passo");
     assert.equal(await isAnimating(page), true);
     assert.equal(await page.locator(SEL.proceed).isDisabled(), true);
     await page.clock.runFor(20);
-    (await readArcs(page)).forEach((arc) => assert.equal(arc.opacity, 1, "l'anello non è tornato intero al primo istante"));
+    (await readParts(page)).forEach((part) => assert.equal(part.opacity, 1, "il tesseratto non è tornato intero al primo istante"));
     Object.values(await readPackets(page)).forEach((p) => assert.equal(p.opacity, 0, "i pacchetti dovrebbero essere spenti al primo istante"));
     assert.equal((await page.locator(SEL.captionStep).textContent()).trim(), "Passo 1 di 3");
     await runUntilIdle(page);
@@ -546,24 +688,24 @@ async function run() {
     assert.equal(await page.locator(SEL.root).getAttribute("data-speed"), "2");
     await page.locator(SEL.review).click();
     const fast = await runUntilIdle(page, { stepMs: 25 });
-    assert.ok(fast >= 1100 && fast <= 1400, `a 2× il passo 1 dovrebbe durare ~1250 ms (${fast})`);
+    assert.ok(fast >= 1450 && fast <= 1900, `a 2× il passo 1 dovrebbe durare ~1650 ms (${fast})`);
 
     await chooseSpeed(page, "0,5×");
     await page.locator(SEL.review).click();
     await page.clock.runFor(3000);
-    assert.equal(await isAnimating(page), true, "a 0,5× dopo 3 s il passo (5 s) dovrebbe essere ancora in corso");
+    assert.equal(await isAnimating(page), true, "a 0,5× dopo 3 s il passo (6,6 s) dovrebbe essere ancora in corso");
     const rest = await runUntilIdle(page, { stepMs: 25 });
-    assert.ok(3000 + rest >= 4800 && 3000 + rest <= 5300, `a 0,5× il passo 1 dovrebbe durare ~5000 ms (${3000 + rest})`);
+    assert.ok(3000 + rest >= 6300 && 3000 + rest <= 6900, `a 0,5× il passo 1 dovrebbe durare ~6600 ms (${3000 + rest})`);
   });
 
   await suite.test("velocità: cambiarla a passo in corso non fa saltare la scena (tempo accumulato)", async () => {
     await page.locator(SEL.review).click(); // sempre a 0,5×
     await page.clock.runFor(1000); // = 500 ms di scena
     await chooseSpeed(page, "2×");
-    const before = await readArcs(page);
-    assert.ok(before.some((a) => a.opacity === 1), "a 500 ms di scena gli archi non dovrebbero essere ancora spariti");
+    const before = await readParts(page);
+    assert.ok(before.some((p) => p.opacity === 1), "a 500 ms di scena le parti non dovrebbero essere ancora sparite");
     const rest = await runUntilIdle(page, { stepMs: 25 });
-    assert.ok(rest >= 800 && rest <= 1200, `restano ~2000 ms di scena a 2× = ~1000 ms (${rest})`);
+    assert.ok(rest >= 1200 && rest <= 1600, `restano ~2800 ms di scena a 2× = ~1400 ms (${rest})`);
     await chooseSpeed(page, "1×");
     assert.equal(await page.locator(SEL.root).getAttribute("data-speed"), "1");
   });
@@ -750,18 +892,19 @@ async function run() {
     assert.deepEqual(orderByX(packets), [1, 2, 3, 4]);
   });
 
-  await suite.test("passo 3, fine: anello ricostruito (4 archi uniti, stessa sequenza di colori di prima), pacchetti assorbiti, spunta visibile", async () => {
+  await suite.test("passo 3, fine: tesseratto ricostruito (4 parti riunite e al loro posto, stessa sequenza di colori di prima), pacchetti assorbiti, spunta visibile", async () => {
     const elapsed = await runUntilIdle(page);
     assert.ok(2250 + elapsed <= MAX_STEP_MS, `il passo 3 dura troppo (${2250 + elapsed} ms)`);
     assert.equal(await dataStep(page), "3");
-    const arcs = await readArcs(page);
-    assert.equal(arcs.length, 4);
-    arcs.forEach((arc, i) => {
-      assert.equal(arc.opacity, 1, `arco ${i + 1} non visibile`);
-      assert.ok(/^translate\(-?0 -?0\)$/.test(arc.transform), `arco ${i + 1} non riunito: ${arc.transform}`);
+    const parts = await readParts(page);
+    assert.equal(parts.length, 4);
+    parts.forEach((part, i) => {
+      assert.equal(part.opacity, 1, `parte ${i + 1} non visibile`);
+      assert.equal(part.transform, "", `parte ${i + 1} non riunita: ${part.transform}`);
+      assert.equal(part.edges, 8, `la parte ${i + 1} dovrebbe avere 8 spigoli`);
     });
     const colors = [...network.packets].sort((a, b) => a.seq - b.seq).map((p) => `var(--sl-color-${p.color}-500)`);
-    assert.deepEqual(arcs.map((a) => a.fill), colors, "i colori dell'anello non sono nell'ordine originale");
+    assert.deepEqual(parts.map((p) => p.fill), colors, "i colori delle parti non sono nell'ordine originale");
     Object.values(await readPackets(page)).forEach((p) => assert.equal(p.opacity, 0));
     const check = await page.evaluate(() => {
       const el = document.querySelector(".sl-packet-journey__check");
@@ -780,6 +923,16 @@ async function run() {
     assert.equal((await page.locator(SEL.outcome).textContent()).trim(), network.announcements.rebuilt);
     assert.equal((await page.locator(`${SEL.stepperItem}[aria-current="step"]`).textContent()).trim(), network.steps[3].stepper);
     assert.equal(await page.locator(".sl-packet-journey__stepper-item--done").count(), 3);
+  });
+
+  await suite.test("passo 3 concluso: il tesseratto ricostruito riprende a ruotare (e la spunta resta)", async () => {
+    const before = await readEdgeCoordinates(page);
+    await page.clock.runFor(600);
+    const after = await readEdgeCoordinates(page);
+    const moved = after.filter((c, i) => c.some((v, j) => Math.abs(v - before[i][j]) > 0.5)).length;
+    assert.ok(moved >= 24, `solo ${moved}/32 spigoli si sono mossi dopo la ricostruzione`);
+    assert.equal(await page.locator(".sl-packet-journey__check").evaluate((el) => Number(el.style.opacity)), 1);
+    assert.equal(await isAnimating(page), false, "la rotazione a riposo non è un passo: data-animating resta false");
   });
 
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, "packet-step3-light.png"), fullPage: true });
@@ -815,11 +968,11 @@ async function run() {
     assert.deepEqual(orderByX(await readPackets(page)), arrivalSeen, "la ripetizione non riparte dall'ordine di arrivo");
     await runUntilIdle(page);
     assert.equal(await dataStep(page), "3");
-    (await readArcs(page)).forEach((arc) => assert.equal(arc.opacity, 1));
+    (await readParts(page)).forEach((arc) => assert.equal(arc.opacity, 1));
     assert.equal(await page.locator(SEL.restart).isVisible(), true);
   });
 
-  await suite.test("Ricomincia: ritorno al passo 0 (anello intero, Prosegui attivo col focus, esito azzerato) e secondo giro possibile", async () => {
+  await suite.test("Ricomincia: ritorno al passo 0 (tesseratto intero, Prosegui attivo col focus, esito azzerato) e secondo giro possibile", async () => {
     await page.locator(SEL.restart).click();
     assert.equal(await dataStep(page), "0");
     assert.equal(await isAnimating(page), false);
@@ -828,7 +981,7 @@ async function run() {
     assert.equal(await page.evaluate(() => document.activeElement.classList.contains("sl-packet-journey__proceed")), true);
     assert.equal((await page.locator(SEL.outcome).textContent()).trim(), "");
     assert.equal((await page.locator(SEL.captionStep).textContent()).trim(), "Punto di partenza");
-    (await readArcs(page)).forEach((arc) => assert.equal(arc.opacity, 1));
+    (await readParts(page)).forEach((arc) => assert.equal(arc.opacity, 1));
     Object.values(await readPackets(page)).forEach((p) => assert.equal(p.opacity, 0));
     await page.locator(SEL.proceed).click();
     await runUntilIdle(page);
@@ -853,7 +1006,7 @@ async function run() {
     assert.equal(await isAnimating(page), false);
     await page.clock.runFor(3000); // un fotogramma dell'animazione interrotta riapparirebbe qui
     assert.equal(await dataStep(page), "0");
-    (await readArcs(page)).forEach((arc) => assert.equal(arc.opacity, 1));
+    (await readParts(page)).forEach((arc) => assert.equal(arc.opacity, 1));
     Object.values(await readPackets(page)).forEach((p) => assert.equal(p.opacity, 0));
     assert.equal(await page.locator(SEL.proceed).isEnabled(), true);
   });
@@ -883,6 +1036,12 @@ async function run() {
   await reducedPage.clock.install({ time: 1_000_000 });
   await reducedPage.clock.pauseAt(1_001_000);
 
+  const reducedCoords0 = await readEdgeCoordinates(reducedPage);
+  await suite.test("riduci animazioni: a riposo il tesseratto resta fermo", async () => {
+    await reducedPage.clock.runFor(600);
+    assert.deepEqual(await readEdgeCoordinates(reducedPage), reducedCoords0, "il tesseratto si muove nonostante 'riduci animazioni'");
+  });
+
   await suite.test("riduci animazioni: ogni 'Prosegui' salta subito allo stato finale del passo, senza far avanzare il tempo", async () => {
     await reducedPage.locator(SEL.proceed).click();
     assert.equal(await dataStep(reducedPage), "1");
@@ -900,8 +1059,12 @@ async function run() {
     await reducedPage.locator(SEL.proceed).click();
     assert.equal(await dataStep(reducedPage), "3");
     assert.equal(await isAnimating(reducedPage), false, "il passo 3 non è concluso subito");
-    (await readArcs(reducedPage)).forEach((arc) => assert.equal(arc.opacity, 1));
+    (await readParts(reducedPage)).forEach((arc) => assert.equal(arc.opacity, 1));
     assert.equal(await reducedPage.locator(SEL.restart).isVisible(), true);
+  });
+  await suite.test("riduci animazioni: a passo 3 concluso il tesseratto è fermo e nella stessa posa canonica di partenza", async () => {
+    await reducedPage.clock.runFor(600);
+    assert.deepEqual(await readEdgeCoordinates(reducedPage), reducedCoords0, "a fine corsa la posa non coincide con quella canonica di partenza");
   });
   await reducedContext.close();
 

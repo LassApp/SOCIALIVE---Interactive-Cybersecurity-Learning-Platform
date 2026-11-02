@@ -2,7 +2,7 @@
   "areaLabel": "Reti",
   "data": { "label": "Dato" },
   "labels": {
-    "stage": "Schema animato: un dato circolare si divide in quattro pacchetti numerati, che attraversano una rete di nodi lungo percorsi diversi e arrivano in ordine diverso; infine vengono rimessi in ordine e ricostruiscono il dato.",
+    "stage": "Schema animato: un dato a forma di tesseratto (ipercubo 4D) ruota e si divide in quattro pacchetti numerati, che attraversano una rete di nodi lungo percorsi diversi e arrivano in ordine diverso; infine vengono rimessi in ordine e ricostruiscono il dato.",
     "packets": "Pacchetti",
     "arrivalOrder": "Ordine di arrivo",
     "correctOrder": "Ordine corretto",
