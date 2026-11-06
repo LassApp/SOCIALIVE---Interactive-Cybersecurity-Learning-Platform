@@ -63,6 +63,7 @@
   <link rel="stylesheet" href="css/scenarios/token-prediction.css" />
   <link rel="stylesheet" href="css/scenarios/llm-response-cycle.css" />
   <link rel="stylesheet" href="css/scenarios/packet-journey.css" />
+  <link rel="stylesheet" href="css/scenarios/disk-compare.css" />
   <link rel="stylesheet" href="css/layouts/login-page.css" />
   <link rel="stylesheet" href="css/layouts/home-page.css" />
   <link rel="stylesheet" href="css/layouts/scenario-page.css" />
@@ -84,6 +85,7 @@
     import { renderTokenPrediction } from "./js/scenarios/renderers/tokenPredictionRenderer.js";
     import { renderLlmResponseCycle } from "./js/scenarios/renderers/llmResponseCycleRenderer.js";
     import { renderPacketJourney } from "./js/scenarios/renderers/packetJourneyRenderer.js";
+    import { renderDiskCompare } from "./js/scenarios/renderers/diskCompareRenderer.js";
 
     initTheme();
 
@@ -94,6 +96,7 @@
     registerRenderer("token-prediction", renderTokenPrediction);
     registerRenderer("llm-response-cycle", renderLlmResponseCycle);
     registerRenderer("packet-journey", renderPacketJourney);
+    registerRenderer("disk-compare", renderDiskCompare);
 
     registerRoute("#/login", createLoginPageController, { protected: false, title: "Accedi" });
     registerRoute("#/home", createHomePageController, { protected: true, title: "Home" });

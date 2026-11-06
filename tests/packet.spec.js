@@ -215,8 +215,8 @@ async function run() {
     assert.deepEqual(area.scenarios.map((s) => [s.id, s.available]), [["viaggio-dei-dati", true]]);
   });
 
-  await suite.test("modules.json: l'area 'reti' si aggiunge in coda, le aree esistenti restano al loro posto", async () => {
-    assert.deepEqual(modules.map((m) => m.id), ["cybersecurity", "ai", "reti"]);
+  await suite.test("modules.json: l'area 'reti' segue le aree esistenti, che restano al loro posto (le aree successive, es. computer-essentials, vengono dopo)", async () => {
+    assert.deepEqual(modules.map((m) => m.id).slice(0, 3), ["cybersecurity", "ai", "reti"]);
   });
 
   const utilPage = await (await browser.newContext()).newPage();

@@ -1,0 +1,9 @@
+{
+  "id": "hdd-vs-ssd",
+  "type": "disk-compare",
+  "title": "HDD vs SSD",
+  "description": "Gli stessi quattro file vengono scritti, cancellati e riscritti su un HDD (piatti e testina in movimento) e su un SSD (memoria flash, accesso elettronico): la frammentazione e i movimenti meccanici spiegano perché i tempi di accesso sono diversi.",
+  "dataRefs": {
+    "disk": "data/scenarios/hdd-vs-ssd/disk.json"
+  }
+}

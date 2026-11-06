@@ -1,0 +1,401 @@
+{
+  "areaLabel": "Computer Essentials",
+  "labels": {
+    "stage": "Animazione del supporto di memoria",
+    "scenarioGroup": "Scenario",
+    "stepperAria": "Passaggi dello scenario",
+    "stepCounter": "Passaggio {n} di {total}",
+    "stepLocked": "Completa prima il passaggio precedente",
+    "stepLockedSr": "bloccato",
+    "stepDone": "completato",
+    "settings": "Impostazioni",
+    "speedGroup": "Velocità dell'animazione",
+    "info": "Informazioni sulla semplificazione",
+    "gridTitle": "Vista logica dei cluster (1 cluster = 1 MB)",
+    "gridAria": "Vista logica dei cluster: {sum}",
+    "filesTitle": "File da copiare",
+    "filesCount": "{mb} MB = {mb} cluster · scritti {done}/{mb}",
+    "fragmented": "frammentato in {n} gruppi",
+    "legendFree": "Libero",
+    "legendExisting": "Dati preesistenti",
+    "legendNumbers": "Numero = ordine di scrittura · × = cancellato",
+    "sectorHeader": "Settore {n}",
+    "trackHeader": "Traccia {n}",
+    "modeLogic": "Allocazione logica: il sistema sceglie i cluster",
+    "modePhysicalHdd": "Accesso fisico: la testina raggiunge le posizioni",
+    "modePhysicalSsd": "Accesso elettronico: il segnale raggiunge i chip",
+    "logicStep": "Il sistema operativo sceglie il cluster {c}",
+    "physicalHdd": "La testina raggiunge la posizione",
+    "physicalSsd": "Il controller invia il segnale al chip Flash {chip}",
+    "capHome": "Testina in posizione iniziale",
+    "capSsd": "Nessuna parte mobile: accesso elettronico",
+    "capHdd": "Traccia {t} · settore {s} · cluster {c}",
+    "capChip": "Chip Flash {chip} · cluster {c}",
+    "capRebuilt": "Immagine ricostruita da sistema operativo e file system",
+    "lensHdd": "Vista logica: i cluster sono un'organizzazione del file system, non divisioni fisiche del disco.",
+    "lensSsd": "Vista logica semplificata: i cluster sono un'organizzazione del file system, non celle fisiche con questa forma.",
+    "zoomHintReady": "Clicca su un settore (o su un chip) per ingrandirlo; clicca di nuovo per tornare alla vista d'insieme.",
+    "zoomHintBusy": "L'ingrandimento manuale è disponibile a fine animazione.",
+    "zoomButtonAria": "Ingrandisci o riduci il supporto: premi Invio per ingrandire il settore o il chip più recente",
+    "reassemblyNote": "Area di ricomposizione: porzioni lette nell'ordine in cui la testina le raggiunge, poi rimesse in ordine.",
+    "reassemblyAria": "Area di ricomposizione",
+    "rebuiltLabel": "foto_sushi.jpeg ricostruita",
+    "compareTitle": "Confronto: stessa sequenza di operazioni, stesso comando di avvio (tempi illustrativi)",
+    "compareHddState": "Piatti in rotazione, testina in movimento",
+    "compareSsdState": "Accesso elettronico, nessuna parte mobile",
+    "compareDone": "Completato",
+    "compareTime": "{s} s simulati",
+    "compareHddName": "HDD",
+    "compareSsdName": "SSD",
+    "compareBarHdd": "Avanzamento HDD",
+    "compareBarSsd": "Avanzamento SSD",
+    "tableCriterion": "Criterio",
+    "completedSr": "completato",
+    "proceedBusy": "Attendi la fine dell'animazione"
+  },
+  "actions": {
+    "next": "Procedi",
+    "replay": "Ripristina",
+    "restart": "Ricomincia"
+  },
+  "settings": {
+    "defaultSpeed": 1,
+    "speeds": [
+      {
+        "value": 0.5,
+        "label": "0.5x"
+      },
+      {
+        "value": 1,
+        "label": "1x"
+      },
+      {
+        "value": 2,
+        "label": "2x"
+      }
+    ]
+  },
+  "timing": {
+    "hddTotalMs": 8000,
+    "ratio": 5
+  },
+  "info": "Semplificazione didattica. 1 cluster = 1 MB in tutti gli scenari (nella realtà dipende dal file system). Il cluster è un'unità logica di allocazione: la griglia è una vista logica, non una divisione fisica del disco. Il disco ha 3 tracce, 4 settori per traccia e 4 cluster per settore (48 cluster). I tempi sono simulati a scopo didattico, non sono misurazioni.",
+  "files": [
+    {
+      "id": "b",
+      "name": "selfie.jpeg",
+      "mb": 5,
+      "color": "#2f5fd0",
+      "accent": "#2f5fd0",
+      "pattern": "solid",
+      "textColor": "#ffffff",
+      "colorName": "blu"
+    },
+    {
+      "id": "r",
+      "name": "foto_pizza.jpeg",
+      "mb": 3,
+      "color": "#c9372e",
+      "accent": "#a32820",
+      "pattern": "stripes",
+      "textColor": "#ffffff",
+      "colorName": "rosso"
+    },
+    {
+      "id": "g",
+      "name": "selfie_di_coppia.jpeg",
+      "mb": 12,
+      "color": "#1b7a49",
+      "accent": "#0b4d2a",
+      "pattern": "dots",
+      "textColor": "#ffffff",
+      "colorName": "verde"
+    },
+    {
+      "id": "y",
+      "name": "foto_sushi.jpeg",
+      "mb": 8,
+      "color": "#e8b800",
+      "accent": "#bf9500",
+      "pattern": "grid",
+      "textColor": "#1a1c21",
+      "colorName": "giallo"
+    }
+  ],
+  "existing": {
+    "id": "n",
+    "color": "#8a90a0",
+    "accent": "#646b7c",
+    "pattern": "hatch"
+  },
+  "scenarios": [
+    {
+      "id": "hdd-vergine",
+      "name": "HDD vergine",
+      "medium": "hdd",
+      "init": [
+        "....",
+        "....",
+        "....",
+        "....",
+        "....",
+        "....",
+        "....",
+        "....",
+        "....",
+        "....",
+        "....",
+        "...."
+      ],
+      "steps": [
+        {
+          "title": "Preparazione",
+          "text": "Piatti in rotazione, testina ferma in posizione iniziale, tutti i cluster liberi. Parti meccaniche: i piatti girano e la testina si sposta sulle tracce.",
+          "ops": []
+        },
+        {
+          "title": "Scrivi selfie",
+          "text": "Prima il sistema operativo sceglie i cluster liberi (allocazione logica), poi la testina li raggiunge (accesso fisico). La vista si avvicina a traccia e settore e si allontana quando serve un altro settore. 5 MB = 5 cluster blu.",
+          "ops": [
+            [
+              "w",
+              "b"
+            ]
+          ]
+        },
+        {
+          "title": "Altri due file",
+          "text": "foto_pizza.jpeg (3 cluster rossi), poi selfie_di_coppia.jpeg (12 cluster verdi), in successione ordinata.",
+          "ops": [
+            [
+              "w",
+              "r"
+            ],
+            [
+              "w",
+              "g"
+            ]
+          ]
+        },
+        {
+          "title": "Cancella pizza",
+          "text": "I 3 cluster rossi tornano liberi: lo spazio è segnato come disponibile, ma i dati possono restare sul supporto finché non vengono sovrascritti.",
+          "ops": [
+            [
+              "d",
+              "r"
+            ]
+          ]
+        },
+        {
+          "title": "Scrivi sushi",
+          "text": "Il sistema trova 3 cluster liberi (lasciati da foto_pizza), poi 5 consecutivi in un'altra zona: foto_sushi.jpeg è frammentato in due gruppi (3 + 5). Su un HDD raggiungere posizioni diverse può richiedere spostamenti meccanici.",
+          "ops": [
+            [
+              "w",
+              "y"
+            ]
+          ]
+        },
+        {
+          "title": "Riepilogo",
+          "text": "{sum}. foto_sushi.jpeg è in due gruppi separati da cluster di altri file. Non ogni scrittura su un HDD vergine si comporta così.",
+          "ops": []
+        }
+      ]
+    },
+    {
+      "id": "hdd-usato",
+      "name": "HDD già utilizzato",
+      "medium": "hdd",
+      "init": [
+        "nn..",
+        "n.n.",
+        "...n",
+        "nn..",
+        ".nn.",
+        "n...",
+        "n..n",
+        ".n..",
+        "nnn.",
+        "..n.",
+        ".n.n",
+        "n..."
+      ],
+      "steps": [
+        {
+          "title": "Preparazione",
+          "text": "Il disco contiene già dati (grigio a trama) e lo spazio libero non è contiguo. Quattro file da copiare.",
+          "ops": []
+        },
+        {
+          "title": "selfie.jpeg",
+          "text": "5 cluster blu nelle prime posizioni libere, anche in settori diversi: la testina deve spostarsi.",
+          "ops": [
+            [
+              "w",
+              "b"
+            ]
+          ]
+        },
+        {
+          "title": "foto_pizza.jpeg",
+          "text": "3 cluster rossi in posizioni libere non per forza consecutive. La scelta dipende dallo spazio disponibile e dal file system.",
+          "ops": [
+            [
+              "w",
+              "r"
+            ]
+          ]
+        },
+        {
+          "title": "selfie_di_coppia",
+          "text": "12 cluster verdi alternati ai cluster occupati.",
+          "ops": [
+            [
+              "w",
+              "g"
+            ]
+          ]
+        },
+        {
+          "title": "foto_sushi.jpeg",
+          "text": "8 cluster gialli in posizioni diverse: la disposizione logica (1, 2, 3…) non coincide con la collocazione fisica.",
+          "ops": [
+            [
+              "w",
+              "y"
+            ]
+          ]
+        },
+        {
+          "title": "Lettura",
+          "text": "La testina legge le porzioni di foto_sushi.jpeg nell'ordine in cui le raggiunge (disordinate); sistema operativo e file system le rimettono in ordine e ricostruiscono l'immagine. Spostamenti e attese possono incidere sulle prestazioni, non sempre.",
+          "ops": [
+            [
+              "read",
+              "y"
+            ]
+          ]
+        },
+        {
+          "title": "Riepilogo",
+          "text": "{sum}. La frammentazione può aumentare gli accessi a posizioni diverse; l'effetto sulle prestazioni dipende dal caso.",
+          "ops": []
+        }
+      ]
+    },
+    {
+      "id": "ssd",
+      "name": "SSD",
+      "medium": "ssd",
+      "init": [
+        "....",
+        "....",
+        "....",
+        "....",
+        "....",
+        "....",
+        "....",
+        "....",
+        "....",
+        "....",
+        "....",
+        "...."
+      ],
+      "steps": [
+        {
+          "title": "Presentazione",
+          "text": "Memoria flash e circuiti elettronici semplificati: nessun piatto, nessuna testina, nessuna parte mobile. Anche l'SSD gestisce allocazione e organizzazione interna.",
+          "ops": []
+        },
+        {
+          "title": "Scrivi selfie",
+          "text": "Il controller invia il segnale elettrico al chip scelto: 5 cluster blu. Accesso elettronico, più rapido ma non istantaneo (tempi simulati).",
+          "ops": [
+            [
+              "w",
+              "b"
+            ]
+          ]
+        },
+        {
+          "title": "Altri due file",
+          "text": "foto_pizza.jpeg (3 cluster rossi), poi selfie_di_coppia.jpeg (12 verdi), come sull'HDD.",
+          "ops": [
+            [
+              "w",
+              "r"
+            ],
+            [
+              "w",
+              "g"
+            ]
+          ]
+        },
+        {
+          "title": "Cancella pizza",
+          "text": "Stessa operazione logica dell'HDD: i 3 cluster rossi tornano disponibili.",
+          "ops": [
+            [
+              "d",
+              "r"
+            ]
+          ]
+        },
+        {
+          "title": "Scrivi sushi",
+          "text": "foto_sushi.jpeg occupa i cluster liberi: anche qui la disposizione logica è in due gruppi, ma senza spostamenti meccanici.",
+          "ops": [
+            [
+              "w",
+              "y"
+            ]
+          ]
+        },
+        {
+          "title": "Confronto",
+          "text": "HDD a sinistra, SSD a destra: stessa sequenza dallo stesso comando. Il controllo velocità non cambia il rapporto illustrativo tra i due tempi.",
+          "ops": [],
+          "kind": "compare",
+          "referenceScenario": "hdd-vergine"
+        }
+      ]
+    }
+  ],
+  "comparison": {
+    "rows": [
+      {
+        "label": "Tecnologia",
+        "hdd": "Piatti magnetici e testine mobili",
+        "ssd": "Memoria flash"
+      },
+      {
+        "label": "Parti meccaniche",
+        "hdd": "Sì",
+        "ssd": "No"
+      },
+      {
+        "label": "Accesso ai dati",
+        "hdd": "Condizionato anche da movimenti meccanici e rotazione",
+        "ssd": "Elettronico"
+      },
+      {
+        "label": "Tempi di accesso",
+        "hdd": "Generalmente maggiori",
+        "ssd": "Generalmente inferiori"
+      },
+      {
+        "label": "Effetti della frammentazione",
+        "hdd": "Può aumentare gli spostamenti della testina",
+        "ssd": "Non comporta gli stessi ritardi meccanici"
+      },
+      {
+        "label": "Rumore",
+        "hdd": "Presente a seconda del modello",
+        "ssd": "Assente"
+      }
+    ],
+    "conclusion": "La maggiore velocità dell'SSD deriva soprattutto dall'assenza di movimenti meccanici e da tempi di accesso minori. Non vale per ogni SSD in ogni operazione."
+  }
+}

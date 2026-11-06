@@ -33,6 +33,16 @@
       "scenarios": [
         { "id": "viaggio-dei-dati", "title": "Viaggio dei dati", "available": true }
       ]
+    },
+    {
+      "id": "computer-essentials",
+      "title": "Computer Essentials",
+      "available": true,
+      "description": "Come funzionano i componenti di un computer: archiviazione, accesso ai dati e prestazioni.",
+      "icon": "assets/icons/areas/computer-essentials.svg",
+      "scenarios": [
+        { "id": "hdd-vs-ssd", "title": "HDD vs SSD", "available": true }
+      ]
     }
   ]
 }

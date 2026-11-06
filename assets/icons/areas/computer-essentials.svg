@@ -1,0 +1,19 @@
+<!--
+  computer-essentials.svg
+  Icona dell'area "Computer Essentials": un disco (piatto con mozzo) e il
+  braccio della testina — l'oggetto da cui parte il primo scenario
+  (HDD vs SSD). Un cerchio in outline e uno pieno per il mozzo, come
+  nelle altre icone d'area. Griglia 24px.
+
+  Il colore (#000) è solo un segnaposto: il file viene usato come
+  maschera CSS (mask-image, vedi css/components/area-card.css), quindi
+  conta soltanto la forma (canale alfa) — il colore reale arriva da
+  currentColor e segue il tema Light/Dark.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="10.5" cy="12" r="8"/>
+  <circle cx="10.5" cy="12" r="3.2"/>
+  <circle cx="10.5" cy="12" r="1" fill="#000"/>
+  <path d="M21 4.5 15.6 10.8"/>
+  <circle cx="21" cy="4.5" r="1" fill="#000"/>
+</svg>
